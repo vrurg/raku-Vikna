@@ -23,7 +23,7 @@ submethod TWEAK(|) {
 }
 
 method debug(*@args) {
-    $.logger.log(msg => @args.join, :level(DEBUG), :frame(callframe(1)));
+    $.logger.log(msg => "[" ~ $*THREAD.id.fmt("%5d") ~ "] " ~ @args.join, :level(DEBUG), :frame(callframe(1)));
 }
 
 method new-desktop {
