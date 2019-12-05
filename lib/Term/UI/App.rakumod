@@ -16,10 +16,9 @@ method new(|) {
 }
 
 submethod TWEAK(|) {
-    $!desktop = self.new-desktop;
     $!logger = Log::Async.new;
     $!logger.send-to('./term-ui.log', :level(*));
-    signal(SIGWINCH).tap: { self.on-screen-resize }
+    $!desktop = self.new-desktop;
 }
 
 method debug(*@args) {
@@ -39,9 +38,4 @@ multi method run(::?CLASS:D:) {
     $!screen.initialize-screen;
     self.main;
     LEAVE $!screen.shutdown-screen;
-}
-
-method on-screen-resize {
-    $!screen.setup(:reset);
-    $!desktop.on-screen-resize;
 }
