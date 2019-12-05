@@ -1,9 +1,16 @@
 use v6;
 use Term::UI::Scrollable;
 use Term::UI::Widget;
-unit class Term::UI::TextScroll
-    does Term::UI::Scrollable
-    is Term::UI::Widget;
+unit class Term::UI::TextScroll;
+also does Term::UI::Scrollable;
+also is Term::UI::Widget;
+
+use Term::UI::Events;
+
+class Event::BufChange does Event::Control is export {
+    has $.old-size;
+    has $.size;
+}
 
 my class BufLine {
     has $.str = "";
@@ -29,15 +36,15 @@ my class BufLine {
 }
 
 has @.buffer = [ BufLine.new ];
-has $!cur-line = 0;
-has Int:D $.buffer-size = 1000;
+has $!cur-row = 0;
+has Int:D $.buffer-size = 200;
 has Bool:D $!wrap = True;
 has Bool:D $.auto-scroll = True;
 
-method cur-line(--> BufLine) { @!buffer[$!cur-line] }
+method cur-line(--> BufLine) { @!buffer[$!cur-row] }
 method next-line {
-    @!buffer.push: BufLine.new if @!buffer <= ++$!cur-line;
-    @!buffer[$!cur-line]
+    @!buffer.push: BufLine.new if @!buffer <= ++$!cur-row;
+    @!buffer[$!cur-row]
 }
 
 method add-text(Str:D $text is copy) {
@@ -73,11 +80,12 @@ method add-text(Str:D $text is copy) {
         }
     }
 
-    @!buffer.splice: 0, (@!buffer - $!buffer-size) if @!buffer > $!buffer-size;
-    self.set-area: lines => @!buffer.elems, columns => $max-cols;
+    @!buffer.splice: 0, (+@!buffer - $!buffer-size) if +@!buffer > $!buffer-size;
+    $!cur-row = @!buffer.end if $!cur-row >= +@!buffer;
+    self.set-area: lines => +@!buffer, columns => $max-cols;
     self.set-pos: dy => $.lines - $.h if $do-scroll;
 
-    self.?on-buffer-change(:$old-size);
+    self.dispatch(Event::BufChange, :$old-size, :size( @!buffer.elems ));
     self
 }
 
@@ -89,9 +97,8 @@ method say(**@args) {
     self.add-text: (|@args, "\n").join: ""
 }
 
-method draw {
+method draw( :$grid ) {
     callsame;
-    my $grid = $.grid;
     for $.dy..^($.dy + $.h) -> $lnum {
         my $y = $lnum - $.dy;
         my $out = $lnum < @!buffer ?? @!buffer[$lnum].substr($.dx, $.w) !! "";
