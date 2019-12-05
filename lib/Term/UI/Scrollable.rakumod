@@ -1,5 +1,6 @@
 use v6;
 unit role Term::UI::Scrollable;
+use Term::UI::Events;
 
 has Int:D $.lines = 0;          # How "tall" is the object
 has Int:D $.columns = 0;        # How "wide" is the object
@@ -18,7 +19,8 @@ method !adjust-pos {
     $!dy = $!lines - $.h if $!h-fit && (($!dy + $.h) > $!lines);
     $!dx = 0 if $!dx < 0;
     $!dy = 0 if $!dy < 0;
-    self.?on-scroll-position(:$!old-x, :$!old-y) if $!dx != $!old-x || $!dy != $!old-y;
+    self.?dispatch(Event::ScrollPosition, :$!old-x, :$!old-y, :x($!dx), :y($!dy))
+        if $!dx != $!old-x || $!dy != $!old-y;
     $!old-x = $!dx;
     $!old-y = $!dy;
 }
@@ -40,10 +42,10 @@ method set-area(Int:D :$!lines where * >= 0, Int:D :$!columns where * >= 0) { se
 #| Set fit flags.
 method fit(Bool:D :$width?, Bool:D :$height?) {
     $.w-fit = $_ with $width;
-    $.h-fir = $_ with $height;
+    $.h-fit = $_ with $height;
     self!adjust-pos
 }
 
-method on-resize(:$old-w, :$old-h) {
-    self!adjust-pos if $old-w != $.w || $old-h != $.h;
+multi method event(Event::Resize:D $ev) {
+    self!adjust-pos if $ev.old-w != $.w || $ev.old-h != $.h;
 }
