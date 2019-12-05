@@ -17,8 +17,8 @@ method h {...}
 method !adjust-pos {
     $!dx = $!columns - $.w if $!w-fit && (($!dx + $.w) > $!columns);
     $!dy = $!lines - $.h if $!h-fit && (($!dy + $.h) > $!lines);
-    $!dx = 0 if $!dx < 0;
-    $!dy = 0 if $!dy < 0;
+    $!dx max= 0;
+    $!dy max= 0;
     self.?dispatch(Event::ScrollPosition, :$!old-x, :$!old-y, :x($!dx), :y($!dy))
         if $!dx != $!old-x || $!dy != $!old-y;
     $!old-x = $!dx;

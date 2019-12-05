@@ -81,7 +81,7 @@ method add-text(Str:D $text is copy) {
     }
 
     @!buffer.splice: 0, (+@!buffer - $!buffer-size) if +@!buffer > $!buffer-size;
-    $!cur-row = @!buffer.end if $!cur-row >= +@!buffer;
+    $!cur-row min= @!buffer.end;
     self.set-area: lines => +@!buffer, columns => $max-cols;
     self.set-pos: dy => $.lines - $.h if $do-scroll;
 

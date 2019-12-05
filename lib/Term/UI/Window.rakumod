@@ -45,9 +45,9 @@ method redraw {
 }
 
 method resize(Int:D :$w is copy where * > 0 = $.w, Int:D :$h is copy where * > 0 = $.h) {
-    my $minh = my $minw = $!border ?? 4 !! 2;
-    $w = $minw if $w < $minw;
-    $h = $minh if $h < $minh;
+    my $min = $!border ?? 4 !! 2;
+    $w max= $min;
+    $h max= $min;
     nextwith(:$w, :$h)
 }
 
