@@ -26,7 +26,11 @@ method debug(*@args) {
 }
 
 method new-desktop {
-    $!screen.root-widget: Term::UI::Desktop.new-from-grid: $!screen.grid-object('.default'), :app(self), :auto-clear;
+    $!screen.root-widget:
+        Term::UI::Desktop.new-from-grid:
+            $!screen.grid-object( '.default' ),
+            :app( self ),
+            :auto-clear;
 }
 
 multi method run(::?CLASS:U: |c) {
