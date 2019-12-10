@@ -1,11 +1,18 @@
 use v6;
-use Term::UI::Widget;
-use Term::UI::Window::Border;
-unit class Term::UI::Window is Term::UI::Widget is export;
+use Vikna::Widget;
+use Vikna::Window::Border;
+unit class Vikna::Window is Vikna::Widget is export;
 
-use Term::UI::Events;
+use Vikna::Events;
 
-my class Client is Term::UI::Widget { }
+my class Client is Vikna::Widget {
+    method fit {
+        my ($w, $h) = $.owner.client-size;
+        self.Vikna::Widget::resize(:$w, :$h)
+    }
+    # Don't allow voluntary client size change.
+    method resize { }
+}
 
 has Str:D $.title = "";
 has $.border;
@@ -14,7 +21,7 @@ has Client $.client handles <add-child remove-child to-top to-bottom create-chil
 submethod TWEAK(Bool:D :$border = True) {
     my ($cx, $cy, $cw, $ch) = (0, 0, self.w, self.h);
     if $border {
-        $!border = Term::UI::Window::Border.new:
+        $!border = Vikna::Window::Border.new:
                         :w( $cw ), :h( $ch ), :x(0), :y(0),
                         :app( self.app ), :owner( self );
         ++$cx; ++$cy;
@@ -24,12 +31,14 @@ submethod TWEAK(Bool:D :$border = True) {
     $!client = Client.new:
                     :x( $cx ), :y( $cy ), :w( $cw ), :h( $ch ),
                     :app( self.app ), :owner( self ),
-                    :bg-pattern('.-+'), :bg-color('on_blue'),
+                    :bg-pattern('.-+'), :color<black blue>,
                     :auto-clear( self.auto-clear );
 }
 
-method set-title(Str:D $!title) {
-    self.dispatch: Event::TitleChange
+method set-title(Str:D $title) {
+    my $old-title = $!title;
+    $!title = $title;
+    self.dispatch: Event::TitleChange, :$old-title, :$title
 }
 
 method clear {
@@ -42,6 +51,11 @@ method redraw {
     $!client.redraw;
     self.?draw( :$grid );
     self.end-draw( :$grid );
+}
+
+method client-size {
+    my $bw = $!border ?? 2 !! 0;
+    ($.w - $bw, $.h - $bw)
 }
 
 method resize(Int:D :$w is copy where * > 0 = $.w, Int:D :$h is copy where * > 0 = $.h) {
@@ -64,6 +78,7 @@ multi method event(Event::TitleChange:D) {
 }
 
 multi method event(Event::Resize:D $ev) {
+    $!client.fit;
     $!client.resize(:w($.w - 2), :h($.h - 2));
     $!border.resize(:$.w, :$.h);
     self.redraw;

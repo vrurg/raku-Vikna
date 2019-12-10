@@ -1,6 +1,6 @@
 use v6;
-use Term::UI::Widget;
-unit class Term::UI::Window::Border is Term::UI::Widget;
+use Vikna::Widget;
+unit class Vikna::Window::Border is Vikna::Widget;
 
 my %borders =
         ansi => %(

@@ -1,14 +1,14 @@
 use v6;
 use Terminal::Print;
-use Term::UI::Widget;
-use Term::UI::Desktop;
+use Vikna::Widget;
+use Vikna::Desktop;
 use Log::Async;
-unit class Term::UI::App is export;
+unit class Vikna::App is export;
 
 my ::?CLASS $app;
 
 has Terminal::Print:D $.screen = Terminal::Print.new;
-has Term::UI::Desktop $.desktop;
+has Vikna::Desktop $.desktop;
 has Log::Async $.logger;
 
 method new(|) {
@@ -27,7 +27,7 @@ method debug(*@args) {
 
 method new-desktop {
     $!screen.root-widget:
-        Term::UI::Desktop.new-from-grid:
+        Vikna::Desktop.new-from-grid:
             $!screen.grid-object( '.default' ),
             :app( self ),
             :auto-clear;

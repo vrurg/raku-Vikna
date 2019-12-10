@@ -1,6 +1,6 @@
 use v6;
-unit role Term::UI::Scrollable;
-use Term::UI::Events;
+unit role Vikna::Scrollable;
+use Vikna::Events;
 
 has Int:D $.lines = 0;          # How "tall" is the object
 has Int:D $.columns = 0;        # How "wide" is the object

@@ -1,21 +1,21 @@
 use v6;
 use Terminal::Print::Widget;
-use Term::UI::Parent;
-use Term::UI::Child;
-use Term::UI::Belongable;
-use Term::UI::EventHandling;
-unit class Term::UI::Widget is Terminal::Print::Widget is export;
-also does Term::UI::Parent[::?CLASS];
-also does Term::UI::Child;
-also does Term::UI::Belongable[::?CLASS];
-also does Term::UI::EventHandling;
+use Vikna::Parent;
+use Vikna::Child;
+use Vikna::Belongable;
+use Vikna::EventHandling;
+unit class Vikna::Widget is Terminal::Print::Widget is export;
+also does Vikna::Parent[::?CLASS];
+also does Vikna::Child;
+also does Vikna::Belongable[::?CLASS];
+also does Vikna::EventHandling;
 
-use Term::UI::Events;
-use Term::UI::X;
+use Vikna::Events;
+use Vikna::X;
 
 has $.app is required;
 has $.bg-pattern;
-has $.bg-color;
+has @.color = <white black>;
 has Bool:D $.auto-clear = False;
 has Terminal::Print::Grid $!draw-grid;
 has Lock:D $!draw-lock .= new;
@@ -23,9 +23,10 @@ has Lock:D $!draw-lock .= new;
 submethod TWEAK(|c) {
     .add-child(self) with $!parent;
     self.ev.subscribe: -> $ev { self.event: $ev }
+    self.?init;
 }
 
-method create-child(Term::UI::Widget:U $wtype, |c) {
+method create-child(Vikna::Widget:U $wtype, |c) {
     $wtype.new: :$!app, :parent(self), :owner(self), |c;
 }
 
@@ -48,6 +49,13 @@ multi method event(Event:D $ev) {
 
 method debug(*@args) {
     $.app.debug: "({self.WHICH}) ", |@args;
+}
+
+method ANSIcolor {
+    (flat
+        (@!color[0] || ()),
+        (@!color[1] ?? "on_" ~ @!color[1] !! ())
+    ).join: " "
 }
 
 method clear {
@@ -97,9 +105,9 @@ method redraw {
 
 method draw-background( :$grid ) {
     if $!bg-pattern {
-        my $back-row = ( $!bg-pattern x ($.w.Num / $!bg-pattern.chars).ceiling ).substr: ^$.w;
+        my $back-row = ( $!bg-pattern x ($.w.Num / $!bg-pattern.chars).ceiling ); #.substr: ^$.w;
         for ^$.h -> $row {
-            $grid.set-span( 0, $row, $back-row, $!bg-color );
+            $grid.set-span( 0, $row, $back-row, $.ANSIcolor );
         }
     }
 }
@@ -118,4 +126,19 @@ method resize(Int:D :$w where * > 0 = $.w, Int:D :$h where * > 0 = $.h) {
     self.replace-grid: $.grid.clone(:$w, :$h);
     $.debug: "resized grid: ", $.grid.w, " x ", $.grid.h;
     self.dispatch(Event::Resize, :$old-w, :$old-h, :$w, :$h) if $old-w != $w || $old-h != $h;
+}
+
+method move(:$x where * >= 0 = $.x, :$y where * >= 0 = $.y) {
+    my $old-x = $.x;
+    my $old-y = $.y;
+    self.move-to($x, $y);
+    self.dispatch(Event::Move, :$old-x, :$old-y, :$.x, :$.y) if $old-x != $.x || $old-y != $y;
+}
+
+multi method set_color(:$fg, :$bg) {
+    my $old-fg = @!color[0];
+    my $old-bg = @!color[1];
+    @!color = $fg, $bg;
+    self.dispatch: Event::ColorChange, :$old-fg, :$old-bg, :$fg, :$bg
+        if $old-fg ne $fg || $old-bg ne $bg;
 }

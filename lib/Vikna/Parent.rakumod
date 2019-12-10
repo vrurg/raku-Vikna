@@ -1,5 +1,5 @@
 use v6;
-unit role Term::UI::Parent[::ChldType] is export;
+unit role Vikna::Parent[::ChldType] is export;
 
 has @.children;
 

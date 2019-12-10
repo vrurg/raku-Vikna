@@ -1,11 +1,11 @@
 use v6;
-use Term::UI::Scrollable;
-use Term::UI::Widget;
-unit class Term::UI::TextScroll;
-also does Term::UI::Scrollable;
-also is Term::UI::Widget;
+use Vikna::Scrollable;
+use Vikna::Widget;
+unit class Vikna::TextScroll;
+also does Vikna::Scrollable;
+also is Vikna::Widget;
 
-use Term::UI::Events;
+use Vikna::Events;
 
 class Event::BufChange does Event::Control is export {
     has $.old-size;

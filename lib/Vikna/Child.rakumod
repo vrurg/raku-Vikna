@@ -1,6 +1,6 @@
 use v6;
-use Term::UI::Parent;
-unit role Term::UI::Child is export;
+use Vikna::Parent;
+unit role Vikna::Child is export;
 
 has $.parent;
 

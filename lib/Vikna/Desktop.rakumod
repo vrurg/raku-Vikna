@@ -1,8 +1,8 @@
 use v6;
-use Term::UI::Widget;
-unit class Term::UI::Desktop is Term::UI::Widget is export;
+use Vikna::Widget;
+unit class Vikna::Desktop is Vikna::Widget is export;
 
-use Term::UI::Events;
+use Vikna::Events;
 
 has Lock:D $!draw-lock .= new;
 

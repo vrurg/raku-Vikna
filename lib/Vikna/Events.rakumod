@@ -1,5 +1,5 @@
 use v6;
-unit package Term::UI;
+unit package Vikna;
 role Event is export {
     has $.origin is required; # Originating object
     has Bool:D $.cleared = False;
@@ -11,7 +11,17 @@ role Event is export {
 
 role Event::Control does Event is export { }
 
-role Event::TitleChange does Event::Control is export { }
+role Event::TitleChange does Event::Control is export {
+    has $.old-title;
+    has $.title;
+}
+
+role Event::ColorChange does Event::Control is export {
+    has $.old-fg;
+    has $.old-bg;
+    has $.fg;
+    has $.bg;
+}
 
 role Event::Geom does Event::Control is export { }
 

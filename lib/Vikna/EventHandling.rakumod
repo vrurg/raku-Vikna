@@ -1,7 +1,7 @@
 use v6;
-unit role Term::UI::EventHandling;
+unit role Vikna::EventHandling;
 
-use Term::UI::Events;
+use Vikna::Events;
 
 my class EvSupplier is Supplier {
     method subscribe(&code) {
@@ -11,10 +11,10 @@ my class EvSupplier is Supplier {
 
 has $.ev = EvSupplier.new;
 
-multi method dispatch(Term::UI::Event:D $ev) {
+multi method dispatch(Vikna::Event:D $ev) {
     $!ev.emit: $ev
 }
 
-multi method dispatch(Term::UI::Event:U \EvType, *%params) {
+multi method dispatch(Vikna::Event:U \EvType, *%params) {
     $!ev.emit: EvType.new: :origin( self ), |%params
 }
