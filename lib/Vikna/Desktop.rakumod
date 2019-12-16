@@ -1,16 +1,8 @@
-use v6;
+use v6.e.PREVIEW;
 use Vikna::Widget;
 unit class Vikna::Desktop is Vikna::Widget is export;
 
 use Vikna::Events;
-
-has Lock:D $!draw-lock .= new;
-
-submethod TWEAK(|) {
-    signal(SIGWINCH).tap: {
-        self.on-screen-resize
-    }
-}
 
 method on-screen-resize {
     my $old-w = $.w;
@@ -22,18 +14,18 @@ method on-screen-resize {
     self.dispatch: Event::Resize, :$old-w, :$old-h, :$.w, :$.h;
 }
 
-method redraw {
-    $.app.debug: "Desktop redraw ", $.w, ' x ', $.h;
-    $!draw-lock.lock;
-    $.app.debug: "Desktop redraw callsame ", $.w, ' x ', $.h;
-    callsame;
-    $.app.debug: "Desktop redraw composite ", $.w, ' x ', $.h;
-    self.composite;
-    $.app.debug: "Desktop redraw complete ", $.w, ' x ', $.h;
-    LEAVE $!draw-lock.unlock;
+multi method invalidate() {
+    $.app.debug: "Full desktop invalidate";
+    self.invalidate: $.geom.clone
 }
 
-multi method event(Event::Resize:D) {
+method redraw {
+    callsame;
+    self.compose;
+    $.app.screen.print: 0, 0, $.canvas;
+}
+
+multi method event(Event::RedrawRequest:D) {
     # Queue up resizes so we miss no one.
     self.redraw;
 }

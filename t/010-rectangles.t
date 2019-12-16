@@ -3,7 +3,7 @@ use Test;
 use Vikna::Rect;
 use Vikna::Point;
 
-plan 3;
+plan 5;
 
 subtest "Rect objects" => {
     plan 9;
@@ -149,6 +149,39 @@ subtest "Rect interactions" => {
             is-deeply $r1.clip( |%value<r2> ).List, %value<clip>, "clipped rectangle";
         }
     }
+}
+
+subtest "Multi-dissect" => {
+    plan 1;
+    my $base = Vikna::Rect.new: 0, 0, 20, 15;
+    my @r =
+        Vikna::Rect.new( 3, 3, 7, 4 ),
+        Vikna::Rect.new( 7, 5, 8, 5 );
+    my @dissected = $base.dissect: @r;
+
+    my $expected =
+        (
+            (0, 0, 2, 14),
+            (15, 0, 19, 14),
+            (10, 0, 14, 4),
+            (10, 10, 14, 14),
+            (3, 0, 9, 2),
+            (3, 7, 6, 14),
+            (7, 10, 9, 14),
+        );
+
+    is-deeply @dissected.map( *.coords ).List, $expected, "dissected by multiple rectangles";
+}
+
+subtest "Relative" => {
+    my $r1 = Vikna::Rect.new( 3, 3, 7, 4 );
+    my $r2 = Vikna::Rect.new( 7, 5, 8, 5 );
+
+    my $rel = $r2.relative-to($r1);
+    is-deeply ($rel.x, $rel.y, $rel.w, $rel.h), (4, 2, 8, 5), "unclipped relative rectangle";
+    $rel = $r2.relative-to($r1, :clip);
+    is-deeply ($rel.x, $rel.y, $rel.w, $rel.h), (4, 2, 3, 2), "clipped relative rectangle";
+
 }
 
 done-testing;

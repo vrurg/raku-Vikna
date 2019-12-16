@@ -1,4 +1,4 @@
-use v6;
+use v6.e.PREVIEW;
 use Vikna::Widget;
 use Vikna::Window::Border;
 unit class Vikna::Window is Vikna::Widget is export;

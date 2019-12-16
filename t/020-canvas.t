@@ -1,8 +1,60 @@
 use v6;
 use Test;
+use Vikna::App;
 use Vikna::Canvas;
+use Vikna::Utils;
 
-plan 4;
+plan 6;
+
+class MyApp is Vikna::App {
+}
+
+my $app = MyApp.new;
+
+role not-passed { }
+sub test-filled-rect(Vikna::Canvas:D $c, $x, $y, $w, $h, $char, Str:D $msg,
+                    BasicColor :$fg = Any but not-passed, BasicColor :$bg = Any but not-passed)
+{
+    subtest "Filled canvas rectangle: " ~ $msg => {
+        plan 4;
+        ok $c.contains($x, $y, $w, $h), "required rectangle fits into the canvas";
+        my @cells := $c.cells;
+        my $char-matches = 0;
+        my $fg-matches = 0;
+        my $bg-matches = 0;
+        for $y..($y + $h - 1) -> $row {
+            my @row := @cells[$row];
+            for $x..($x + $w - 1) -> $col {
+                given @row[$col] {
+                    when Vikna::Canvas::Cell {
+                        ++$char-matches if .char ~~ $char;
+                        ++$fg-matches if $fg ~~ not-passed || .fg ~~ $fg;
+                        ++$bg-matches if $bg ~~ not-passed || .bg ~~ $bg;
+                    }
+                    default {
+                        ++$char-matches if $_ ~~ $char;
+                        ++$fg-matches if $fg ~~ not-passed;
+                        ++$bg-matches if $bg ~~ not-passed;
+                    }
+                }
+            }
+        }
+        my $expected-matches = $w * $h;
+        is $char-matches, $expected-matches, "all characters match";
+        if $fg ~~ not-passed {
+            pass "fg color parameter not passed";
+        }
+        else {
+            is $fg-matches, $expected-matches, "all fg colors match";
+        }
+        if $bg ~~ not-passed {
+            pass "bg color parameter not passed";
+        }
+        else {
+            is $bg-matches, $expected-matches, "all bg colors match";
+        }
+    }
+}
 
 subtest "Paintable rectangles" => {
     plan 14;
@@ -16,7 +68,7 @@ subtest "Paintable rectangles" => {
     nok $c.is-paintable(130, 1), "too big X";
     nok $c.is-paintable(1, 50), "too big Y";
 
-    $c.invalidate-reset;
+    $c.clear-inv-rect;
     $c.add-inv-rect: 10, 15, 20, 5;
     $c.add-inv-rect: 50, 10, 10, 20;
 
@@ -41,45 +93,6 @@ subtest "Overlapping invalidation" => {
     is $c.invalidates.elems, 3, "one invalidation is not added because covered by existing ones";
 }
 
-subtest "Coloring" => {
-    plan 4;
-    my $c = Vikna::Canvas.new: :w<25>, :h<10>;
-    $c.invalidate;
-    for ^10 {
-        $c.imprint(0, $_, '.' x 25);
-    }
-    $c.viewport: 1, 1, 13, 4;
-
-    my $sample = "Some text";
-    $c.imprint(1, 1, $sample, :text-only);
-    is-deeply $c.cells[1;1..^(1 + $sample.chars)], $sample.comb, "all chars in place";
-    $c.imprint(2, 1, 4, 3, :bg('50,80,0'));
-
-    sub test-colored-rect($canvas, $x, $y, $w, $h, $ul-char, $br-char, $msg, *%c) {
-        $c.imprint($x, $y, $w, $h, |%c);
-        my @tpoints = {msg => "Upper left", :$x, :$y, char => $ul-char},
-                      {msg => "Bottom right", :x($x + $w - 1), :y($y + $h - 1), char => $br-char};
-        subtest $msg => {
-            for @tpoints -> %t {
-                subtest %t<msg> ~ " corner" => {
-                    my $cell = $c.cells[%t<y>; %t<x>];
-                    is $cell.^name, 'Vikna::Canvas::Cell', 'cell type';
-                    is $cell.char, %t<char>, 'char is preserved';
-                    is $cell.bg, %c<bg> // Str, 'bg color';
-                    is $cell.fg, %c<fg> // Str, 'fg color';
-                }
-            }
-        }
-    }
-
-    test-colored-rect($c, 2, 1, 5, 3, 'o', '.', "Only background color", :bg('50,80,0'));
-    test-colored-rect($c, 3, 1, 2, 2, 'm', '.', "Foreground and background", :fg<red>, :bg('50,80,0'));
-
-    is $c.viewport(30,3).comb.map({ .ord == 27 ?? '<ESC>' !! $_ }).join,
-        q{<ESC>[4;31HS<ESC>[0m<ESC>[48;2;50;80;0mo<ESC>[0m<ESC>[31;48;2;50;80;0mme<ESC>[0m<ESC>[48;2;50;80;0m t<ESC>[0mext....<ESC>[5;31H.<ESC>[0m<ESC>[48;2;50;80;0m.<ESC>[0m<ESC>[31;48;2;50;80;0m..<ESC>[0m<ESC>[48;2;50;80;0m..<ESC>[0m.......<ESC>[6;31H.<ESC>[0m<ESC>[48;2;50;80;0m.....<ESC>[0m.......<ESC>[7;31H.............},
-        "resulting output string";
-}
-
 subtest "Invalidated painting" => {
     plan 38;
     my $c = Vikna::Canvas.new: :w<25>, :h<10>;
@@ -96,7 +109,7 @@ subtest "Invalidated painting" => {
     for ^$c.h {
         $c.imprint(0, $_, '.' x $c.w);
     }
-    $c.invalidate-reset;
+    $c.clear-inv-rect;
 
     test-points
         '.' => (
@@ -141,6 +154,124 @@ subtest "Invalidated painting" => {
             [16, 3], [17, 4], [17, 6], [16, 7], [7, 7], [6, 6], [6, 5]
         )
         ;
+}
+
+subtest "Coloring" => {
+    plan 4;
+    my $c = Vikna::Canvas.new: :w<25>, :h<10>;
+    $c.invalidate;
+    for ^10 {
+        $c.imprint(0, $_, '.' x 25);
+    }
+    $c.viewport: 1, 1, 13, 4;
+
+    my $sample = "Some text";
+    $c.imprint(1, 1, $sample, :text-only);
+    is-deeply $c.cells[1;1..^(1 + $sample.chars)], $sample.comb, "all chars in place";
+    $c.imprint(2, 1, 4, 3, :bg(50,80,0));
+
+    sub test-colored-rect($canvas, $x, $y, $w, $h, $ul-char, $br-char, $msg, *%c) {
+        $c.imprint($x, $y, $w, $h, |%c);
+        my @tpoints = {msg => "Upper left", :$x, :$y, char => $ul-char},
+                      {msg => "Bottom right", :x($x + $w - 1), :y($y + $h - 1), char => $br-char};
+        subtest $msg => {
+            for @tpoints -> %t {
+                subtest %t<msg> ~ " corner" => {
+                    my $cell = $c.cells[%t<y>; %t<x>];
+                    is $cell.^name, 'Vikna::Canvas::Cell', 'cell type';
+                    is $cell.char, %t<char>, 'char is preserved';
+                    with %c<fg> {
+                        is $cell.fg, %c<fg>, 'fg color';
+                    }
+                    else {
+                        nok $cell.fg.defined, 'fg color not specified';
+                    }
+                    with %c<bg> {
+                        is $cell.bg, %c<bg>, 'bg color';
+                    }
+                    else {
+                        nok $cell.bg.defined, 'bg color not specified';
+                    }
+                }
+            }
+        }
+    }
+
+    test-colored-rect($c, 2, 1, 5, 3, 'o', '.', "Only background color", :bg('50,80,0'));
+    test-colored-rect($c, 3, 1, 2, 2, 'm', '.', "Foreground and background", :fg<red>, :bg('50,80,0'));
+
+    is $app.screen.print(30, 3, $c.viewport, :str).comb.map({ .ord == 27 ?? '<ESC>' !! $_ }).join,
+        q{<ESC>[4;31H<ESC>[0mS<ESC>[0m<ESC>[48;2;50;80;0mo<ESC>[0m<ESC>[31;48;2;50;80;0mme<ESC>[0m<ESC>[48;2;50;80;0m t<ESC>[0mext....<ESC>[0m<ESC>[5;31H<ESC>[0m.<ESC>[0m<ESC>[48;2;50;80;0m.<ESC>[0m<ESC>[31;48;2;50;80;0m..<ESC>[0m<ESC>[48;2;50;80;0m..<ESC>[0m.......<ESC>[0m<ESC>[6;31H<ESC>[0m.<ESC>[0m<ESC>[48;2;50;80;0m.....<ESC>[0m.......<ESC>[0m<ESC>[7;31H<ESC>[0m.............<ESC>[0m},
+        "resulting output string";
+}
+
+subtest "Transparency" => {
+    plan 1;
+    my $c = Vikna::Canvas.new: :w<25>, :h<10>;
+    $c.invalidate: 0, 0, 5, 1;
+    $c.invalidate: 10, 0, 5, 1;
+    for ^10 {
+        $c.imprint(0, $_, 'X' x 25);
+    }
+    is $app.screen.print(30, 3, $c.viewport, :str).comb.map({ .ord == 27 ?? '<ESC>' !! $_ }).join,
+        q{<ESC>[4;31H<ESC>[0mXXXXX<ESC>[4;41HXXXXX<ESC>[0m<ESC>[5;31H<ESC>[0m<ESC>[0m<ESC>[6;31H<ESC>[0m<ESC>[0m<ESC>[7;31H<ESC>[0m<ESC>[0m<ESC>[8;31H<ESC>[0m<ESC>[0m<ESC>[9;31H<ESC>[0m<ESC>[0m<ESC>[10;31H<ESC>[0m<ESC>[0m<ESC>[11;31H<ESC>[0m<ESC>[0m<ESC>[12;31H<ESC>[0m<ESC>[0m<ESC>[13;31H<ESC>[0m<ESC>[0m},
+        "Transprent cells are not output";
+}
+
+subtest "Canvas -> canvas imprinting" => {
+    plan 13;
+    my $cbase = Vikna::Canvas.new: :w<25>, :h<10>;
+    $cbase.invalidate;
+    $cbase.fill("*");
+
+    test-filled-rect $cbase, 0, 0, 25, 10, '*', 'canvas fully filled';
+
+    my $ctop = Vikna::Canvas.new: :w<5>, :h<3>;
+    $ctop.invalidate;
+    $ctop.fill(" ");
+
+    $cbase.imprint(1,1, $ctop);
+
+    test-filled-rect $cbase, 1, 1, 5, 3, " ", "imprinted plain spaces";
+    # $app.screen.print(30,10, $cbase);
+    # sleep 1;
+
+    $cbase.clear-inv-rect;
+
+    $ctop = $cbase.new-from-self;
+    $ctop.invalidate;
+    $ctop.fill("×", :fg<yellow>);
+
+    test-filled-rect $ctop, 0, 0, $cbase.w, $cbase.h, "×", "prepared top canvase", :fg<yellow>;
+
+    $cbase.invalidate(5,3,5,2);
+    $cbase.invalidate(7, 7, 4, 1);
+    $cbase.imprint(0,0,$ctop);
+    # $app.screen.print(30,10, $cbase);
+    # sleep 1;
+
+    test-filled-rect $cbase, 5, 3, 5, 2, "×", "imprinted by invalidation #1", :fg<yellow>;
+    test-filled-rect $cbase, 7, 7, 4, 1, "×", "imprinted by invalidation #2", :fg<yellow>;
+    test-filled-rect $cbase, 1, 1, 3, 3, " ", "area outside of invalidation is untouched #1";
+    test-filled-rect $cbase, 1, 1, 4, 2, " ", "area outside of invalidation is untouched #2";
+    test-filled-rect $cbase, 0, 5, $cbase.w, 2, "*", "area outside of invalidation is untouched #3";
+    test-filled-rect $cbase, 10, 0, 14, 7, "*", "area outside of invalidation is untouched #4";
+
+    $cbase.clear-inv-rect;
+    $cbase.invalidate;
+    $ctop = $cbase.new-from-self;
+    $ctop.invalidate(0,1,24,9);
+    $ctop.fill("⚛", :fg<green>);
+    $ctop.clear-inv-rect;
+    $ctop.invalidate(0,0,25,1);
+    $ctop.imprint(0,0,25,1, :bg<blue>);
+    $cbase.imprint(8,4,$ctop);
+    # $app.screen.print(30,10, $cbase);
+
+    test-filled-rect $cbase, 8, 5, 17, 5, "⚛", "imprint with transparent cells: non-transparent", :fg<green>;
+    test-filled-rect $cbase, 10, 4, 15, 1, "*", "imprint with transparent cells: transparent, bg from imprint", :bg<blue>;
+    test-filled-rect $cbase, 8, 4, 2, 1, "×", "imprint with transparent cells: transparent, fg from base, bg from imprint", :fg<yellow>, :bg<blue>;
+    test-filled-rect $cbase, 5, 4, 3, 1, "×", "imprint with transparent cells: outside unchanged", :fg<yellow>;
 }
 
 done-testing;

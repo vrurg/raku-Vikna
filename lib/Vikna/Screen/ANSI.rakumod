@@ -1,0 +1,176 @@
+use v6.e.PREVIEW;
+use nqp;
+use Vikna::Screen;
+use Vikna::Color;
+
+unit class Vikna::Screen::ANSI;
+also does Vikna::Screen;
+
+use Color::Names;
+use Color;
+use AttrX::Mooish;
+use Terminal::Print::Commands;
+use Terminal::ANSIColor;
+use Vikna::Canvas;
+use Vikna::Color::RGB;
+use Vikna::Color::Named;
+use Vikna::Utils;
+
+constant RESET-COLOR = color('reset');
+
+has Str $.terminal-profile = 'ansi'; # or universal
+has &.cursor-sub is mooish(:lazy);
+
+submethod TWEAK {
+    signal(SIGWINCH).tap: { self.screen-resize }
+}
+
+method build-is-unicode {
+    %*ENV<TERM>.fc.contains: "utf".fc
+}
+
+method build-geom {
+    Vikna::Rect.new: 0, 0, w => columns(), h => rows()
+}
+
+method build-cursor-sub {
+    move-cursor-template($!terminal-profile)
+}
+
+my %color-cache = '' => '';
+my $cc-lock = Lock.new;
+multi method ansi-color(Vikna::Canvas::Cell:D $cell) {
+    self.ansi-color: :fg($cell.fg), :bg($cell.bg);
+}
+multi method ansi-color(Vikna::Color :$fg?, Vikna::Color :$bg?) {
+    self.ansi-color: :fg($fg.Str), :bg($bg.Str)
+}
+multi method ansi-color(BasicColor :$fg?, BasicColor :$bg?) {
+    my $cl := nqp::list();
+    nqp::stmts(
+        nqp::if($fg, nqp::push($cl, nqp::decont($fg))),
+        nqp::if($bg, nqp::push($cl, "on_{$bg}")),
+    );
+    nqp::join(" ", $cl)
+}
+
+method color2esc(BasicColor $color) {
+    $color ?? color($color) !! ''
+}
+
+# multi method print(::?CLASS:D: Int:D $x, Int:D $y, Vikna::Canvas:D $canvas, *%c) {
+#     self.print: $x, $y, $canvas.viewport, |%c
+# }
+multi method print(::?CLASS:D: Int:D $x, Int:D $y, Vikna::Canvas:D $viewport, *%c ) {
+    $*OUT.print: $.print( $x, $y, $viewport, :str, |%c )
+}
+
+multi method print( ::?CLASS:D: Int:D $x, Int:D $y, Vikna::Canvas:D $viewport, :$str!, *%c )
+{
+    my $vlines := nqp::list();
+    my $default-color := $.color2esc( $.ansi-color(fg => %c<default-fg>, bg => %c<default-bg>) );
+    for $viewport.cells.kv -> $vrow, @row {
+        # Mandatory move cursor once per line.
+        nqp::push($vlines, nqp::decont(&!cursor-sub($x, $y + $vrow)));
+        nqp::push($vlines, RESET-COLOR);
+        my $last-color = '';
+        my $need-pos-change := 0;
+        for @row.kv -> $vcol, \cell {
+            my $color = '';
+            my $char;
+            nqp::stmts(
+                nqp::if(
+                    nqp::istype(nqp::decont(cell), Vikna::Canvas::Cell),
+                    nqp::stmts(
+                        ($color = $.ansi-color(fg => cell.fg, bg => cell.bg)),
+                        nqp::if(
+                            ( $color ne $last-color ), # Do we need to change color?
+                            nqp::stmts(
+                                nqp::push($vlines, RESET-COLOR),
+                                nqp::if(
+                                    $color,
+                                    nqp::push($vlines, $.color2esc($color)),
+                                    nqp::push($vlines, $default-color)
+                                )
+                            )
+                        ),
+                        ($char := nqp::defor(cell.char, ''))
+                    ),
+                    nqp::stmts(
+                        nqp::if(
+                            nqp::chars($last-color),
+                            nqp::stmts(
+                                nqp::push($vlines, RESET-COLOR),
+                                nqp::push($vlines, $default-color)
+                            )
+                        ),
+                        ($char := nqp::defor(cell, ''))
+                    )
+                ),
+                nqp::if(
+                    $char,
+                    nqp::stmts(
+                        nqp::if(
+                            $need-pos-change,
+                            nqp::stmts(
+                                nqp::push($vlines, &!cursor-sub($x + $vcol, $y + $vrow)),
+                                ($need-pos-change := 0)
+                            )
+                        ),
+                        nqp::push($vlines, nqp::decont($char)),
+                    ),
+                    ($need-pos-change := 1)
+                )
+            );
+            $last-color = nqp::defor($color, '');
+        }
+        nqp::push($vlines, RESET-COLOR);
+    }
+    # my @v = $vlines;
+    # note @v.perl;
+    nqp::join("", $vlines);
+}
+
+multi method print(::?CLASS:D: Int:D $x, Int:D $y, Str:D $string, Vikna::Color:D :$fg?, Vikna::Color:D :$bg?) {
+    $*OUT.print: &!cursor-sub($x, $y) ~ $.color2esc(self.ansi-color: :$fg, :$bg) ~ $string ~ RESET-COLOR
+}
+
+multi method color(Str:D $name) {
+    # Strings of form "R,G,B,A" are to be converted into positionals
+    return self.color( |$name.split(",").map: *.Int ) if $name.index(",");
+    note "named color($name)";
+    my @ns = <X11 XKCB CSS>;
+    my @rgb;
+    for @ns -> $n {
+        with Color::Names.color-data($n){$name} {
+            @rgb.append: |$_<rgb>;
+            note "= FOUND: [{@rgb}]";
+            last
+        }
+    }
+    # TODO add support for terminal numeric colors
+    note "= CREATING COLOR OBJ";
+    Vikna::Color::Named.new: :$name, |%(<r g b> Z=> @rgb)
+}
+
+multi method color(UInt:D $r, UInt:D $g, UInt:D $b, UInt:D $a = 255) {
+    Vikna::Color::RGB.new: :$r, :$g, :$b, :$a
+}
+
+# multi method color(@chan) {
+#     Vikna::Color::RGB.new: |%( <r g b a> Z=> @chan )
+# }
+
+multi method color(*%chan) {
+    Vikna::Color::RGB.new: |%chan
+}
+
+multi method color(Vikna::Color:D $c) {
+    $c.clone
+}
+
+method init {
+}
+
+method shutdown {
+}

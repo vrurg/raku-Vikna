@@ -1,4 +1,4 @@
-use v6;
+use v6.e.PREVIEW;
 use Text::UI::Widget;
 unit class Text::UI::Label;
 also does Text::UI::Widget;

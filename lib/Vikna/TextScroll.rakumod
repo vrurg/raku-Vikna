@@ -1,6 +1,7 @@
-use v6;
+use v6.e.PREVIEW;
 use Vikna::Scrollable;
 use Vikna::Widget;
+
 unit class Vikna::TextScroll;
 also does Vikna::Scrollable;
 also is Vikna::Widget;
@@ -85,8 +86,9 @@ method add-text(Str:D $text is copy) {
     self.set-area: lines => +@!buffer, columns => $max-cols;
     self.set-pos: dy => $.lines - $.h if $do-scroll;
 
-    self.dispatch(Event::BufChange, :$old-size, :size( @!buffer.elems ));
-    self
+    self.dispatch: Event::BufChange, :$old-size, :size( @!buffer.elems );
+    self.invalidate;
+    self.dispatch: Event::RedrawRequest;
 }
 
 method print(**@args) {
@@ -97,11 +99,11 @@ method say(**@args) {
     self.add-text: (|@args, "\n").join: ""
 }
 
-method draw( :$grid ) {
+method draw( :$canvas ) {
     callsame;
     for $.dy..^($.dy + $.h) -> $lnum {
         my $y = $lnum - $.dy;
         my $out = $lnum < @!buffer ?? @!buffer[$lnum].substr($.dx, $.w) !! "";
-        $grid.set-span-text($.dx, $y, $out.chomp);
+        $canvas.imprint($.dx, $y, $out.chomp);
     }
 }
