@@ -51,9 +51,10 @@ our class Cell {
     method Str { $!char }
 }
 
-has Vikna::Rect:D $.geom is required handles <x y w h contains>;
+has Vikna::Rect:D $.geom is required;
 has @.cells is mooish(:lazy, :clearer);
-has @!paintable-mask is mooish(:lazy, :clearer);
+has Mu $!paintable-mask; # is mooish(:lazy, :clearer);
+has Bool $!paintable-expired = True;
 
 # Viewport
 has Vikna::Rect $!vp-geom is mooish(:lazy, :clearer);
@@ -119,8 +120,7 @@ proto method imprint(UInt:D $x where * < $.w, UInt:D $y where * < $.h, |) {
 }
 
 # a string
-multi method imprint(UInt:D $x where * < $.w, UInt:D $y where * < $.h, Str:D $line,
-                        :$fg? is copy, :$bg? is copy, Int :$span?)
+multi method imprint($x, $y, $line, :$fg? is copy, :$bg? is copy, Int :$span?)
 {
     my $len = min $.w, $span // $line.chars;
     my @chars = $line.substr(0, $len).comb;
@@ -128,21 +128,22 @@ multi method imprint(UInt:D $x where * < $.w, UInt:D $y where * < $.h, Str:D $li
     $fg = $fg.join(",") if $fg ~~ Positional:D;
     $bg = $fg.join(",") if $bg ~~ Positional:D;
     my $use-Cell = $fg || $bg;
+    my @row := @!cells[$y];
     for @chars.kv -> $i, $char {
-        my $cx = $x + $i;
+        my $cx := nqp::add_i($x, $i);
         next unless $.is-paintable($cx, $y);
         # Condition branches must be the same as set-cell method bodies. Avoiding extra method call for perofrmance.
         if $use-Cell {
-            @!cells[$y][$cx] = Cell.new: :$char, :$fg, :$bg;
+            @row[$cx] = Cell.new: :$char, :$fg, :$bg;
         }
         else {
-            @!cells[$y][$cx] = $char;
+            @row[$cx] = $char;
         }
     }
 }
 
 # fill a rect with color
-multi method imprint(UInt:D $x where * < $.w, UInt:D $y where * < $.h, UInt:D $w where * > 0, UInt:D $h where * > 0, :$fg? is copy, :$bg? is copy) {
+multi method imprint($x, $y, $w, $h, :$fg? is copy, :$bg? is copy) {
     for $y..^(min $.h, $y + $h) -> $row {
         my @row := @!cells[$row];
         for $x..^(min $.w, $x + $w) -> $col {
@@ -153,7 +154,7 @@ multi method imprint(UInt:D $x where * < $.w, UInt:D $y where * < $.h, UInt:D $w
 }
 
 # a string but preserve colors
-multi method imprint(UInt:D $x where * < $.w, UInt:D $y where * < $.h, Str:D $line, Bool :$text-only! where *) {
+multi method imprint($x, $y, Str:D $line, Bool :$text-only! where *) {
     my @row = @!cells[$y];
     my @chars = $line.comb;
     for ^(min $.w - $x, +@chars) -> $i {
@@ -172,7 +173,7 @@ multi method imprint(UInt:D $x where * < $.w, UInt:D $y where * < $.h, Str:D $li
 }
 
 # Copy from another canvas
-multi method imprint(UInt:D $x where * < $.w, UInt:D $y where * < $.h, ::?CLASS:D $from) {
+multi method imprint($x, $y, ::?CLASS:D $from) {
     my @from-cells := $from.cells;
     nqp::stmts(
         (my $from-y = $from.h),
@@ -213,27 +214,6 @@ multi method imprint(UInt:D $x where * < $.w, UInt:D $y where * < $.h, ::?CLASS:
             )
         )
     );
-    # for ^(min $from.h, $.h - $y) -> $from-y {
-    #     my $to-y := $y + $from-y;
-    #     my @from-row := @from-cells[$from-y];
-    #     my @row := @!cells[$to-y];
-    #     for ^(min $from.w, $.w - $x) -> $from-x {
-    #         my $to-x := $x + $from-x;
-    #         next unless $.is-paintable($to-x, $y + $from-y);
-    #         my \from-cell := @from-row[$from-x];
-    #         my %from-params;
-    #         my $use-Cell := 0;
-    #         if nqp::istype(from-cell, Cell) {
-    #             for <fg bg> -> $fattr {
-    #                 %from-params{$fattr} = from-cell."$fattr"() if from-cell."$fattr"()
-    #             }
-    #             @row[$to-x] = Cell.FROM(from-cell || @row[$to-x], |%from-params);
-    #         }
-    #         else {
-    #             @row[$to-x] = from-cell || @row[$to-x];
-    #         }
-    #     }
-    # }
 }
 
 #| With four parameters viewport is been set.
@@ -275,10 +255,12 @@ multi method invalidate(+@rect where *.elems == 4) {
 
 method is-paintable(::?CLASS:D: $x, $y) {
     # By default the whole canvas is non-paintable unless invalidated rects are added.
-    return False unless    $x < $.w
-                        && $y < $.h
+    my $w := $.w;
+    return False unless    nqp::isle_i($x, $w)
+                        && nqp::isle_i($y, $.h)
                         && nqp::elems($!inv-rects);
-    return ? @!paintable-mask[$y][$x]
+    self!build-paintable-mask if $!paintable-expired;
+    nqp::atpos_i(nqp::decont($!paintable-mask), nqp::add_i(nqp::mul_i($w, $y), $x))
 }
 
 #| See if the whole rectange is inside another invalidated rectangle.
@@ -306,31 +288,33 @@ multi method is-paintable-rect(::?CLASS:D: Vikna::Rect:D $rect) {
 }
 
 method !build-paintable-mask {
-    my @mask = [ [ 0 xx $.w ] xx $.h ];
+    $!paintable-mask := nqp::list_i();
     my $y = $.h;
     $*VIKNA-APP.debug("build-paintable-mask from ", nqp::elems($!inv-rects), " rects");
     nqp::while(
         nqp::isge_i(--$y, 0),
         nqp::stmts(
             (my $x = $.w),
-            (my @mrow := @mask[$y]),
+            (my $yshift = $y * $.w),
             nqp::while(
                 nqp::isge_i(--$x, 0),
                 nqp::stmts(
-                    # (my \iter = nqp::iterator($!inv-rects)),
                     (my $i = nqp::elems($!inv-rects)),
+                    (my $paintable := nqp::unbox_i(0)),
                     nqp::while(
-                        nqp::if(nqp::isge_i(--$i, 0), !@mrow[$x]),
+                        nqp::if(nqp::isge_i(--$i, 0), !$paintable),
                         nqp::stmts(
                             (my \inv-rect := nqp::atpos($!inv-rects, $i)),
-                            (@mrow[$x] = inv-rect.contains($x, $y))
+                            ($paintable := nqp::istrue(inv-rect.contains($x, $y)))
                         )
-                    )
+                    ),
+                    (my $pos := $yshift + $x),
+                    (nqp::bindpos_i($!paintable-mask, $pos, $paintable)),
                 )
             )
         )
     );
-    @mask
+    $!paintable-expired = False;
 }
 
 # multi method add-inv-rect(UInt:D $x, UInt:D $y, UInt:D $w where * > 0, UInt:D $h where * > 0) {
@@ -340,13 +324,15 @@ method !build-paintable-mask {
 multi method add-inv-rect(+@rect where *.elems == 4) {
     $*VIKNA-APP.debug: "Add inv rect \@: ", @rect;
     nqp::push( $!inv-rects, Vikna::Rect.new: |@rect );
-    self!clear-paintable-mask;
+    $!paintable-expired = True;
+    # self!clear-paintable-mask;
 }
 
 multi method add-inv-rect(Vikna::Rect:D $r) {
     $*VIKNA-APP.debug: "Add inv rect: ", $r;
     nqp::push( $!inv-rects, $r );
-    self!clear-paintable-mask;
+    $!paintable-expired = True;
+    # self!clear-paintable-mask;
 }
 
 method clear-inv-rect {
@@ -363,3 +349,8 @@ multi method fill(Str:D $char where *.chars == 1, BasicColor :$fg?, BasicColor :
         $.imprint(0, $row, $line, :$fg, :$bg);
     }
 }
+
+method x { $!geom.x }
+method y { $!geom.y }
+method w { $!geom.w }
+method h { $!geom.h }

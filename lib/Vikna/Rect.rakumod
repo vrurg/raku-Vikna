@@ -133,8 +133,7 @@ multi method dissect(::?CLASS:D: @by) {
     nqp::hllize($dissects);
 }
 
-multi method contains(::?CLASS:D: Vikna::Point:D $p) { $.contains: $p.x, $p.y }
-multi method contains(::?CLASS:D: Int:D $px, Int:D $py) {
+method contains(::?CLASS:D: Int:D $px, Int:D $py) {
     nqp::if(
         nqp::isge_i($px, $!x),
         nqp::if(
@@ -146,8 +145,9 @@ multi method contains(::?CLASS:D: Int:D $px, Int:D $py) {
         )
     )
 }
-multi method contains(::?CLASS:D: Vikna::Rect:D $r) { $.contains: $r.x, $r.y, $r.w, $r.h }
-multi method contains(::?CLASS:D: Int:D $x, Int:D $y, Int:D $w, Int:D $h) {
+
+multi method contains-rect(::?CLASS:D: Vikna::Rect:D $r) { $.contains: $r.x, $r.y, $r.w, $r.h }
+multi method contains-rect(::?CLASS:D: Int:D $x, Int:D $y, Int:D $w, Int:D $h) {
     nqp::if( self.contains($x, $y), self.contains($x + $w - 1, $y + $h - 1) )
 }
 

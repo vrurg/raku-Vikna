@@ -168,7 +168,7 @@ method begin-draw(Vikna::Canvas $canvas? is copy --> Vikna::Canvas) {
     $canvas //= $!auto-clear || $.w != $!canvas.w || $.h != $!canvas.h
                 ?? $.create: Vikna::Canvas, geom => $!geom.clone,
                     |($!auto-clear ?? () !! :from-cells($!canvas.cells))
-                !! $!canvas;
+                !! $!canvas; # <-- XXX potentially problematic.
     $.debug: "begin-draw canvas: ", $canvas.WHICH, " ", $canvas.w, " x ", $canvas.h;
     self.invalidate if $!auto-clear;
     $!draw-canvas = $canvas;
