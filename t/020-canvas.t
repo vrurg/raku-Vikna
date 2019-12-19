@@ -17,25 +17,16 @@ sub test-filled-rect(Vikna::Canvas:D $c, $x, $y, $w, $h, $char, Str:D $msg,
 {
     subtest "Filled canvas rectangle: " ~ $msg => {
         plan 4;
-        ok $c.contains($x, $y, $w, $h), "required rectangle fits into the canvas";
-        my @cells := $c.cells;
+        ok $c.geom.contains-rect($x, $y, $w, $h), "required rectangle fits into the canvas";
         my $char-matches = 0;
         my $fg-matches = 0;
         my $bg-matches = 0;
         for $y..($y + $h - 1) -> $row {
-            my @row := @cells[$row];
             for $x..($x + $w - 1) -> $col {
-                given @row[$col] {
-                    when Vikna::Canvas::Cell {
-                        ++$char-matches if .char ~~ $char;
-                        ++$fg-matches if $fg ~~ not-passed || .fg ~~ $fg;
-                        ++$bg-matches if $bg ~~ not-passed || .bg ~~ $bg;
-                    }
-                    default {
-                        ++$char-matches if $_ ~~ $char;
-                        ++$fg-matches if $fg ~~ not-passed;
-                        ++$bg-matches if $bg ~~ not-passed;
-                    }
+                given $c.pick($col, $row) {
+                    ++$char-matches if .char ~~ $char;
+                    ++$fg-matches if $fg ~~ not-passed || .fg ~~ $fg;
+                    ++$bg-matches if $bg ~~ not-passed || .bg ~~ $bg;
                 }
             }
         }
@@ -100,7 +91,7 @@ subtest "Invalidated painting" => {
     sub test-points(**@p) {
         for @p -> (:key($char), :value(@points)) {
             for @points -> @c {
-                is $c.cells[@c[1];@c[0]], $char, "found '$char' at {@c[0]},{@c[1]}";
+                is $c.pick(@c[0], @c[1]).char, $char, "found '$char' at {@c[0]},{@c[1]}";
             }
         }
     }
@@ -167,7 +158,10 @@ subtest "Coloring" => {
 
     my $sample = "Some text";
     $c.imprint(1, 1, $sample, :text-only);
-    is-deeply $c.cells[1;1..^(1 + $sample.chars)], $sample.comb, "all chars in place";
+    is-deeply
+        (1..^(1 + $sample.chars)).map( { $c.pick($_, 1).char } ),
+        $sample.comb,
+        "all chars in place";
     $c.imprint(2, 1, 4, 3, :bg(50,80,0));
 
     sub test-colored-rect($canvas, $x, $y, $w, $h, $ul-char, $br-char, $msg, *%c) {
@@ -176,21 +170,21 @@ subtest "Coloring" => {
                       {msg => "Bottom right", :x($x + $w - 1), :y($y + $h - 1), char => $br-char};
         subtest $msg => {
             for @tpoints -> %t {
-                subtest %t<msg> ~ " corner" => {
-                    my $cell = $c.cells[%t<y>; %t<x>];
+                subtest %t<msg> ~ " corner at {%t<x>},{%t<y>}"  => {
+                    my $cell = $c.pick(%t<x>, %t<y>);
                     is $cell.^name, 'Vikna::Canvas::Cell', 'cell type';
                     is $cell.char, %t<char>, 'char is preserved';
                     with %c<fg> {
                         is $cell.fg, %c<fg>, 'fg color';
                     }
                     else {
-                        nok $cell.fg.defined, 'fg color not specified';
+                        nok ?$cell.fg, 'fg color not specified';
                     }
                     with %c<bg> {
                         is $cell.bg, %c<bg>, 'bg color';
                     }
                     else {
-                        nok $cell.bg.defined, 'bg color not specified';
+                        nok ?$cell.bg, 'bg color not specified';
                     }
                 }
             }
@@ -267,6 +261,7 @@ subtest "Canvas -> canvas imprinting" => {
     $ctop.imprint(0,0,25,1, :bg<blue>);
     $cbase.imprint(8,4,$ctop);
     # $app.screen.print(30,10, $cbase);
+    # sleep 3;
 
     test-filled-rect $cbase, 8, 5, 17, 5, "⚛", "imprint with transparent cells: non-transparent", :fg<green>;
     test-filled-rect $cbase, 10, 4, 15, 1, "*", "imprint with transparent cells: transparent, bg from imprint", :bg<blue>;

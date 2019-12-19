@@ -22,7 +22,7 @@ use Vikna::Color;
 use Vikna::Utils;
 
 
-our class Cell {
+class Cell {
     has Str $.char where { !.defined || .chars == 0 | 1 };
     has BasicColor $.fg;
     has BasicColor $.bg;
@@ -52,9 +52,15 @@ our class Cell {
 }
 
 has Vikna::Rect:D $.geom is required;
-has @.cells is mooish(:lazy, :clearer);
-has Mu $!paintable-mask; # is mooish(:lazy, :clearer);
+has Mu $!paintable-mask;
 has Bool $!paintable-expired = True;
+
+# nqp::list() of 3 planes:
+# 0 - characters
+# 1 - fg color
+# 2 - bg color
+# Each plane is nqp::list() of rows, each row is nqp::list() of elems.
+has Mu $!planes;
 
 # Viewport
 has Vikna::Rect $!vp-geom is mooish(:lazy, :clearer);
@@ -69,26 +75,69 @@ multi method new(Dimension :$w, Dimension :$h, *%c) {
     self.new: geom => Vikna::Rect.new(:0x, :0y, :$w, :$h), |%c
 }
 
-multi submethod TWEAK(:@from-cells where ?*, *%c) {
-    if @from-cells {
-        for @from-cells[ ^min( self.h, +@from-cells ) ].kv -> $i, @row {
-            my $w = self.w min +@row;
-            @!cells[$i].splice( 0, $w, @row[^$w]);
-        }
-    }
-    nextsame
+submethod TWEAK(*%c) {
+    $!inv-rects := nqp::list();
+    self!setup-planes(|%c);
 }
 
-multi submethod TWEAK {
-    $!inv-rects := nqp::list();
+method !setup-planes(:$from?, :$viewport?) {
+    my ($w, $h) = $.w, $.h;
+    my ($from-x, $from-y, $from-w, $from-h, $from-planes);
+    my ($copy-w, $copy-h);
+    if $from {
+        if $viewport {
+            $from-x := $from.vx;
+            $from-y := $from.vy;
+            $from-w := $from.vw;
+            $from-h := $from.vh;
+        }
+        else {
+            $from-x := $from-y := 0;
+            $from-w := $from.w;
+            $from-h := $from.h;
+        }
+        $copy-w = $w min $from-w;
+        $copy-h = $h min $from-h;
+        $from-planes := nqp::getattr(nqp::decont($from), ::?CLASS, '$!planes');
+    }
+    my $p-idx = -1;
+    $!planes := nqp::list();
+    nqp::while(
+        (++$p-idx < 3),
+        nqp::stmts(
+            (my $plane := nqp::list()),
+            (my $from-plane := nqp::if($from, nqp::atpos($from-planes, $p-idx), Nil)),
+            nqp::push($!planes, $plane),
+            (my $y = -1),
+            nqp::while(
+                (++$y < $h),
+                nqp::stmts(
+                    (my $row := nqp::list()),
+                    (my $from-row := nqp::if($from, nqp::atpos($from-plane, ($from-y + $y)), Nil)),
+                    nqp::push($plane, $row),
+                    (my $x = -1),
+                    nqp::while(
+                        (++$x < $w),
+                        nqp::stmts(
+                            (my $sym := ''),
+                            nqp::if(
+                                $from-row,
+                                nqp::if(
+                                    nqp::if(($x < $copy-w), ($y < $copy-h)),
+                                    ($sym := nqp::atpos($from-row, ($from-x + $x)))
+                                )
+                            ),
+                            (nqp::push($row, $sym))
+                        )
+                    )
+                )
+            )
+        )
+    )
 }
 
 method !build-vp-geom {
     $!geom.clone
-}
-
-method build-cells {
-    [ Nil xx $.w ] xx $.h
 }
 
 method new-from-self(::?CLASS:D: *%args) {
@@ -96,23 +145,11 @@ method new-from-self(::?CLASS:D: *%args) {
 }
 
 method dup(::?CLASS:D: *%args) {
-    self.create: self.WHAT, geom => $!geom.clone, vp-geom => $!vp-geom.clone, :from-cells(@!cells), |%args;
+    self.create: self.WHAT, geom => $!geom.clone, vp-geom => $!vp-geom.clone, :from(self), |%args;
 }
 
 method clear {
     $.clear-cells
-}
-
-multi method set-cell(UInt:D $x where * < $.w, UInt:D $y where * < $.h, Str:D $char where *.chars == 1) {
-    @!cells[$y][$x] = $char;
-}
-
-multi method set-cell(UInt:D $x where * < $.w, UInt:D $y where * < $.h, Cell:D $c) {
-    @!cells[$y][$x] = $c
-}
-
-multi method set-cell(UInt:D $x where * < $.w, UInt:D $y where * < $.h, *%c) {
-    @!cells[$y][$x] = Cell.new: |%c;
 }
 
 proto method imprint(UInt:D $x where * < $.w, UInt:D $y where * < $.h, |) {
@@ -122,103 +159,148 @@ proto method imprint(UInt:D $x where * < $.w, UInt:D $y where * < $.h, |) {
 # a string
 multi method imprint($x, $y, $line, :$fg? is copy, :$bg? is copy, Int :$span?)
 {
-    my $len = min $.w, $span // $line.chars;
-    my @chars = $line.substr(0, $len).comb;
-    # A color can be a triplet of color channels.
+    return if $y >= $.h || $x >= $.w;
+    self!build-paintable-mask;
     $fg = $fg.join(",") if $fg ~~ Positional:D;
-    $bg = $fg.join(",") if $bg ~~ Positional:D;
-    my $use-Cell = $fg || $bg;
-    my @row := @!cells[$y];
-    for @chars.kv -> $i, $char {
-        my $cx := nqp::add_i($x, $i);
-        next unless $.is-paintable($cx, $y);
-        # Condition branches must be the same as set-cell method bodies. Avoiding extra method call for perofrmance.
-        if $use-Cell {
-            @row[$cx] = Cell.new: :$char, :$fg, :$bg;
-        }
-        else {
-            @row[$cx] = $char;
-        }
-    }
+    $bg = $bg.join(",") if $bg ~~ Positional:D;
+    nqp::stmts(
+        (my $char-count := $line.chars),
+        (my $len := min ($.w - $x), ($span // $char-count)),
+        (my $chars := nqp::split('', nqp::substr($line, 0, $len))),
+        nqp::if(nqp::istype($fg, Positional:D), ($fg := $fg.join(","))),
+        nqp::if(nqp::istype($bg, Positional:D), ($bg := $bg.join(","))),
+        (my $crow := nqp::atpos(nqp::atpos($!planes, 0), $y)),
+        (my $fgrow := nqp::atpos(nqp::atpos($!planes, 1), $y)),
+        (my $bgrow := nqp::atpos(nqp::atpos($!planes, 2), $y)),
+        (my $prow := nqp::atpos($!paintable-mask, $y)),
+        (my $i = -1),
+        nqp::while(
+            (++$i < $len),
+            nqp::stmts(
+                (my $cx := $x + $i),
+                nqp::if(
+                    nqp::atpos_i($prow, $cx),
+                    nqp::stmts(
+                        nqp::if($i < $char-count, nqp::bindpos($crow, $cx, nqp::atpos($chars, $i))),
+                        nqp::if($fg, nqp::bindpos($fgrow, $cx, $fg)),
+                        nqp::if($bg, nqp::bindpos($bgrow, $cx, $bg)),
+                    )
+                )
+            )
+        )
+    )
 }
 
 # fill a rect with color
 multi method imprint($x, $y, $w, $h, :$fg? is copy, :$bg? is copy) {
-    for $y..^(min $.h, $y + $h) -> $row {
-        my @row := @!cells[$row];
-        for $x..^(min $.w, $x + $w) -> $col {
-            next unless $.is-paintable($col, $row);
-            @row[$col] = Cell.FROM( @row[$col], :$fg, :$bg );
-        }
-    }
-}
-
-# a string but preserve colors
-multi method imprint($x, $y, Str:D $line, Bool :$text-only! where *) {
-    my @row = @!cells[$y];
-    my @chars = $line.comb;
-    for ^(min $.w - $x, +@chars) -> $i {
-        my $cx = $x + $i;
-        next if $.is-paintable( $cx, $y );
-        nqp::stmts(
-            ( my \cell = @row[ $cx + $i ] ),
-            ( my $char = @chars[$i] // '' ),
-            nqp::if(
-                nqp::istype( cell, Cell ),
-                ( cell = Cell.FROM( cell, :$char ) ),
-                ( cell = $char )
+    self!build-paintable-mask;
+    $fg = $fg.join(",") if $fg ~~ Positional:D;
+    $bg = $bg.join(",") if $bg ~~ Positional:D;
+    nqp::stmts(
+        (my $cw := min $x + $w, $.w),
+        (my $ch := min $y + $h, $.h),
+        (my $cy = ($y max 0) - 1),
+        (my $fgplane := nqp::atpos($!planes, 1)),
+        (my $bgplane := nqp::atpos($!planes, 2)),
+        nqp::while(
+            (++$cy < $ch),
+            nqp::stmts(
+                (my $fgrow := nqp::atpos($fgplane, $cy)),
+                (my $bgrow := nqp::atpos($bgplane, $cy)),
+                (my $prow := nqp::atpos($!paintable-mask, $cy)),
+                (my $cx = ($x max 0) - 1),
+                nqp::while(
+                    (++$cx < $cw),
+                    nqp::if(
+                        nqp::atpos_i($prow, $cx),
+                        nqp::stmts(
+                            nqp::if($fg, nqp::bindpos($fgrow, $cx, $fg)),
+                            nqp::if($bg, nqp::bindpos($bgrow, $cx, $bg)),
+                        )
+                    )
+                ),
             )
-        );
-    }
+        )
+    );
 }
 
 # Copy from another canvas
 multi method imprint($x, $y, ::?CLASS:D $from) {
-    my @from-cells := $from.cells;
+    self!build-paintable-mask;
     nqp::stmts(
+        (my $from-planes := nqp::getattr(nqp::decont($from), ::?CLASS, '$!planes')),
+        (my $from-cplane := nqp::atpos($from-planes, 0)),
+        (my $from-fgplane := nqp::atpos($from-planes, 1)),
+        (my $from-bgplane := nqp::atpos($from-planes, 2)),
+        (my $cplane := nqp::atpos($!planes, 0)),
+        (my $fgplane := nqp::atpos($!planes, 1)),
+        (my $bgplane := nqp::atpos($!planes, 2)),
+        (my $from-w := $from.w),
+        (my $w := $.w),
         (my $from-y = $from.h),
         nqp::if($from-y > (my $hh := $.h - $y), ($from-y = $hh)),
         nqp::while(
-            nqp::isge_i(--$from-y, 0),
+            (--$from-y >= 0),
             nqp::stmts(
                 (my $to-y := $y + $from-y),
-                (my @from-row := @from-cells[$from-y]),
-                (my @row := @!cells[$to-y]),
-                (my $from-x = $from.w),
-                nqp::if($from-x > (my $ww = $.w - $x), ($from-x = $ww)),
+                (my $from-crow := nqp::atpos($from-cplane, $from-y)),
+                (my $from-fgrow := nqp::atpos($from-fgplane, $from-y)),
+                (my $from-bgrow := nqp::atpos($from-bgplane, $from-y)),
+                (my $crow := nqp::atpos($cplane, $to-y)),
+                (my $fgrow := nqp::atpos($fgplane, $to-y)),
+                (my $bgrow := nqp::atpos($bgplane, $to-y)),
+                (my $prow := nqp::atpos($!paintable-mask, $to-y)),
+                (my $from-x = $from-w),
+                nqp::if($from-x > (my $ww := $w - $x), ($from-x = $ww)),
                 nqp::while(
-                    nqp::isge_i(--$from-x, 0),
+                    (--$from-x >= 0),
                     nqp::stmts(
                         (my $to-x := $x + $from-x),
                         nqp::if(
-                            $.is-paintable($to-x, $to-y),
+                            nqp::atpos_i($prow, $to-x), # is paintable
                             nqp::stmts(
-                                (my $from-cell := @from-row[$from-x]),
-                                nqp::if(
-                                    nqp::istype($from-cell, Cell),
-                                    nqp::stmts(
-                                        (my $fg := $from-cell.fg),
-                                        (my $bg := $from-cell.bg),
-                                        nqp::if(
-                                            $fg || $bg,
-                                            (@row[$to-x] = Cell.FROM($from-cell || @row[$to-x], :$fg, :$bg)),
-                                            nqp::if($from-cell, (@row[$to-x] = $from-cell))
-                                        ),
-                                    ),
-                                    nqp::if($from-cell, (@row[$to-x] = $from-cell))
-                                )
+                                nqp::if((my $from-char := nqp::atpos($from-crow, $from-x)), nqp::bindpos($crow, $to-x, $from-char)),
+                                nqp::if((my $from-fg := nqp::atpos($from-fgrow, $from-x)), nqp::bindpos($fgrow, $to-x, $from-fg)),
+                                nqp::if((my $from-bg := nqp::atpos($from-bgrow, $from-x)), nqp::bindpos($bgrow, $to-x, $from-bg)),
                             )
                         )
                     )
                 )
             )
         )
-    );
+    )
+}
+
+method pick($x is copy, $y is copy, :$viewport?) {
+    if $viewport {
+        return if $x < $.vx || $x >= ($.vx + $.vw) || $y < $.vy || $y >= ($.vy + $.vh);
+        $x += $.vx;
+        $y += $.vy;
+    }
+    else {
+        return if $x < 0 || $x >= $.w || $y < 0 || $y >= $.h;
+    }
+    nqp::stmts(
+        (my $cplane := nqp::atpos($!planes, 0)),
+        (my $fgplane := nqp::atpos($!planes, 1)),
+        (my $bgplane := nqp::atpos($!planes, 2)),
+        Cell.new(
+            char => nqp::atpos(nqp::atpos($cplane, $y), $x),
+            fg => nqp::atpos(nqp::atpos($fgplane, $y), $x),
+            bg => nqp::atpos(nqp::atpos($bgplane, $y), $x),
+        )
+    )
+}
+
+method get-planes(\cplane, \fgplane, \bgplane) is raw {
+    cplane = nqp::atpos($!planes, 0);
+    fgplane = nqp::atpos($!planes, 1);
+    bgplane = nqp::atpos($!planes, 2);
 }
 
 #| With four parameters viewport is been set.
 multi method viewport(UInt:D $x, UInt:D $y, Int:D $w where * > 0, Int:D $h where * > 0 --> Nil) {
-    $.throw: X::Canvas::BadViewport, :$x, :$y, :$w, :$h unless $!geom.contains($x, $y, $w, $h);
+    $.throw: X::Canvas::BadViewport, :$x, :$y, :$w, :$h unless $!geom.contains-rect($x, $y, $w, $h);
     $!vp-geom = $.create: Vikna::Rect, :$x, :$y, :$w, :$h;
 }
 
@@ -227,19 +309,8 @@ multi method viewport(Vikna::Rect:D $rect) {
     $!vp-geom = $rect.clone;
 }
 
-#| Returns array of rows of cells
-multi method viewport( --> Vikna::Canvas ) {
-    my ($vx, $vy, $vw, $vh) = $!vp-geom.x, $!vp-geom.y, $!vp-geom.w, $!vp-geom.h;
-    my @viewport = [] xx $vh;
-    for ^$vh -> $vrow {
-        my @row := @!cells[$vy + $vrow];
-        my @vrow := @viewport[$vrow];
-        for ^$vw -> $vcol {
-            my \cell = @row[$vx + $vcol];
-            @vrow[$vcol] = cell ~~ Cell ?? cell.clone !! cell;
-        }
-    }
-    $.create: Vikna::Canvas, geom => $!vp-geom, from-cells => @viewport
+multi method viewport(--> Vikna::Canvas:D) {
+    self.new: geom => $!vp-geom, :from(self), :viewport;
 }
 
 multi method invalidate(::?CLASS:D:) {
@@ -249,8 +320,8 @@ multi method invalidate(::?CLASS:D: Vikna::Rect:D $rect) {
     $.add-inv-rect($rect) unless $.is-paintable-rect($rect);
 }
 multi method invalidate(+@rect where *.elems == 4) {
-    $.add-inv-rect(@rect)
-        unless $.is-paintable-rect(@rect);
+    my $r := $.create: Vikna::Rect, @rect;
+    $.add-inv-rect: $r unless $.is-paintable-rect: $r;
 }
 
 method is-paintable(::?CLASS:D: $x, $y) {
@@ -260,7 +331,7 @@ method is-paintable(::?CLASS:D: $x, $y) {
                         && nqp::isle_i($y, $.h)
                         && nqp::elems($!inv-rects);
     self!build-paintable-mask if $!paintable-expired;
-    nqp::atpos_i(nqp::decont($!paintable-mask), nqp::add_i(nqp::mul_i($w, $y), $x))
+    nqp::atpos_i(nqp::atpos($!paintable-mask, $y), $x)
 }
 
 #| See if the whole rectange is inside another invalidated rectangle.
@@ -288,28 +359,30 @@ multi method is-paintable-rect(::?CLASS:D: Vikna::Rect:D $rect) {
 }
 
 method !build-paintable-mask {
-    $!paintable-mask := nqp::list_i();
-    my $y = $.h;
-    $*VIKNA-APP.debug("build-paintable-mask from ", nqp::elems($!inv-rects), " rects");
+    return unless $!paintable-expired;
+    $!paintable-mask := nqp::list();
+    my $y = -1;
+    my $h = $.h;
+    my $w = $.w;
     nqp::while(
-        nqp::isge_i(--$y, 0),
+        (++$y < $h),
         nqp::stmts(
-            (my $x = $.w),
-            (my $yshift = $y * $.w),
+            (my $x = -1),
+            (my $row := nqp::list_i()),
+            nqp::push($!paintable-mask, $row),
             nqp::while(
-                nqp::isge_i(--$x, 0),
+                (++$x < $w),
                 nqp::stmts(
                     (my $i = nqp::elems($!inv-rects)),
-                    (my $paintable := nqp::unbox_i(0)),
+                    (my $paintable := 0),
                     nqp::while(
-                        nqp::if(nqp::isge_i(--$i, 0), !$paintable),
+                        nqp::if((--$i >= 0), !$paintable),
                         nqp::stmts(
                             (my \inv-rect := nqp::atpos($!inv-rects, $i)),
                             ($paintable := nqp::istrue(inv-rect.contains($x, $y)))
                         )
                     ),
-                    (my $pos := $yshift + $x),
-                    (nqp::bindpos_i($!paintable-mask, $pos, $paintable)),
+                    (nqp::bindpos_i($row, $x, $paintable)),
                 )
             )
         )
@@ -322,14 +395,14 @@ method !build-paintable-mask {
 # }
 
 multi method add-inv-rect(+@rect where *.elems == 4) {
-    $*VIKNA-APP.debug: "Add inv rect \@: ", @rect;
+    .debug: "Add inv rect \@: ", @rect with $*VIKNA-APP;
     nqp::push( $!inv-rects, Vikna::Rect.new: |@rect );
     $!paintable-expired = True;
     # self!clear-paintable-mask;
 }
 
 multi method add-inv-rect(Vikna::Rect:D $r) {
-    $*VIKNA-APP.debug: "Add inv rect: ", $r;
+    .debug: "Add inv rect: ", $r with $*VIKNA-APP;
     nqp::push( $!inv-rects, $r );
     $!paintable-expired = True;
     # self!clear-paintable-mask;
@@ -354,3 +427,7 @@ method x { $!geom.x }
 method y { $!geom.y }
 method w { $!geom.w }
 method h { $!geom.h }
+method vx { $!vp-geom.x }
+method vy { $!vp-geom.y }
+method vw { $!vp-geom.w }
+method vh { $!vp-geom.h }

@@ -45,7 +45,7 @@ multi method ansi-color(Vikna::Canvas::Cell:D $cell) {
 multi method ansi-color(Vikna::Color :$fg?, Vikna::Color :$bg?) {
     self.ansi-color: :fg($fg.Str), :bg($bg.Str)
 }
-multi method ansi-color(BasicColor :$fg?, BasicColor :$bg?) {
+multi method ansi-color(:$fg?, :$bg?) {
     my $cl := nqp::list();
     nqp::stmts(
         nqp::if($fg, nqp::push($cl, nqp::decont($fg))),
@@ -69,63 +69,60 @@ multi method print( ::?CLASS:D: Int:D $x, Int:D $y, Vikna::Canvas:D $viewport, :
 {
     my $vlines := nqp::list();
     my $default-color := $.color2esc( $.ansi-color(fg => %c<default-fg>, bg => %c<default-bg>) );
-    for $viewport.cells.kv -> $vrow, @row {
-        # Mandatory move cursor once per line.
-        nqp::push($vlines, nqp::decont(&!cursor-sub($x, $y + $vrow)));
-        nqp::push($vlines, RESET-COLOR);
-        my $last-color = '';
-        my $need-pos-change := 0;
-        for @row.kv -> $vcol, \cell {
-            my $color = '';
-            my $char;
-            nqp::stmts(
-                nqp::if(
-                    nqp::istype(nqp::decont(cell), Vikna::Canvas::Cell),
-                    nqp::stmts(
-                        ($color = $.ansi-color(fg => cell.fg, bg => cell.bg)),
-                        nqp::if(
-                            ( $color ne $last-color ), # Do we need to change color?
-                            nqp::stmts(
-                                nqp::push($vlines, RESET-COLOR),
-                                nqp::if(
-                                    $color,
-                                    nqp::push($vlines, $.color2esc($color)),
-                                    nqp::push($vlines, $default-color)
-                                )
-                            )
-                        ),
-                        ($char := nqp::defor(cell.char, ''))
-                    ),
-                    nqp::stmts(
-                        nqp::if(
-                            nqp::chars($last-color),
-                            nqp::stmts(
-                                nqp::push($vlines, RESET-COLOR),
+    my ($cplane, $fgplane, $bgplane);
+    $viewport.get-planes($cplane, $fgplane, $bgplane);
+    my $vw = $viewport.w;
+    my $vh = $viewport.h;
+    my $vrow = -1;
+    nqp::while(
+        ++$vrow < $vh,
+        nqp::stmts(
+            nqp::push($vlines, nqp::decont(&!cursor-sub($x, $y + $vrow))),
+            nqp::push($vlines, RESET-COLOR),
+            (my $last-color = ''),
+            (my $need-col-change := 0),
+            (my $crow := nqp::atpos(nqp::decont($cplane), $vrow)),
+            (my $fgrow := nqp::atpos(nqp::decont($fgplane), $vrow)),
+            (my $bgrow := nqp::atpos(nqp::decont($bgplane), $vrow)),
+            (my $vcol = -1),
+            nqp::while(
+                ++$vcol < $vw,
+                nqp::stmts(
+                    (my $char := nqp::defor(nqp::atpos($crow, $vcol), '')),
+                    (my $fg = nqp::atpos($fgrow, $vcol)),
+                    (my $bg = nqp::atpos($bgrow, $vcol)),
+                    (my $color := nqp::decont($.ansi-color(:$fg, :$bg))),
+                    nqp::if(
+                        nqp::isne_s($color, $last-color),
+                        nqp::stmts(
+                            nqp::push($vlines, RESET-COLOR),
+                            nqp::if(
+                                $color,
+                                nqp::push($vlines, $.color2esc($color)),
                                 nqp::push($vlines, $default-color)
                             )
-                        ),
-                        ($char := nqp::defor(cell, ''))
-                    )
-                ),
-                nqp::if(
-                    $char,
-                    nqp::stmts(
-                        nqp::if(
-                            $need-pos-change,
-                            nqp::stmts(
-                                nqp::push($vlines, &!cursor-sub($x + $vcol, $y + $vrow)),
-                                ($need-pos-change := 0)
-                            )
-                        ),
-                        nqp::push($vlines, nqp::decont($char)),
+                        )
                     ),
-                    ($need-pos-change := 1)
+                    nqp::if(
+                        $char,
+                        nqp::stmts(
+                            nqp::if(
+                                $need-col-change,
+                                nqp::stmts(
+                                    nqp::push($vlines, nqp::decont(&!cursor-sub($x + $vcol, $y + $vrow))),
+                                    ($need-col-change := 0)
+                                )
+                            ),
+                            nqp::push($vlines, nqp::decont($char)),
+                        ),
+                        ($need-col-change := 1)
+                    ),
+                    ($last-color = $color)
                 )
-            );
-            $last-color = nqp::defor($color, '');
-        }
-        nqp::push($vlines, RESET-COLOR);
-    }
+            ),
+            nqp::push($vlines, RESET-COLOR)
+        )
+    );
     # my @v = $vlines;
     # note @v.perl;
     nqp::join("", $vlines);
