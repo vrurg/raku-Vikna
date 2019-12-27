@@ -14,6 +14,7 @@ has Int $.right;
 has Int $.bottom;
 
 multi method new(::?CLASS: +@r where *.elems == 4, *%c) {
+    .debug: "NEW RECT FROM ", @r.join("×") with $*VIKNA-APP;
     $.new: |%( <x y w h> Z=> @r ), |%c
 }
 
@@ -63,7 +64,7 @@ multi method overlap(::?CLASS:D: ::?CLASS:D $r) {
 # Returns: [x, y, w, h]
 my sub clip-coords(@r is copy, @into) {
     @r[$_] max= @into[$_] for 0..1;
-    @r[$_] = (@r[$_] min @into[$_]) - @r[$_ - 2] + 1 for 2..3;
+    @r[$_] = ((@r[$_] max (@into[$_ - 2] - 1)) min @into[$_]) - @r[$_ - 2] + 1 for 2..3;
     @r
 }
 
@@ -161,7 +162,7 @@ multi method relative-to(::?CLASS:D: Int:D $x, Int:D $y, UInt:D $w, UInt:D $h, B
     if $clip {
         self.new: |clip-coords(
                     [$!x - $x, $!y - $y, $!right - $x, $!bottom - $y],
-                    [0, 0, $w - 1, $h - 1])
+                    [0, 0, $w - 1, $h - 1]);
     }
     else {
         self.new: $!x - $x, $!y - $y, $!w, $!h

@@ -1,8 +1,9 @@
 use v6.e.PREVIEW;
 use Vikna::Scrollable;
 use Vikna::Widget;
+use OO::Monitors;
 
-unit class Vikna::TextScroll;
+unit monitor Vikna::TextScroll;
 also does Vikna::Scrollable;
 also is Vikna::Widget;
 
@@ -101,6 +102,7 @@ method say(**@args) {
 
 method draw( :$canvas ) {
     callsame;
+    $.debug: "TextScroll draw";
     for $.dy..^($.dy + $.h) -> $lnum {
         my $y = $lnum - $.dy;
         my $out = $lnum < @!buffer ?? @!buffer[$lnum].substr($.dx, $.w) !! "";

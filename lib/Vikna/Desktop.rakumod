@@ -3,6 +3,7 @@ use Vikna::Widget;
 unit class Vikna::Desktop is Vikna::Widget is export;
 
 use Vikna::Events;
+use Vikna::Utils;
 
 method on-screen-resize {
     my $old-w = $.w;
@@ -15,19 +16,16 @@ method on-screen-resize {
 }
 
 multi method invalidate() {
-    $.app.debug: "Full desktop invalidate";
     self.invalidate: $.geom.clone
 }
 
 method redraw {
-    callsame;
-    self.compose;
-    $.app.screen.print: 0, 0, $.canvas;
-}
-
-multi method event(Event::RedrawRequest:D) {
-    # Queue up resizes so we miss no one.
-    self.redraw;
+    my &nextcall = nextcallee;
+    self.hold-events: Event::RedrawRequest, :kind(HoldFirst), {
+        self.&nextcall();
+        self.compose;
+        $.app.screen.print: 0, 0, $.canvas;
+    }
 }
 
 # Desktop doesn't allow resize unless through screen resize

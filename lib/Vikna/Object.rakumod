@@ -29,3 +29,9 @@ multi method create(Mu \type, |c) {
         type.new: |c
     }
 }
+
+method debug(|c) {
+    with $.app {
+        .debug: |c
+    }
+}

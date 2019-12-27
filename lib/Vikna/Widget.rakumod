@@ -31,20 +31,12 @@ has $!draw-lock = Lock.new;
 
 has @!invalidations;
 
-# A lock prevents the widget from redrawing
-has atomicint $!locks = 0;
-
 multi method new(Int:D $x, Int:D $y, Dimension $w, Dimension $h, *%c) {
     self.new: geom => Vikna::Rect.new(:$x, :$y, :$w, :$h), |%c
 }
 
 multi method new(Int:D :$x, Int:D :$y, Dimension :$w, Dimension :$h, *%c) {
     self.new: geom => Vikna::Rect.new(:$x, :$y, :$w, :$h), |%c
-}
-
-submethod TWEAK(|c) {
-    # .add-child(self) with $!parent;
-    self.events.subscribe: -> $ev { self.event: $ev }
 }
 
 method build-canvas {
@@ -58,8 +50,16 @@ method create-child(Vikna::Widget:U $wtype, |c) {
 proto method event(Event:D $ev) {
     {*}
 
-    unless $ev.clear {
-        .event($ev) for @.children;
+    self.for-children: {
+        .event($ev) unless $_ === $ev.dispatcher;
+    }
+    CONTROL {
+        when CX::Event::Last {
+            $.debug: "STOP EVENT HANDLING for ", $ev.^name;
+        }
+        default {
+            .rethrow
+        }
     }
 }
 
@@ -74,16 +74,22 @@ multi method event(Event:D $ev) {
 
 proto method child-event(Vikna::Event:D) {*}
 
-multi method child-event(Event::Geom:D $ev) {
-    $.draw-protect: {
-        self.invalidate: $ev.from;
-        self.invalidate: $ev.to;
-    }
-    $.dispatch: Event::RedrawRequest;
+multi method child-event(Event::Geomish:D $ev) {
+    self.invalidate: $ev.from;
+    self.invalidate: $ev.to;
+    self.request-redraw;
 }
 
 multi method child-event(Event::RedrawRequest:D $ev) {
     $.dispatch: $ev
+}
+
+multi method child-event(Event::Detach:D $ev) {
+    unless $ev.parent<> =:= self {
+        # A bug protection: we must never receive a detach event where the parent is not us.
+        self.throw: X::Event::ReParent, ev => $ev
+    }
+    self.unsubscribe($ev.dispatcher);
 }
 
 multi method child-event(Event:D) { }
@@ -96,29 +102,16 @@ method detach( :$parent ) {
     $.dispatch: Event::Detach, :$parent
 }
 
-method setup-child-monitor(::?CLASS:D $SELF: ::?CLASS:D $child ) {
-    start react {
-        whenever $child.events {
-            when Event::Detach {
-                unless .parent<> =:= $SELF<> {
-                    # A bug protection: we must never receive a detach event where the parent is not us.
-                    $SELF.throw: X::Event::ReParent, ev => $_
-                }
-                # Let our subclasses take actions if need to...
-                $SELF.child-event: $_;
-                # ... and stop processing events from this child.
-                done;
-            }
-            default {
-                $SELF.child-event($_)
-            }
-        }
-    }
+method add-child(::?CLASS:D $child) {
+    self.subscribe: $child, {
+        self.child-event($_)
+    };
+    self.Vikna::Parent::add-child: $child;
 }
 
-method add-child(::?CLASS:D $child) {
-    self.setup-child-monitor($child);
-    self.Vikna::Parent::add-child($child);
+method remove-child(::?CLASS:D $child) {
+    self.unsubscribe: $child;
+    self.Vikna::Parent::remove-child: $child;
 }
 
 method debug(*@args) {
@@ -133,7 +126,7 @@ multi method invalidate(Vikna::Rect:D $rect) {
             .invalidate: $rect.relative-to(.geom, :clip)
         },
         pre => {
-            @!invalidations.push: $rect
+            $.add-inv-rect: $rect
         }
 }
 
@@ -160,16 +153,14 @@ method clear {
 }
 
 method begin-draw(Vikna::Canvas $canvas? is copy --> Vikna::Canvas) {
-    return Nil if $.locked;
-
     $!draw-lock.lock;
     LEAVE $!draw-lock.unlock;
 
-    $canvas //= $!auto-clear || $.w != $!canvas.w || $.h != $!canvas.h
-                ?? $.create: Vikna::Canvas, geom => $!geom.clone,
-                    |($!auto-clear ?? () !! :from-cells($!canvas.cells))
-                !! $!canvas; # <-- XXX potentially problematic.
-    $.debug: "begin-draw canvas: ", $canvas.WHICH, " ", $canvas.w, " x ", $canvas.h;
+    $canvas //= $.create:
+                    Vikna::Canvas,
+                    geom => $!geom.clone,
+                    |($!auto-clear ?? () !! :from($!canvas));
+    $.debug: "begin-draw canvas (auto-clear:{$!auto-clear}): ", $canvas.WHICH, " ", $canvas.w, " x ", $canvas.h;
     self.invalidate if $!auto-clear;
     $!draw-canvas = $canvas;
 
@@ -186,34 +177,35 @@ method end-draw( :$canvas! ) {
     $!draw-lock.lock;
     LEAVE $!draw-lock.unlock;
 
-    $.debug: "end-draw   canvas: ", $.canvas.WHICH;
+    $.debug: "end-draw canvas: ", $.canvas.WHICH;
     # Because more than one draw session might happen simultaneously,
-    if $canvas === $!draw-canvas {
+    if cas($!draw-canvas, $canvas, Nil) === $canvas {
         $.debug: "end-draw setting new canvas";
         $!canvas = $canvas;
-        $!draw-canvas = Nil;
     }
 }
 
 method redraw {
-    return if $.locked;
-    my Vikna::Canvas:D $canvas = self.begin-draw;
-    my $abort-draw = False;
-    for @.children {
-        # Stop if another thread started drawing.
-        last if $abort-draw = !($canvas === $!draw-canvas);
-        .redraw;
+    self.hold-events: Event::RedrawRequest, :kind(HoldLast), {
+        my Vikna::Canvas:D $canvas = self.begin-draw;
+        $.debug: "DRAWING, canvas has ", $canvas.invalidations.elems, " invalidations";
+        self.draw( :$canvas );
+        self.end-draw( :$canvas );
     }
-    self.draw-background( :$canvas );
-    unless $abort-draw {
-        self.?draw( :$canvas );
-    }
-    self.debug: "Aborted draw? ", $abort-draw;
-    self.end-draw( :$canvas );
+}
+
+method request-redraw {
+    self.dispatch: Event::RedrawRequest;
+    @!invalidations = [];
+}
+
+method draw(:$canvas) {
+    self.draw-background(:$canvas);
 }
 
 method draw-background( :$canvas ) {
     if $!bg-pattern {
+        $.debug: "Filling background with '{$!bg-pattern}'";
         my $back-row = ( $!bg-pattern x ($.w.Num / $!bg-pattern.chars).ceiling );
         for ^$.h -> $row {
             $canvas.imprint(0, $row, $back-row, :$!fg, :$!bg)
@@ -221,65 +213,45 @@ method draw-background( :$canvas ) {
     }
 }
 
-method compose {
+method compose(:$to = $!canvas) {
     # Compose children into our canvas
     self.for-children: {
         .compose;
-        $!canvas.imprint: .x, .y, .canvas;
+        $to.imprint: .x, .y, .canvas;
     }
 }
 
 method resize(Dimension :$w = $.w, Dimension :$h = $.h) {
-    $.draw-protect: {
-        $.debug: "? resizing to $w x $h";
-        my $old-w = $.w;
-        my $old-h = $.h;
-        cas $!geom, { $!geom.clone: :$w, :$h };
-        self.dispatch: Event::Resize, :$old-w, :$old-h, :$w, :$h
-            if $old-w != $w || $old-h != $h;
-    }
+    $.debug: "? resizing to $w x $h";
+    my $from;
+    cas $!geom, {
+        $from = $!geom;
+        $!geom.clone: :$w, :$h
+    };
+    self.dispatch: Event::Resize, :$from, to => $!geom
+        if $from.w != $!geom.w || $from.h != $!geom.h;
 }
 
 method move(:$x where * >= 0 = $.x, :$y where * >= 0 = $.y) {
     return if $x == $.x && $y == $.y;
-    my $old;
+    my $from;
     cas $!geom, {
-        $old = $!geom;
-        $!geom.move($x, $y);
+        $from = $!geom;
+        $!geom.clone: :$x, :$y;
     };
-    self.dispatch: Event::Move, :$old, new => $!geom;
+    self.dispatch: Event::Move, :$from, to => $!geom;
 }
 
 multi method set_color(BasicColor :$fg, BasicColor :$bg) {
     return if $!fg eq $fg && $!bg eq $bg;
     my ($old-fg, $old-bg);
-    $.draw-protect: {
-        $old-fg = $!fg;
-        $old-bg = $!bg;
-        $!fg = $fg;
-        $!bg = $bg;
-    }
+    $old-fg = $!fg;
+    $old-bg = $!bg;
+    $!fg = $fg;
+    $!bg = $bg;
     self.dispatch: Event::ColorChange, :$old-fg, :$old-bg, :$fg, :$bg if $old-fg ne $fg || $old-bg ne $bg;
 }
 
-method lock {
-    $!locks⚛++;
-    self.for-children: { .lock };
-}
-
-method unlock() {
-    if --⚛$!locks < 0 {
-        self.throw: X::Widget::ExtraUnlock, :count(-⚛$!locks);
-    }
-    self.for-children: { .unlock }
-}
-
-method locked {
-    $!locks > 0;
-}
-
-method draw-protect(&code) {
-    $.lock;
-    LEAVE $.unlock;
-    &code()
+method add-inv-rect(Vikna::Rect:D $rect) {
+    @!invalidations.push: $rect;
 }

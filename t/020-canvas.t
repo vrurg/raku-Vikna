@@ -213,7 +213,7 @@ subtest "Transparency" => {
 }
 
 subtest "Canvas -> canvas imprinting" => {
-    plan 13;
+    plan 17;
     my $cbase = Vikna::Canvas.new: :w<25>, :h<10>;
     $cbase.invalidate;
     $cbase.fill("*");
@@ -267,6 +267,13 @@ subtest "Canvas -> canvas imprinting" => {
     test-filled-rect $cbase, 10, 4, 15, 1, "*", "imprint with transparent cells: transparent, bg from imprint", :bg<blue>;
     test-filled-rect $cbase, 8, 4, 2, 1, "×", "imprint with transparent cells: transparent, fg from base, bg from imprint", :fg<yellow>, :bg<blue>;
     test-filled-rect $cbase, 5, 4, 3, 1, "×", "imprint with transparent cells: outside unchanged", :fg<yellow>;
+
+    my $cdup = $cbase.dup;
+
+    test-filled-rect $cdup, 8, 5, 17, 5, "⚛", "dup: imprint with transparent cells: non-transparent", :fg<green>;
+    test-filled-rect $cdup, 10, 4, 15, 1, "*", "dup: imprint with transparent cells: transparent, bg from imprint", :bg<blue>;
+    test-filled-rect $cdup, 8, 4, 2, 1, "×", "dup: imprint with transparent cells: transparent, fg from base, bg from imprint", :fg<yellow>, :bg<blue>;
+    test-filled-rect $cdup, 5, 4, 3, 1, "×", "dup: imprint with transparent cells: outside unchanged", :fg<yellow>;
 }
 
 done-testing;

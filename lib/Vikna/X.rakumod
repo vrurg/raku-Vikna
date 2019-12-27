@@ -36,7 +36,7 @@ class X::BadColor is X::Base is export {
 }
 
 role X::Eventish is X::Base is export {
-    has Vikna::Event:D $.ev is required;
+    has Vikna::Event $.ev is required;
 }
 
 class X::Event::ReParent does X::Eventish {
@@ -50,4 +50,33 @@ role X::Widget is X::Base { }
 class X::Widget::ExtraUnlock {
     has Int:D $.count is required;
     method message { "Too many unlocks: {$.count} too many" }
+}
+
+class X::Event::Unsubscribe {
+    has $.obj is required;
+    method message {
+        "Can't unsubscribe from " ~ $!obj.^name ~ " object: not subscribed to"
+    }
+}
+
+class X::Event::Unholdable is X::Eventish {
+    method message {
+        "Events of type " ~ $.ev.^name ~ " cannot be held"
+    }
+}
+
+class X::Event::AlreadyHeld is X::Eventish {
+    method message {
+        "Events of type " ~ $.ev.^name ~ " are being held already"
+    }
+}
+
+class X::Event::NotHeld is X::Eventish {
+    method message {
+        "Events of type " ~ $.ev.^name ~ " is not being currently held"
+    }
+}
+
+class CX::Event::Last is export {
+    has Vikna::Event:D $.ev is required;
 }

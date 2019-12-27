@@ -53,12 +53,14 @@ multi method run(::?CLASS:U: |c) {
 }
 
 multi method run(::?CLASS:D:) {
-    my $*VIKNA-APP = self;
+    PROCESS::<$VIKNA-APP> = self;
     $!screen.init;
-    self.main;
+    $.main;
+    await $.desktop.sync-events;
     LEAVE $!screen.shutdown;
 }
 
 method create(Mu \type, |c) {
+    # note "APP CREATE: ", type.^name, " ", c.perl;
     type.new( :app(self), |c );
 }

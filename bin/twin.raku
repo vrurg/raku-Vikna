@@ -10,7 +10,7 @@ class MyWin is Vikna::Window {
 class MyApp is Vikna::App {
     method main {
         my $mw = $.desktop.create-child(MyWin, :w<79>, :h<30>, :x<10>, :y<3>, :title<test>);
-        $.desktop.redraw;
+        $.desktop.invalidate;
         for ^10 {
             my $nw = 79.rand.Int + 4;
             my $nh = 30.rand.Int + 4;
@@ -30,7 +30,7 @@ class MyApp is Vikna::App {
                 my $cy = ($oy + $dy × ($step / $steps)).Int;
                 $mw.resize(w => $cw, h => $ch);
                 $mw.move(x => $cx, y => $cy);
-                $.desktop.redraw;
+                await $mw.sync-events;
             }
         }
     }

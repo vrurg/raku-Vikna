@@ -174,14 +174,22 @@ subtest "Multi-dissect" => {
 }
 
 subtest "Relative" => {
+    plan 4;
     my $r1 = Vikna::Rect.new( 3, 3, 7, 4 );
     my $r2 = Vikna::Rect.new( 7, 5, 8, 5 );
 
     my $rel = $r2.relative-to($r1);
-    is-deeply ($rel.x, $rel.y, $rel.w, $rel.h), (4, 2, 8, 5), "unclipped relative rectangle";
+    is-deeply ($rel.x, $rel.y, $rel.w, $rel.h), (4, 2, 8, 5), "overlapping: unclipped relative rectangle";
     $rel = $r2.relative-to($r1, :clip);
-    is-deeply ($rel.x, $rel.y, $rel.w, $rel.h), (4, 2, 3, 2), "clipped relative rectangle";
+    is-deeply ($rel.x, $rel.y, $rel.w, $rel.h), (4, 2, 3, 2), "overlapping: clipped relative rectangle";
 
+    # Non-overlapping rectangles
+    $r1 = Vikna::Rect.new(15, 8, 10, 11);
+    $r2 = Vikna::Rect.new(2, 1, 10, 5);
+    $rel = $r2.relative-to($r1);
+    is-deeply ($rel.x, $rel.y, $rel.w, $rel.h), (-13, -7, 10, 5), "non-overlapping: unclipped relative rectangle";
+    $rel = $r2.relative-to($r1, :clip);
+    is-deeply ($rel.x, $rel.y, $rel.w, $rel.h), (0, 0, 0, 0), "non-overlapping: clipped relative rectangle";
 }
 
 done-testing;

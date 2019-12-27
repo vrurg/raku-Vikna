@@ -14,10 +14,22 @@ role Event {
         $!cleared = True;
     }
 
+    method last {
+        require ::(Vikna::Events);
+        ::('Vikna::Events::CX::Event::Last').new(:ev(self)).throw
+    }
+
     method build-origin { $!dispatcher }
 }
 
 role Event::Control does Event is export { }
+
+class Event::SyncQueue does Event::Control is export {
+    has Promise:D $.promise .= new;
+}
+
+# Marks events not eligible for holding
+role Event::Unholdable { }
 
 role Event::TitleChange does Event::Control is export {
     has $.old-title;
@@ -31,7 +43,7 @@ role Event::ColorChange does Event::Control is export {
     has $.bg;
 }
 
-role Event::Geom does Event::Control is export {
+role Event::Geomish does Event::Control is export {
     has Vikna::Rect:D $.from is required;
     has Vikna::Rect:D $.to is required;
 }
@@ -41,13 +53,17 @@ role Event::Positional does Event::Control is export {
     has Vikna::Point:D $.to is required;
 }
 
-class Event::RedrawRequest does Event::Control is export { }
+class Event::RedrawRequest does Event::Control is export {
+    # has @.invalidations is required;
+}
 
-class Event::ScreenGeom does Event::Geom is export { }
+class Event::Geom does Event::Geomish is export { }
 
-class Event::Resize does Event::Geom is export { }
+class Event::ScreenGeom does Event::Geomish is export { }
 
-class Event::Move does Event::Geom is export { }
+class Event::Resize does Event::Geomish is export { }
+
+class Event::Move does Event::Geomish is export { }
 
 class Event::Clear does Event::Control is export { }
 
@@ -63,3 +79,11 @@ role Event::ReParent does Event::Control is export {
 
 class Event::Attach does Event::ReParent { }
 class Event::Detach does Event::ReParent { }
+
+role Event::Holdish does Event {
+    has Event:U $ev-type;
+    submethod TWEAK(:$!ev-type) {
+    }
+}
+class Event::HoldAcquire does Event::Holdish does Event::Unholdable { }
+class Event::HoldRelease does Event::Holdish does Event::Unholdable { }

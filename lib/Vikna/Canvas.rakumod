@@ -82,6 +82,9 @@ submethod TWEAK(*%c) {
 
 method !setup-planes(:$from?, :$viewport?) {
     my ($w, $h) = $.w, $.h;
+    with $*VIKNA-APP {
+        .debug: "Setting up canvas planes from ", $from.WHICH
+    }
     my ($from-x, $from-y, $from-w, $from-h, $from-planes);
     my ($copy-w, $copy-h);
     if $from {
@@ -412,7 +415,7 @@ method clear-inv-rect {
     $!inv-rects := nqp::list()
 }
 
-method invalidates {
+method invalidations {
     nqp::hllize($!inv-rects)
 }
 

@@ -1,11 +1,12 @@
 use v6.e.PREVIEW;
 use Vikna::Widget;
-use Vikna::Window::Border;
+use Vikna::Border;
 unit class Vikna::Window is Vikna::Widget is export;
 
 use Vikna::Events;
+use Vikna::Utils;
 
-my class Client is Vikna::Widget {
+class Client is Vikna::Widget {
     method fit {
         my ($w, $h) = $.owner.client-size;
         self.Vikna::Widget::resize(:$w, :$h)
@@ -16,23 +17,37 @@ my class Client is Vikna::Widget {
 
 has Str:D $.title = "";
 has $.border;
-has Client $.client handles <add-child remove-child to-top to-bottom create-child>;
+has Client $.client handles <add-child remove-child create-child to-top to-bottom for-children children-protect>;
+
+has $!win-lock = Lock.new;
 
 submethod TWEAK(Bool:D :$border = True) {
     my ($cx, $cy, $cw, $ch) = (0, 0, self.w, self.h);
     if $border {
-        $!border = Vikna::Window::Border.new:
+        $!border = Vikna::Border.new:
                         :w( $cw ), :h( $ch ), :x(0), :y(0),
-                        :app( self.app ), :owner( self );
+                        :app( self.app ),
+                        :owner( self ),
+                        :!auto-clear;
         ++$cx; ++$cy;
         $cw -= 2;
         $ch -= 2;
     }
     $!client = Client.new:
                     :x( $cx ), :y( $cy ), :w( $cw ), :h( $ch ),
-                    :app( self.app ), :owner( self ),
-                    :bg-pattern('.-+'), :color<black blue>,
+                    :app( self.app ),
+                    :owner( self ),
+                    :bg-pattern('.-+'),
+                    :color<black blue>,
                     :auto-clear( self.auto-clear );
+}
+
+method for-elems(&code) {
+    $!win-lock.protect: {
+        for $!border, $!client -> $elem {
+            &code($elem)
+        }
+    }
 }
 
 method set-title(Str:D $title) {
@@ -45,12 +60,29 @@ method clear {
     $!client.clear;
 }
 
+# method redraw {
+#     $.hold-events: Event::RedrawRequest, :kind(HoldFirst), {
+#         my $canvas = self.begin-draw;
+#         self.draw( :$canvas );
+#         self.end-draw( :$canvas );
+#     }
+# }
+
 method redraw {
-    my $grid = self.begin-draw;
-    $!border.redraw;
-    $!client.redraw;
-    self.?draw( :$grid );
-    self.end-draw( :$grid );
+    $.debug: "WINDOW REDRAW METHOD";
+    nextsame;
+}
+
+method draw(:$canvas) {
+    $.debug: "WINDOW DRAWING"; #, invalidations: ", $canvas.invalidations.elems;
+    nextsame;
+}
+
+multi method invalidate(Vikna::Rect:D $rect) {
+    $.add-inv-rect: $rect;
+    $.for-elems: {
+        .invalidate: $rect.relative-to(.geom, :clip)
+    };
 }
 
 method client-size {
@@ -65,21 +97,32 @@ method resize(Int:D :$w is copy where * > 0 = $.w, Int:D :$h is copy where * > 0
     nextwith(:$w, :$h)
 }
 
-method composite {
-    with $.grid {
-        $!border.composite: to => $_;
-        $!client.composite: to => $_;
+method compose(:$to = $.canvas) {
+    $.debug: "INVALIDATES ON CANVAS: ", $to.invalidations.elems;
+    $.for-elems: {
+        .compose;
+        $.debug: "IMPRINT ", $_.WHICH, " into ", .x, ", ", .y;
+        $to.imprint: .x, .y, .canvas;
     }
-    nextsame
+    # $.app.screen.print: 0,0, $to;
 }
 
 multi method event(Event::TitleChange:D) {
-    self.redraw;
+    self.dispatch: Event::RedrawRequest;
 }
 
 multi method event(Event::Resize:D $ev) {
-    $!client.fit;
-    $!client.resize(:w($.w - 2), :h($.h - 2));
-    $!border.resize(:$.w, :$.h);
-    self.redraw;
+    $!win-lock.protect: {
+        $!client.fit;
+        $!client.resize(:w($.w - 2), :h($.h - 2));
+        $!border.resize(:$.w, :$.h);
+    }
+    self.dispatch: Event::RedrawRequest;
+}
+
+multi method event(Event::RedrawRequest:D $ev) {
+    $.for-elems: {
+        .dispatch: $ev
+    }
+    nextsame;
 }
