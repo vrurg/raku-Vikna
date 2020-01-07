@@ -59,21 +59,9 @@ class X::Event::Unsubscribe {
     }
 }
 
-class X::Event::Unholdable is X::Eventish {
+class X::Event::LostRedraw does X::Eventish {
     method message {
-        "Events of type " ~ $.ev.^name ~ " cannot be held"
-    }
-}
-
-class X::Event::AlreadyHeld is X::Eventish {
-    method message {
-        "Events of type " ~ $.ev.^name ~ " are being held already"
-    }
-}
-
-class X::Event::NotHeld is X::Eventish {
-    method message {
-        "Events of type " ~ $.ev.^name ~ " is not being currently held"
+        "Lost redraw command produced by " ~ $.ev.^name;
     }
 }
 

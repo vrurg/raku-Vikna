@@ -50,14 +50,22 @@ method for-elems(&code) {
     }
 }
 
-method set-title(Str:D $title) {
+### Command handlers ###
+
+method cmd-settitle(Event::Cmd::SetTitle:D $ev) {
     my $old-title = $!title;
-    $!title = $title;
+    $!title = $ev.title;
     self.dispatch: Event::TitleChange, :$old-title, :$title
+}
+
+### Command senders ###
+method set-title(Str:D $title) {
+    self.dispatch: Event::Cmd::SetTitle, :$title;
 }
 
 method clear {
     $!client.clear;
+    nextsame;
 }
 
 # method redraw {
@@ -67,16 +75,6 @@ method clear {
 #         self.end-draw( :$canvas );
 #     }
 # }
-
-method redraw {
-    $.debug: "WINDOW REDRAW METHOD";
-    nextsame;
-}
-
-method draw(:$canvas) {
-    $.debug: "WINDOW DRAWING"; #, invalidations: ", $canvas.invalidations.elems;
-    nextsame;
-}
 
 multi method invalidate(Vikna::Rect:D $rect) {
     $.add-inv-rect: $rect;

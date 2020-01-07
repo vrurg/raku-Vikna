@@ -169,6 +169,13 @@ multi method relative-to(::?CLASS:D: Int:D $x, Int:D $y, UInt:D $w, UInt:D $h, B
     }
 }
 
+multi method absolute(::?CLASS:D: ::?CLASS:D $rect --> Vikna::Rect:D) {
+    self.absolute: $rect.x, $rect.y
+}
+multi method absolute(::?CLASS:D: Int:D $x, Int:D $y) {
+    self.new: $!x + $x, $!y + $y, $!w, $!h
+}
+
 multi method move(::?CLASS:D: Vikna::Point:D $point) {
     self.new: :x(.x), :y(.y), :$!w, :$!h with $point
 }

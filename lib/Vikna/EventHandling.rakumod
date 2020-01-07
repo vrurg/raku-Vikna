@@ -5,33 +5,15 @@ use Vikna::Utils;
 use AttrX::Mooish;
 use Vikna::X;
 
-my class HoldEntry {
-    has Mu $.ev-type is required;
-    has EvHoldKind:D $.kind is required;
-    has @.queue;
-
-    method add(Event:D $ev) {
-        given $!kind {
-            when HoldCollect {
-                @!queue.push: $ev;
-            }
-            when HoldLast {
-                @!queue[0] = $ev;
-            }
-            when HoldFirst {
-                @!queue[0] = $ev unless @!queue;
-            }
-        }
-    }
-}
-
 has Supplier:D $.events .= new;
+
+has Lock::Async:D $!ev-lock .= new;
+has Lock::Async:D $!send-lock .= new;
 
 has Channel:D $!ev-queue = Channel.new;
 has %!subscriptions;
 
-has %!holds;
-has $!hold-lock = Lock.new;
+has Bool:D $!shutdown = False;
 
 submethod TWEAK {
     self!run-event-handling;
@@ -39,14 +21,18 @@ submethod TWEAK {
 
 method !run-event-handling(::?CLASS:D:) {
     start react {
-        $.debug: "Started event handling";
+        $.debug: "Started event handling on ", self.WHICH;
         whenever $!ev-queue -> $ev {
-            if !self!event-on-hold($ev) {
-                self.?event($ev);
-                $!events.emit: $ev
-            }
+            $.debug: "REACTING ON EVENT: ", $ev.WHICH;
+            self.handle-event($ev);
+            $.debug: "EMITTING EVENT for subscribers: ", $ev.WHICH;
+            start $!events.emit: $ev;
+            $.debug: "EMITTED EVENT for subscribers: ", $ev.WHICH;
+            done if $!shutdown;
             CATCH {
                 default {
+                    note "EVENT KABOOM!";
+                    $.debug: "EVENT HANDLING THROWN ", .message, .backtrace;
                     unless self.?on-event-queue-fail($_) {
                         note "[", $*THREAD.id, "]", $_, $_.backtrace;
                         $!ev-queue.fail($_);
@@ -60,8 +46,17 @@ method !run-event-handling(::?CLASS:D:) {
     }
 }
 
+method handle-event(Event:D $ev) {
+    # Make sure only one event is being handled at a time.
+    $!ev-lock.protect: {
+        $.debug: "Handling ", $ev.WHICH, " on ", self.^name;
+        self.event($ev);
+        $.debug: "Handled ", $ev.WHICH, " on ", self.^name;
+    }
+}
+
 method subscribe(::?ROLE:D $obj, &code?) {
-    %!subscriptions{ $obj } = $obj.events.Supply.tap: &code // { self.event: $_ }
+    %!subscriptions{ $obj } = $obj.events.Supply.tap: &code // { self.handle-event: $_ };
 }
 
 method unsubscribe(::?ROLE:D $obj) {
@@ -72,73 +67,48 @@ method unsubscribe(::?ROLE:D $obj) {
     }
 }
 
+method send-event(Vikna::Event:D $ev) {
+    $.debug: "SEND-EVENT: ", $ev.^name;
+    if $ev ~~ Event::Cmd::Redraw {
+        $.debug: " ... redraw event has ", $ev.invalidations.elems, " invalidations";
+    }
+    $!send-lock.protect: {
+        my Vikna::Event:D @events = $ev;
+        @events = $_ with self.event-filter($ev);
+        $.debug: " ---> FILTERED EVENTS:\n",
+                    @events.map( { "      . " ~ .^name } ).join("\n");
+        for @events {
+            $.debug: " ---> QUEUEING ", $_.WHICH;
+            $!ev-queue.send: $_
+        }
+        $ev
+    }
+}
+
 multi method dispatch(Vikna::Event:D $ev) {
-    $!ev-queue.send: $ev.clone(:dispatcher($ev.dispatcher));
-    $ev
+    $.send-event: $ev.clone(:dispatcher($ev.dispatcher));
 }
 
 multi method dispatch(Vikna::Event:U \EvType, *%params) {
-    self.dispatch: self.create(EvType, :dispatcher( self ), |%params );
+    $.debug: "NEW EVENT OF ", EvType.^name, " with ", %params;
+    $.send-event: self.create(EvType, :dispatcher( self ), |%params );
+}
+
+# Preserve event's dispatcher. Sugar for readability.
+method re-dispatch(Vikna::Event:D $ev) {
+    $.send-event: $ev
 }
 
 sub ev2key($ev) { $ev.WHICH }
 
-multi method hold-events(Event \evt, EvHoldKind:D :$kind = HoldCollect) {
-    my $ev-type := evt.WHAT;
-
-    self.throw: X::Event::Unholdable, :ev($ev-type) if $ev-type ~~ Event::Unholdable;
-
-    $!hold-lock.protect: {
-        my $ev-key = ev2key($ev-type);
-        # self.throw: X::Event::AlreadyHeld, :ev($ev-type) if %!holds{$ev-key}:exists;
-        %!holds{$ev-key}.push: self.create: HoldEntry, :$ev-type, :$kind;
-        self.dispatch: Event::HoldAcquire, :$ev-type;
-    }
-}
-
-multi method hold-events(Event \evt, &code, EvHoldKind:D :$kind = HoldCollect) {
-    self.hold-events(evt, :$kind);
-    LEAVE self.release-events(evt);
-    &code()
-}
-
-method release-events(Event \evt) {
-    $!hold-lock.protect: {
-        my $ev-type = evt.WHAT;
-        my $ev-key = ev2key($ev-type);
-        self.throw: X::Event::NotHeld, :ev($ev-type) unless %!holds{$ev-key}:exists && %!holds{$ev-key}.elems;
-        my $hentry = %!holds{$ev-key}.pop;
-        for $hentry.queue -> $ev {
-            self.dispatch: $ev
-        }
-        self.dispatch: Event::HoldRelease, :$ev-type;
-    }
-}
-
-method sync-events( --> Promise:D ) {
-    self.dispatch(Event::SyncQueue).promise
-}
-
 proto method event(Event:D $ev) {*}
-multi method event(Event::SyncQueue:D $ev) {
-    $ev.promise.keep(True) if $ev.origin === self;
-}
-multi method event(Event:D $ev) {
-    # Sink method
-}
+multi method event(Event:D $ev) { #`<Sink method> }
 
-method !event-on-hold(Event:D $ev) {
-    $!hold-lock.protect: {
-        my $ev-key = ev2key($ev.WHAT);
-        my $held = False;
-        with %!holds{$ev-key} {
-            if $_.elems {
-                $_[*-1].add: $ev;
-                $held = True;
-            }
-        }
-        $held
-    }
+proto method event-filter(Event:D) {*}
+multi method event-filter(Event:D $ev) { [$ev] }
+
+method shutdown-events {
+    $!shutdown = True;
 }
 
 submethod DESTROY {

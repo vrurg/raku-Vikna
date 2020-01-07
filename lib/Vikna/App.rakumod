@@ -15,6 +15,7 @@ has %.screen-params;
 has Vikna::Screen $.screen is mooish(:lazy);
 has Vikna::Desktop $.desktop is mooish(:lazy, :clearer, :predicate);
 has Log::Async $.logger is mooish(:lazy);
+has Bool:D $.debugging = False;
 
 method new(|) {
     $app //= callsame;
@@ -44,8 +45,12 @@ method build-desktop {
     self.create: Vikna::Desktop, :geom($.screen.geom.clone), :bg-pattern<.>;
 }
 
-method debug(*@args) {
-    $!logger.log(msg => "[" ~ $*THREAD.id.fmt("%5d") ~ "] " ~ @args.join, :level(DEBUG), :frame(callframe(1)));
+method debug(*@args, :$obj) {
+    return unless $!debugging;
+    my @msg = @args.join
+                    .split("\n")
+                    .map( { "[" ~ $*THREAD.id.fmt("%5d") ~ "] {"({$_.WHICH}) " with $obj}" ~ $_ } );
+    $!logger.log(msg => $_, :level(DEBUG), :frame(callframe(1))) for @msg;
 }
 
 multi method run(::?CLASS:U: |c) {
@@ -56,8 +61,20 @@ multi method run(::?CLASS:D:) {
     PROCESS::<$VIKNA-APP> = self;
     $!screen.init;
     $.main;
-    await $.desktop.sync-events;
+    $.debug: "MAIN IS DONE";
+    $.desktop.sync-events(:transitive);
+    $.debug: "CLOSING DESKTOP";
+    await $.desktop.close.completed;
+    $.debug: "APP DONE!";
+    $!logger.done;
+
     LEAVE $!screen.shutdown;
+    CATCH {
+        default {
+            $.debug: .message ~ .backtrace;
+            .rethrow;
+        }
+    }
 }
 
 method create(Mu \type, |c) {

@@ -173,8 +173,8 @@ subtest "Multi-dissect" => {
     is-deeply @dissected.map( *.coords ).List, $expected, "dissected by multiple rectangles";
 }
 
-subtest "Relative" => {
-    plan 4;
+subtest "Relative/absolute" => {
+    plan 5;
     my $r1 = Vikna::Rect.new( 3, 3, 7, 4 );
     my $r2 = Vikna::Rect.new( 7, 5, 8, 5 );
 
@@ -190,6 +190,10 @@ subtest "Relative" => {
     is-deeply ($rel.x, $rel.y, $rel.w, $rel.h), (-13, -7, 10, 5), "non-overlapping: unclipped relative rectangle";
     $rel = $r2.relative-to($r1, :clip);
     is-deeply ($rel.x, $rel.y, $rel.w, $rel.h), (0, 0, 0, 0), "non-overlapping: clipped relative rectangle";
+
+    $r2 = Vikna::Rect.new(3, 2, 4, 3);
+    my $abs = $r2.absolute($r1);
+    is-deeply ($abs.x, $abs.y, $abs.w, $abs.h), (18, 10, 4, 3), "relative -> absolute convertion";
 }
 
 done-testing;

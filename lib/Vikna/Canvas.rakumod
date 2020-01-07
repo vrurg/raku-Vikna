@@ -5,7 +5,6 @@ use v6.e.PREVIEW;
 #
 # Output operations thus act on viewport coordinates. Drawing operations act on canvas coordinates.
 
-# use OO::Monitors;
 use Vikna::Object;
 
 unit class Vikna::Canvas;
@@ -20,7 +19,6 @@ use Vikna::Rect;
 use Vikna::Point;
 use Vikna::Color;
 use Vikna::Utils;
-
 
 class Cell {
     has Str $.char where { !.defined || .chars == 0 | 1 };
@@ -65,6 +63,7 @@ has Mu $!planes;
 # Viewport
 has Vikna::Rect $!vp-geom is mooish(:lazy, :clearer);
 
+has $.inv-mark-color;
 has $!inv-rects;
 
 multi method new(Dimension $w, Dimension $h, *%c) {
@@ -372,6 +371,7 @@ method !build-paintable-mask {
         nqp::stmts(
             (my $x = -1),
             (my $row := nqp::list_i()),
+            (my $bgrow := nqp::atpos(nqp::atpos($!planes, 2), $y)),
             nqp::push($!paintable-mask, $row),
             nqp::while(
                 (++$x < $w),
@@ -386,6 +386,12 @@ method !build-paintable-mask {
                         )
                     ),
                     (nqp::bindpos_i($row, $x, $paintable)),
+                    nqp::if($!inv-mark-color,
+                        nqp::if($paintable,
+                            nqp::bindpos($bgrow, $x, $!inv-mark-color),
+                            nqp::bindpos($bgrow, $x, 'black'),
+                        )
+                    ),
                 )
             )
         )
@@ -398,14 +404,12 @@ method !build-paintable-mask {
 # }
 
 multi method add-inv-rect(+@rect where *.elems == 4) {
-    .debug: "Add inv rect \@: ", @rect with $*VIKNA-APP;
     nqp::push( $!inv-rects, Vikna::Rect.new: |@rect );
     $!paintable-expired = True;
     # self!clear-paintable-mask;
 }
 
 multi method add-inv-rect(Vikna::Rect:D $r) {
-    .debug: "Add inv rect: ", $r with $*VIKNA-APP;
     nqp::push( $!inv-rects, $r );
     $!paintable-expired = True;
     # self!clear-paintable-mask;

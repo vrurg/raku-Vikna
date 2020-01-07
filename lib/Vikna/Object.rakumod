@@ -18,7 +18,7 @@ multi method fail( X::Base:D $ex ) {
 }
 
 multi method fail( X::Base:U \exception, *%args ) {
-    fail exception.new( |%args )
+    fail exception.new( :obj(self), |%args )
 }
 
 multi method create(Mu \type, |c) {
