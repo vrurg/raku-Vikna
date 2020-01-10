@@ -65,6 +65,12 @@ class X::Event::LostRedraw does X::Eventish {
     }
 }
 
+class X::Event::Stopped does X::Eventish {
+    method message {
+        "Can't send " ~ $.ev.^name ~ ": event handling is stopped"
+    }
+}
+
 class CX::Event::Last is export {
     has Vikna::Event:D $.ev is required;
 }

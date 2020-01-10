@@ -10,32 +10,33 @@ has Supplier:D $.events .= new;
 has Lock::Async:D $!ev-lock .= new;
 has Lock::Async:D $!send-lock .= new;
 
-has Channel:D $!ev-queue = Channel.new;
+has Channel $!ev-queue;
 has %!subscriptions;
 
 has Bool:D $!shutdown = False;
 
 submethod TWEAK {
-    self!run-event-handling;
+    self.start-event-handling
 }
 
-method !run-event-handling(::?CLASS:D:) {
-    start react {
+method !run-ev-loop {
+    react {
         $.debug: "Started event handling on ", self.WHICH;
         whenever $!ev-queue -> $ev {
-            $.debug: "REACTING ON EVENT: ", $ev.WHICH;
-            self.handle-event($ev);
-            $.debug: "EMITTING EVENT for subscribers: ", $ev.WHICH;
-            start $!events.emit: $ev;
-            $.debug: "EMITTED EVENT for subscribers: ", $ev.WHICH;
+            $!ev-lock.protect: {
+                $.debug: "REACTING ON EVENT: ", $ev.WHICH;
+                self.handle-event($ev);
+            }
             done if $!shutdown;
             CATCH {
                 default {
                     note "EVENT KABOOM!";
                     $.debug: "EVENT HANDLING THROWN ", .message, .backtrace;
                     unless self.?on-event-queue-fail($_) {
-                        note "[", $*THREAD.id, "]", $_, $_.backtrace;
-                        $!ev-queue.fail($_);
+                        note "[", $*THREAD.id, "] ", $_, $_.backtrace;
+                        $!ev-queue.fail($_) if $!ev-queue;
+                        self.stop-event-handling;
+                        .rethrow;
                     }
                 }
             }
@@ -46,13 +47,26 @@ method !run-event-handling(::?CLASS:D:) {
     }
 }
 
+method start-event-handling(::?CLASS:D:) {
+    $!ev-lock.protect: {
+        unless $!ev-queue {
+            $!ev-queue = Channel.new;
+            start self!run-ev-loop;
+        }
+    }
+}
+
+method stop-event-handling {
+    $!shutdown = True;
+}
+
 method handle-event(Event:D $ev) {
     # Make sure only one event is being handled at a time.
-    $!ev-lock.protect: {
-        $.debug: "Handling ", $ev.WHICH, " on ", self.^name;
-        self.event($ev);
-        $.debug: "Handled ", $ev.WHICH, " on ", self.^name;
-    }
+    $.debug: "HANDLING ", $ev.WHICH, " on ", self.^name;
+    self.event($ev);
+    $.debug: "EMITTING EVENT for subscribers: ", $ev.WHICH;
+    start $!events.emit: $ev;
+    $.debug: "EMITTED EVENT for subscribers: ", $ev.WHICH;
 }
 
 method subscribe(::?ROLE:D $obj, &code?) {
@@ -69,20 +83,30 @@ method unsubscribe(::?ROLE:D $obj) {
 
 method send-event(Vikna::Event:D $ev) {
     $.debug: "SEND-EVENT: ", $ev.^name;
-    if $ev ~~ Event::Cmd::Redraw {
-        $.debug: " ... redraw event has ", $ev.invalidations.elems, " invalidations";
-    }
+    self.throw: X::Event::Stopped, :$ev if $!shutdown;
+    my Vikna::Event:D @events = $ev;
     $!send-lock.protect: {
-        my Vikna::Event:D @events = $ev;
+        $.debug: " ---> FILTERING EVENT";
         @events = $_ with self.event-filter($ev);
         $.debug: " ---> FILTERED EVENTS:\n",
                     @events.map( { "      . " ~ .^name } ).join("\n");
-        for @events {
-            $.debug: " ---> QUEUEING ", $_.WHICH;
-            $!ev-queue.send: $_
+    }
+        for @events -> $filtered {
+            $.debug: " ---> QUEUEING ", $filtered.WHICH;
+            # If event queue is not initialized then work synchronously.
+            if $!ev-queue {
+                $!ev-queue.send: $filtered;
+                CATCH {
+                    when X::Channel::SendOnClosed {
+                        self.throw: X::Event::Stopped, ev => $filtered;
+                    }
+                }
+            }
+            else {
+                $.handle-event: $filtered
+            }
         }
         $ev
-    }
 }
 
 multi method dispatch(Vikna::Event:D $ev) {
@@ -94,7 +118,7 @@ multi method dispatch(Vikna::Event:U \EvType, *%params) {
     $.send-event: self.create(EvType, :dispatcher( self ), |%params );
 }
 
-# Preserve event's dispatcher. Sugar for readability.
+# Preserve event's dispatcher. send-event sugar, for readability.
 method re-dispatch(Vikna::Event:D $ev) {
     $.send-event: $ev
 }
@@ -107,10 +131,6 @@ multi method event(Event:D $ev) { #`<Sink method> }
 proto method event-filter(Event:D) {*}
 multi method event-filter(Event:D $ev) { [$ev] }
 
-method shutdown-events {
-    $!shutdown = True;
-}
-
 submethod DESTROY {
-    $!ev-queue.close;
+    .close with $!ev-queue;
 }

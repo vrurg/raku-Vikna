@@ -32,6 +32,7 @@ role Event::Informative does Event { }
 # Commanding events like 'move', or 'resize', or 'redraw'
 role Event::Command does Event {
     has Promise:D $.completed .= new;
+    has Capture:D $.args = \();
 }
 
 # Various helper events
@@ -44,12 +45,12 @@ role Event::Unholdable { }
 
 # Any geometry event without old state.
 role Event::Geomish {
-    # Alias `to` for GeomChange sugar
+    # Alias `to` for Transformish sugar
     has Vikna::Rect:D $.geom is mooish(:alias<to>) is required;
 }
 
 # Widget geometry changes of any kind, including position change
-role Event::GeomChange does Event::Geomish {
+role Event::Transformish does Event::Geomish {
     has Vikna::Rect:D $.from is required;
 }
 
@@ -94,44 +95,32 @@ role Event::Kbd does Event { }
 
 #### Commands ####
 
-# Can be used for syncing event queue.
-class Event::Cmd::Nop does Event::Command { }
-
-class Event::Cmd::Close does Event::Command { }
-
-# Move, resize, or both
-class Event::Cmd::SetGeom does Event::Command does Event::Geomish { }
-
-class Event::Cmd::SetColor does Event::Command does Event::Colorish { }
+class Event::Cmd::Nop                 does Event::Command { }
+class Event::Cmd::Close               does Event::Command { }
+class Event::Cmd::SetGeom             does Event::Command { }
+class Event::Cmd::SetColor            does Event::Command { }
+class Event::Cmd::AddChild            does Event::Command { }
+class Event::Cmd::RemoveChild         does Event::Command { }
+class Event::Cmd::Clear               does Event::Command { }
+class Event::Cmd::SetTitle            does Event::Command { }
+class Event::Cmd::Scroll::By          does Event::Command { }
+class Event::Cmd::Scroll::To          does Event::Command { }
+class Event::Cmd::Scroll::SetArea     does Event::Command { }
+class Event::Cmd::Scroll::Fit         does Event::Command { }
+class Event::Cmd::TextScroll::AddText does Event::Command { }
 
 class Event::Cmd::Redraw does Event::Command {
-    has @.invalidations is required;
     has Promise:D $.redrawn .= new;
+    method args {
+        \($!redrawn, |$!args)
+    }
 }
 
-class Event::Cmd::AddChild    does Event::Command does Event::Childish { }
-class Event::Cmd::RemoveChild does Event::Command does Event::Childish { }
-
-class Event::Cmd::Clear does Event::Command { }
-
-class Event::Cmd::SetTitle does Event::Command {
-    has Str:D $.title is required;
-}
-
-class Event::Cmd::Scroll::By does Event::Command {
-    has $.dx;
-    has $.dy;
-}
-
-class Event::Cmd::Scroll::To      does Event::Command does Event::Positionish { }
-class Event::Cmd::Scroll::SetArea does Event::Command does Event::Geomish     { }
-class Event::Cmd::Scroll::Fit     does Event::Command {
-    has Bool $.width;
-    has Bool $.height;
-}
-
-class Event::Cmd::TextScroll::AddText does Event::Command {
-    has Str:D $.text is required;
+class Event::Cmd::CanvasReq does Event::Command {
+    has Promise:D $.response .= new;
+    method args {
+        \( $!response, |$!args )
+    }
 }
 
 #### Informative ####
@@ -143,19 +132,17 @@ class Event::TitleChange does Event::Informative {
 
 class Event::WidgetColor does Event::Informative does Event::ColorChange { }
 
-class Event::Geom does Event::Informative does Event::GeomChange { }
+class Event::GeomChanged does Event::Informative does Event::Transformish { }
 
-class Event::ScreenGeom does Event::Informative does Event::GeomChange { }
+class Event::ScreenGeom does Event::Informative does Event::Transformish { }
 
 # Dispatched whenever widget content might have changed.
 class Event::Updated does Event::Informative {
     has $.geom is required; # Widget geometry at the point of time when the event was dispatched.
-    has @.invalidations is required;
-    has $.canvas is required;
 }
 
 class Event::Scroll::Position does Event::Informative does Event::Positional { }
-class Event::Scroll::Area does Event::Informative does Event::GeomChange { }
+class Event::Scroll::Area does Event::Informative does Event::Transformish { }
 
 class Event::TextScroll::BufChange does Event::Informative {
     has Int:D $.old-size is required;

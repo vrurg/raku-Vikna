@@ -1,71 +1,68 @@
 use v6.e.PREVIEW;
-use Vikna::Widget;
-use Vikna::Border;
-unit class Vikna::Window is Vikna::Widget is export;
+use Vikna::Widget::Group;
+unit class Vikna::Window is Vikna::Widget::Group;
 
 use Vikna::Events;
 use Vikna::Utils;
+use Vikna::Border;
+use Vikna::Widget::GroupMember;
 
-class Client is Vikna::Widget {
-    method fit {
-        my ($w, $h) = $.owner.client-size;
-        self.Vikna::Widget::resize(:$w, :$h)
+class Client is Vikna::Widget::GroupMember {
+    method fit(Vikna::Rect:D $geom) {
+        my ($w, $h) = $.parent.client-size($geom);
+        self.Vikna::Widget::resize($w, $h)
     }
     # Don't allow voluntary client size change.
     method resize { }
 }
 
 has Str:D $.title = "";
-has $.border;
-has Client $.client handles <add-child remove-child create-child to-top to-bottom for-children children-protect>;
-
-has $!win-lock = Lock.new;
+has Vikna::Border $.border;
+has Client $.client handles <cmd-addchild cmd-removechild>;
 
 submethod TWEAK(Bool:D :$border = True) {
     my ($cx, $cy, $cw, $ch) = (0, 0, self.w, self.h);
     if $border {
-        $!border = Vikna::Border.new:
+        $!border = self.create-child:
+                        Vikna::Border,
+                        :group(self),
                         :w( $cw ), :h( $ch ), :x(0), :y(0),
-                        :app( self.app ),
-                        :owner( self ),
                         :!auto-clear;
         ++$cx; ++$cy;
         $cw -= 2;
         $ch -= 2;
     }
-    $!client = Client.new:
+    $!client = self.create-child:
+                    Client,
                     :x( $cx ), :y( $cy ), :w( $cw ), :h( $ch ),
-                    :app( self.app ),
-                    :owner( self ),
+                    :group( self ),
                     :bg-pattern('.-+'),
                     :color<black blue>,
                     :auto-clear( self.auto-clear );
 }
 
-method for-elems(&code) {
-    $!win-lock.protect: {
-        for $!border, $!client -> $elem {
-            &code($elem)
-        }
-    }
-}
-
 ### Command handlers ###
 
-method cmd-settitle(Event::Cmd::SetTitle:D $ev) {
+method cmd-settitle(Str:D $title) {
     my $old-title = $!title;
-    $!title = $ev.title;
-    self.dispatch: Event::TitleChange, :$old-title, :$title
+    $!title = $title;
+    self.dispatch: Event::TitleChange, :$old-title, :$!title
+}
+
+method cmd-setgeom(Vikna::Rect:D $geom) {
+    $!client.fit($geom);
+    $!border.cmd-setgeom: Vikna::Rect.new(.w, .h) given $geom;
+    nextsame;
+}
+
+method cmd-setcolor(|c) {
+    $!client.cmd-setcolor(|c);
+    nextsame;
 }
 
 ### Command senders ###
 method set-title(Str:D $title) {
-    self.dispatch: Event::Cmd::SetTitle, :$title;
-}
-
-method clear {
-    $!client.clear;
-    nextsame;
+    self.send-command: Event::Cmd::SetTitle, $title;
 }
 
 # method redraw {
@@ -76,51 +73,20 @@ method clear {
 #     }
 # }
 
-multi method invalidate(Vikna::Rect:D $rect) {
-    $.add-inv-rect: $rect;
-    $.for-elems: {
-        .invalidate: $rect.relative-to(.geom, :clip)
-    };
-}
-
-method client-size {
-    my $bw = $!border ?? 2 !! 0;
-    ($.w - $bw, $.h - $bw)
-}
-
-method resize(Int:D :$w is copy where * > 0 = $.w, Int:D :$h is copy where * > 0 = $.h) {
+method resize(Int:D $w is copy where * > 0 = $.w, Int:D $h is copy where * > 0 = $.h) {
     my $min = $!border ?? 4 !! 2;
     $w max= $min;
     $h max= $min;
-    nextwith(:$w, :$h)
+    nextwith($w, $h)
 }
 
-method compose(:$to = $.canvas) {
-    $.debug: "INVALIDATES ON CANVAS: ", $to.invalidations.elems;
-    $.for-elems: {
-        .compose;
-        $.debug: "IMPRINT ", $_.WHICH, " into ", .x, ", ", .y;
-        $to.imprint: .x, .y, .canvas;
-    }
-    # $.app.screen.print: 0,0, $to;
+### Utility methods ###
+method client-size(Vikna::Rect:D $geom) {
+    my $bw = $!border ?? 2 !! 0;
+    ($geom.w - $bw, $geom.h - $bw)
 }
 
 multi method event(Event::TitleChange:D) {
-    self.dispatch: Event::RedrawRequest;
-}
-
-multi method event(Event::Resize:D $ev) {
-    $!win-lock.protect: {
-        $!client.fit;
-        $!client.resize(:w($.w - 2), :h($.h - 2));
-        $!border.resize(:$.w, :$.h);
-    }
-    self.dispatch: Event::RedrawRequest;
-}
-
-multi method event(Event::RedrawRequest:D $ev) {
-    $.for-elems: {
-        .dispatch: $ev
-    }
-    nextsame;
+    $.invalidate: 0, 0, $.w, 1;
+    $.redraw;
 }

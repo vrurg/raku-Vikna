@@ -1,6 +1,6 @@
 use v6.e.PREVIEW;
-use Vikna::Widget;
-unit class Vikna::Border is Vikna::Widget;
+use Vikna::Widget::GroupMember;
+unit class Vikna::Border is Vikna::Widget::GroupMember;
 
 my %borders =
         ansi => %(
@@ -26,8 +26,8 @@ method draw( :$canvas ) {
     $canvas.imprint(1, $b, $bottom);
     # Limit title length.
     my $top;
-    if $.owner.?title && $.w > 6 {
-        my $title = " " ~ $.owner.title.substr(0, $.w - 6) ~ " ";
+    if $.parent.?title && $.w > 6 {
+        my $title = " " ~ $.parent.title.substr(0, $.w - 6) ~ " ";
         my $tlen = $.w - 2 - $title.chars;
         my $l-len = $tlen div 2;
         my $r-len = $tlen - $l-len;

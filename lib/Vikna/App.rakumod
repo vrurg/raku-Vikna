@@ -42,7 +42,7 @@ method build-screen {
 }
 
 method build-desktop {
-    self.create: Vikna::Desktop, :geom($.screen.geom.clone), :bg-pattern<.>;
+    self.create: Vikna::Desktop, :geom($.screen.geom.clone), :bg-pattern<.>, :!auto-clear;
 }
 
 method debug(*@args, :$obj) {
@@ -60,6 +60,9 @@ multi method run(::?CLASS:U: |c) {
 multi method run(::?CLASS:D:) {
     PROCESS::<$VIKNA-APP> = self;
     $!screen.init;
+    $!desktop.invalidate;
+    $!desktop.redraw;
+    $!desktop.sync-events: :transitive;
     $.main;
     $.debug: "MAIN IS DONE";
     $.desktop.sync-events(:transitive);
@@ -71,7 +74,7 @@ multi method run(::?CLASS:D:) {
     LEAVE $!screen.shutdown;
     CATCH {
         default {
-            $.debug: .message ~ .backtrace;
+            $.debug: "APP:[{$*THREAD.id}] ", .message, .backtrace;
             .rethrow;
         }
     }
