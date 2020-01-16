@@ -1,6 +1,5 @@
 use v6.d;
-use lib "%*ENV<HOME>/src/Raku/Terminal-Print/lib";
-use lib "%*ENV<HOME>/src/Raku/raku-Terminal-Window/lib";
+# use lib "%*ENV<HOME>/src/Raku/Terminal-Print/lib";
 use Vikna::App;
 use Vikna::Window;
 
@@ -9,13 +8,13 @@ class MyWin is Vikna::Window {
 
 class MyApp is Vikna::App {
     method main {
-        my $mw = $.desktop.create-child: MyWin, :w<79>, :h<30>, :x<10>, :y<10>, :title<test>;
-        # $mw.invalidate;
-        # $mw.redraw;
-        # for 10...7 -> $c {
-        #     $mw.set-geom($c, $c, 70, 30);
-        #     $mw.sync-events;
-        # }
+        $.trace: "--- Creating window";
+        my $mw = $.desktop.create-child: MyWin, :w<79>, :h<30>, :x<10>, :y<3>, :title<test>, :bg-pattern<#>;
+        my $w = $.desktop.create-child: MyWin, :w<20>, :h<5>, :x<30>, :y<7>, :title('test 2');
+        $.trace: "--- Redraw window";
+        $mw.redraw;
+        $.trace: "--- Sync desktop events";
+        $.desktop.sync-events: :transitive;
         # return;
 
         for ^10 {

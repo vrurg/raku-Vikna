@@ -1,11 +1,13 @@
 use v6.e.PREVIEW;
+use Vikna::Object;
 unit class Vikna::App;
+also is Vikna::Object;
 
 use Terminal::Print;
 use Vikna::Widget;
 use Vikna::Desktop;
 use Vikna::Screen;
-use Log::Async;
+use Vikna::Tracer;
 use AttrX::Mooish;
 
 my ::?CLASS $app;
@@ -14,18 +16,17 @@ my ::?CLASS $app;
 has %.screen-params;
 has Vikna::Screen $.screen is mooish(:lazy);
 has Vikna::Desktop $.desktop is mooish(:lazy, :clearer, :predicate);
-has Log::Async $.logger is mooish(:lazy);
+has Vikna::Tracer $.tracer is mooish(:lazy);
 has Bool:D $.debugging = False;
 
 method new(|) {
     $app //= callsame;
 }
 
-method build-logger {
-    my $l = Log::Async.new;
-    my $log-name = .subst(":", "_", :g) with self.^name;
-    $l.send-to('./' ~ $log-name ~ '.log', :level(*));
-    $l
+method build-tracer {
+    my $db-name = .subst(":", "_", :g) ~ ".sqlite" with self.^name;
+    # note "CREATING TRACER DB ", $db-name, " with session ", self.^name;
+    Vikna::Tracer.new: :$db-name, :session-name( self.^name ), :!to-err;
 }
 
 method build-screen {
@@ -34,7 +35,7 @@ method build-screen {
     }
     elsif %*ENV<TERM>:exists {
         use Vikna::Screen::ANSI;
-        Vikna::Screen::ANSI.new: |%!screen-params
+        $.create: Vikna::Screen::ANSI, |%!screen-params
     }
     else {
         die $*VM.osname ~ " is not Windows but neither I see TERM environment variable"
@@ -42,15 +43,19 @@ method build-screen {
 }
 
 method build-desktop {
-    self.create: Vikna::Desktop, :geom($.screen.geom.clone), :bg-pattern<.>, :!auto-clear;
+    self.create: Vikna::Desktop,
+                    :geom($.screen.geom.clone),
+                    :bg-pattern<.>,
+                    :!auto-clear;
 }
 
-method debug(*@args, :$obj) {
+method trace(*@args, :$obj = self, *%c) {
     return unless $!debugging;
-    my @msg = @args.join
-                    .split("\n")
-                    .map( { "[" ~ $*THREAD.id.fmt("%5d") ~ "] {"({$_.WHICH}) " with $obj}" ~ $_ } );
-    $!logger.log(msg => $_, :level(DEBUG), :frame(callframe(1))) for @msg;
+    my $message = @args.join;
+    for <phase debug event error> { # predefined classes
+        %c<class> = $_ if %c{$_}:delete;
+    }
+    $!tracer.record(:object-id(~$obj.WHICH), :$message, |%c);
 }
 
 multi method run(::?CLASS:U: |c) {
@@ -58,24 +63,31 @@ multi method run(::?CLASS:U: |c) {
 }
 
 multi method run(::?CLASS:D:) {
-    PROCESS::<$VIKNA-APP> = self;
-    $!screen.init;
-    $!desktop.invalidate;
-    $!desktop.redraw;
-    $!desktop.sync-events: :transitive;
-    $.main;
-    $.debug: "MAIN IS DONE";
-    $.desktop.sync-events(:transitive);
-    $.debug: "CLOSING DESKTOP";
-    await $.desktop.close.completed;
-    $.debug: "APP DONE!";
-    $!logger.done;
+    $.flow: :sync, :name('MAIN'), {
+        PROCESS::<$VIKNA-APP> = self;
+        $.trace: "Starting app" ~ self.^name, obj => self, :phase;
+        $!screen.init;
+        $!desktop.invalidate;
+        $!desktop.redraw;
+        $!desktop.sync-events: :transitive;
+        $.trace: "PASSING TO MAIN", :phase;
+        $.main;
+        $.trace: "MAIN IS DONE", :phase;
+        $.desktop.sync-events(:transitive);
+        $.trace: "CLOSING DESKTOP", :phase;
+        await $.desktop.close.completed;
+        $.trace: "APP DONE!", :phase;
 
-    LEAVE $!screen.shutdown;
-    CATCH {
-        default {
-            $.debug: "APP:[{$*THREAD.id}] ", .message, .backtrace;
-            .rethrow;
+        LEAVE {
+            $!screen.shutdown;
+            $!tracer.shutdown if $!debugging;
+        }
+        CATCH {
+            default {
+                note .message, ~.backtrace;
+                $.trace: .message, .backtrace, :error;
+                .rethrow;
+            }
         }
     }
 }

@@ -14,7 +14,7 @@ method on-screen-resize {
     my $old-w = $.w;
     my $old-h = $.h;
     $.app.screen.setup(:reset);
-    $.app.debug: "Desktop resized to ", $.w, " x ", $.h;
+    $.app.trace: "Desktop resized to ", $.w, " x ", $.h;
     # Do it in two events as screen resize might be handy for a child widget. But otherwise it's a normal resize event.
     self.dispatch: Event::ScreenResize, :$old-w, :$old-h, :$.w, :$.h;
     self.dispatch: Event::Resize, :$old-w, :$old-h, :$.w, :$.h;
@@ -24,23 +24,23 @@ method on-screen-resize {
 
 method cmd-redraw(|) {
     callsame;
-    $.debug: "-> screen!";
+    $.trace: "-> screen!";
     $.app.screen.print: 0, 0, $.canvas;
 }
 
 ### Utility methods ###
 
 # method redraw {
-#     $.debug: "DESKTOP REDRAW";
+#     $.trace: "DESKTOP REDRAW";
 #     $.draw-protect: {
-#         $.debug: " -> redrawing, invalidations: ", +@.invalidations;
+#         $.trace: " -> redrawing, invalidations: ", +@.invalidations;
 #         if @.invalidations {
-#             $.debug: "DESKTOP self invalidate";
+#             $.trace: "DESKTOP self invalidate";
 #             $.invalidate if $.auto-clear;
 #             my @invalidations = @.invalidations;
-#             $.debug: "DESKTOP self clear invalidations";
+#             $.trace: "DESKTOP self clear invalidations";
 #             $.clear-invalidations;
-#             $.debug: "DISPATCHING DESKTOP REDRAW COMMAND";
+#             $.trace: "DISPATCHING DESKTOP REDRAW COMMAND";
 #             self.send-command: Event::Cmd::Redraw, @invalidations;
 #         }
 #     }

@@ -13,6 +13,6 @@ method draw(|) { }
 
 method event-for-children(Event:D $ev) {
     $.for-children: {
-        .event($ev)
+        .event($ev.clone)
     }
 }

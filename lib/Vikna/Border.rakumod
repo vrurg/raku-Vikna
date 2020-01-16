@@ -14,7 +14,7 @@ my %borders =
 has $.type = 'ansi';
 
 method draw( :$canvas ) {
-    $.debug: "### BORDER DRAW, invalidations: ", $canvas.invalidations.elems;
+    $.trace: "### BORDER DRAW, invalidations: ", $canvas.invalidations.elems;
     my %b = %borders{ $!type };
     my $r = $.w - 1;
     my $b = $.h - 1;

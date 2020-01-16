@@ -3,8 +3,7 @@ use v6.e.PREVIEW;
 
 use Vikna::EventHandling;
 
-unit role Vikna::Screen is export;
-also does Vikna::EventHandling;
+unit role Vikna::Screen;
 
 use Vikna::Point;
 use Vikna::Rect;
@@ -34,9 +33,3 @@ multi method color(Any:U)                           { Vikna::Color::RGB }
 
 multi method print(::?CLASS:D: Vikna::Point:D $pos, Vikna::Canvas:D $viewport, *%c ) { self.print: $pos.x, $pos.y, $viewport, |%c }
 multi method print(::?CLASS:D: Int:D $x, Int:D $y, Vikna::Canvas:D $viewport, *%c ) { ... }
-
-method screen-resize {
-    my $old = $!geom;
-    self.clear-geom;
-    self.dispatch: Event::ScreenGeom, :$old, new => $!geom
-}

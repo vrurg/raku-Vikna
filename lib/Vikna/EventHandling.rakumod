@@ -20,23 +20,28 @@ submethod TWEAK {
 }
 
 method !run-ev-loop {
+    my $vf = $*VIKNA-FLOW;
+    $.trace: "Starting event handling", :event;
     react {
-        $.debug: "Started event handling on ", self.WHICH;
         whenever $!ev-queue -> $ev {
+            my $*VIKNA-FLOW = $vf; # Workaround lost dynamic variables.
             $!ev-lock.protect: {
-                $.debug: "REACTING ON EVENT: ", $ev.WHICH;
+                $.trace: "EVENT ", $ev.WHICH, " START HANDLING", :event;
                 self.handle-event($ev);
+                $.trace: "EVENT ", $ev.WHICH, " HANDLING DONE", :event;
             }
             done if $!shutdown;
             CATCH {
                 default {
                     note "EVENT KABOOM!";
-                    $.debug: "EVENT HANDLING THROWN ", .message, .backtrace;
+                    note .message, ~.backtrace;
+                    $.trace: "EVENT HANDLING THROWN:\n", .message, .backtrace, :error;
                     unless self.?on-event-queue-fail($_) {
                         note "[", $*THREAD.id, "] ", $_, $_.backtrace;
                         $!ev-queue.fail($_) if $!ev-queue;
                         self.stop-event-handling;
-                        .rethrow;
+                        $.trace: "RETHROWING ", $_.WHICH;
+                        .rethrow
                     }
                 }
             }
@@ -47,26 +52,26 @@ method !run-ev-loop {
     }
 }
 
-method start-event-handling(::?CLASS:D:) {
+method start-event-handling(::?ROLE:D:) {
     $!ev-lock.protect: {
         unless $!ev-queue {
             $!ev-queue = Channel.new;
-            start self!run-ev-loop;
+            $.flow: { self!run-ev-loop }, :name('EVENT LOOP ' ~ self.WHICH);
         }
     }
 }
 
-method stop-event-handling {
+method stop-event-handling(::?ROLE:D:) {
     $!shutdown = True;
 }
 
-method handle-event(Event:D $ev) {
+method handle-event(::?ROLE:D: Event:D $ev) {
     # Make sure only one event is being handled at a time.
-    $.debug: "HANDLING ", $ev.WHICH, " on ", self.^name;
+    $.trace: "HANDLING ", $ev.WHICH, " on ", self.^name, :event;
     self.event($ev);
-    $.debug: "EMITTING EVENT for subscribers: ", $ev.WHICH;
-    start $!events.emit: $ev;
-    $.debug: "EMITTED EVENT for subscribers: ", $ev.WHICH;
+    $.trace: "EMITTING EVENT for subscribers: ", $ev.WHICH, :event;
+    $.flow: { $!events.emit: $ev }, :name('EVENT SUBSCRIBERS ' ~ self.WHICH);
+    $.trace: "EMITTED EVENT for subscribers: ", $ev.WHICH, :event;
 }
 
 method subscribe(::?ROLE:D $obj, &code?) {
@@ -82,17 +87,17 @@ method unsubscribe(::?ROLE:D $obj) {
 }
 
 method send-event(Vikna::Event:D $ev) {
-    $.debug: "SEND-EVENT: ", $ev.^name;
+    $.trace: "SEND-EVENT: ", $ev.WHICH, :event;
     self.throw: X::Event::Stopped, :$ev if $!shutdown;
     my Vikna::Event:D @events = $ev;
     $!send-lock.protect: {
-        $.debug: " ---> FILTERING EVENT";
+        $.trace: "  ---> FILTERING EVENT";
         @events = $_ with self.event-filter($ev);
-        $.debug: " ---> FILTERED EVENTS:\n",
-                    @events.map( { "      . " ~ .^name } ).join("\n");
+        $.trace: "  ---> FILTERED EVENTS:\n",
+                    @events.map( { "      . " ~ .WHICH } ).join("\n"), :event;
     }
         for @events -> $filtered {
-            $.debug: " ---> QUEUEING ", $filtered.WHICH;
+            $.trace: " ---> QUEUEING ", $filtered.WHICH, :event;
             # If event queue is not initialized then work synchronously.
             if $!ev-queue {
                 $!ev-queue.send: $filtered;
@@ -103,33 +108,33 @@ method send-event(Vikna::Event:D $ev) {
                 }
             }
             else {
-                $.handle-event: $filtered
+                $.flow: { $.handle-event: $filtered }, :sync, :name('SYNC EVENT HANDLING');
             }
         }
         $ev
 }
 
-multi method dispatch(Vikna::Event:D $ev) {
+multi method dispatch(::?ROLE:D: Vikna::Event:D $ev) {
     $.send-event: $ev.clone(:dispatcher($ev.dispatcher));
 }
 
-multi method dispatch(Vikna::Event:U \EvType, *%params) {
-    $.debug: "NEW EVENT OF ", EvType.^name, " with ", %params;
+multi method dispatch(::?ROLE:D: Vikna::Event:U \EvType, *%params) {
+    $.trace: "NEW EVENT OF ", EvType.^name, " with params:\n", %params.pairs».map("  " ~ *).join("\n");
     $.send-event: self.create(EvType, :dispatcher( self ), |%params );
 }
 
 # Preserve event's dispatcher. send-event sugar, for readability.
-method re-dispatch(Vikna::Event:D $ev) {
+method re-dispatch(::?ROLE:D: Vikna::Event:D $ev) {
     $.send-event: $ev
 }
 
 sub ev2key($ev) { $ev.WHICH }
 
-proto method event(Event:D $ev) {*}
-multi method event(Event:D $ev) { #`<Sink method> }
+proto method event(::?ROLE:D: Event:D $ev) {*}
+multi method event(::?ROLE:D: Event:D $ev) { #`<Sink method> }
 
-proto method event-filter(Event:D) {*}
-multi method event-filter(Event:D $ev) { [$ev] }
+proto method event-filter(::?ROLE:D: Event:D) {*}
+multi method event-filter(::?ROLE:D: Event:D $ev) { [$ev] }
 
 submethod DESTROY {
     .close with $!ev-queue;

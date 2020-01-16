@@ -2,9 +2,11 @@ use v6.e.PREVIEW;
 use nqp;
 use Vikna::Screen;
 use Vikna::Color;
+use Vikna::Object;
 
 unit class Vikna::Screen::ANSI;
 also does Vikna::Screen;
+also is Vikna::Object;
 
 use Color::Names;
 use Color;
@@ -170,4 +172,11 @@ method init {
 }
 
 method shutdown {
+}
+
+method screen-resize {
+    my $old = $!geom;
+    $.clear-geom;
+    # TODO Find elegant and less application dependent way of signalling the resize.
+    $.app.desktop.dispatch: Event::ScreenGeom, :$old, new => $!geom
 }

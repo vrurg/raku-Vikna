@@ -45,7 +45,7 @@ method cmd-textscroll-addtext(Str:D $text is copy) {
     # Translate escapes.
     $text ~~ s:g| \x1B | ^[ |;
 
-    $.debug: "&&& CMD ADD-TEXT «$text»";
+    $.trace: "&&& CMD ADD-TEXT «$text»";
 
     my $text-width = $!wrap ?? $.w !! Inf;
     my $max-cols = $.columns;
@@ -79,7 +79,7 @@ method cmd-textscroll-addtext(Str:D $text is copy) {
         self!set-area( :w( $max-cols ), :h( +@!buffer ) );
         my $ovflow = $.lines - $.dy - $.h ;
         if $!auto-scroll && $ovflow > 0 {
-            $.debug: "SCROLL-BY ", $ovflow;
+            $.trace: "SCROLL-BY ", $ovflow;
             self!scroll( dy => $ovflow );
         }
     }
@@ -114,7 +114,7 @@ method cmd-scroll-fit(Bool:D :$width?, Bool:D :$height?) {
 ### Command senders ###
 
 method add-text(Str:D $text is copy) {
-    $.debug: "ADD-TEXT: «$text»";
+    $.trace: "ADD-TEXT: «$text»";
     self.send-command: Event::Cmd::TextScroll::AddText, $text;
 }
 
@@ -138,14 +138,14 @@ method fit(Bool:D :$width?, Bool:D :$height?) {
 ### Event handlers ###
 
 multi method event(Event::TextScroll::BufChange:D $ev) {
-    $.debug: "TEXTSCROLL -- REDRAW";
+    $.trace: "TEXTSCROLL -- REDRAW";
     $.invalidate;
     $.redraw;
 }
 
 ### Utility methods ###
 method cur-line(--> BufLine) {
-    $.debug: "CUR ROW: ", $!cur-row, " LINES IN BUFFER: ", +@!buffer;
+    $.trace: "CUR ROW: ", $!cur-row, " LINES IN BUFFER: ", +@!buffer;
      @!buffer[$!cur-row]
   }
 method !next-line {
@@ -154,7 +154,7 @@ method !next-line {
 }
 
 method print(**@args) {
-    $.debug: "TS.PRINT: [[", @args, "]]";
+    $.trace: "TS.PRINT: [[", @args, "]]";
     self.add-text: @args.join: ""
 }
 
@@ -164,7 +164,7 @@ method say(**@args) {
 
 method draw( :$canvas ) {
     callsame;
-    $.debug: "TextScroll draw";
+    $.trace: "TextScroll draw";
     for $.dy..^($.dy + $.h) -> $lnum {
         my $y = $lnum - $.dy;
         my $out = $lnum < @!buffer ?? @!buffer[$lnum].substr($.dx, $.w) !! "";
