@@ -1,0 +1,117 @@
+<html>
+    <head>
+        <title>Dump of events</title>
+        <style>
+        .session_data {
+            border: none
+            border-spacing: 0;
+            padding: 0.5em;
+            outline: 0;
+            border-collapse: collapse;
+        }
+        .session_data td, .session_data th {
+            padding: 0.5em;
+        }
+        .session_header {
+            font-size: 200%;
+            border-top: 3px solid green;
+            border-bottom: 3px solid green;
+            background-color: #e0e0e0;
+        }
+        .flow_header: {
+            font-size: 150%;
+        }
+        .record_row td {
+            border-bottom-style: solid;
+            border-bottom-color: #a0a0a0;
+            border-bottom-width: 1px;
+        }
+        .record_message {
+            font-family: monospace;
+            background-color: #f0f0f0;
+            white-space: pre-wrap;
+        }
+        .record_message pre {
+            margin: 0;
+        }
+        .object_id {
+            background-color: #fefdd5;
+        }
+        .tracer_phase {
+            color: #a0169d;
+            font-weight: bold;
+        }
+        .tracer_error {
+            color: #700000;
+            font-weight: bold;
+        }
+        .tracer_event {
+            color: blue;
+            font-style: oblique;
+        }
+        td[class=flow_name_cell] {
+            background-color: #9fd8fe;
+        }
+        </style>
+    </head>
+    <body>
+        <ul class="TOC">
+        {{#session}}
+            <li>
+                <a href="#session{{id}}">Session #{{id}} {{name}}</a>
+            </li>
+        {{/session}}
+        </ul>
+        <table class="session_data">
+            <tbody>
+                {{#session}}
+                <tr class="session_header">
+                    <th colspan={{tbl_columns}} class="header-cell"><a name="session{{id}}" />Session {{name}} #{{id}}</th>
+                </tr>
+                <tr class="flow_header">
+                    <th>ID</th>
+                    <th>Time</th>
+                    {{#flows}}
+                    <th>Flow #{{flow}}</th>
+                    {{/flows}}
+                </tr>
+                {{#rows}}
+                {{#record}}
+                <tr class="record_row">
+                    <td>{{id}}</td>
+                    <td>{{time}}</td>
+                    {{#cols}}
+                    {{#cell}}
+                    <td class="record_cell">
+                        <div class="object_id">{{object_id}}</div>
+                        {{#message}}
+                        <div class="record_message {{rec_class}}">{{line}}</div>
+                        {{/message}}
+                    </td>
+                    {{/cell}}
+                    {{^cell}}
+                    <td class="record_cell empty_cell"><div class="no_record"></div></td>
+                    {{/cell}}
+                    {{/cols}}
+                </tr>
+                {{/record}}
+                {{#flow_name}}
+                <tr class="flow_name_row">
+                    <td>{{id}}</td>
+                    <td>{{time}}</td>
+                    {{#cols}}
+                    {{#cell}}
+                    <td class="flow_name_cell">{{flow_name}}</td>
+                    {{/cell}}
+                    {{^cell}}
+                    {{/cell}}
+                    <td class="flow_name_cell empty_cell"><div class="no_record"/></td>
+                    {{/cols}}
+                </tr>
+                {{/flow_name}}
+                {{/rows}}
+                {{/session}}
+            </tbody>
+        </table>
+    </body>
+</html>

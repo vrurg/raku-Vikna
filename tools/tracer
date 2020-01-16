@@ -1,0 +1,90 @@
+#!/usr/bin/env raku
+use v6.e.PREVIEW;
+use Vikna::Tracer;
+use Template::Mustache;
+use Data::Dump;
+
+my %*SUB-MAIN-OPTS =
+    :named-anywhere,
+    ;
+
+multi MAIN('list-sessions', Str :$db-file = 'Vikna.sqlite', :$with-threads = False) {
+    my $tr = Vikna::Tracer.new: db-name => $db-file;
+    for $tr.sessions {
+        say .id.fmt('%4d '), ~DateTime.new(.started).local, " [{.records.elems.fmt('%6d')}] ", .name;
+        if $with-threads {
+            say "\tthreads: ", .records.map( *.thread ).unique.sort.join(", ");
+        }
+    }
+}
+
+multi MAIN( Str:D $format where * ~~ (any Vikna::Tracer.templates.keys),
+            Int :$session?,
+            Str:D :$db-file = 'Vikna.sqlite',
+            Str :o(:$output)?
+        )
+{
+    my $tr = Vikna::Tracer.new: db-name => $db-file;
+    my $fh = $*OUT;
+    LEAVE $fh.close if $output;
+    with $output {
+        $fh = .IO.open: :w;
+    }
+
+    my $tmpl = Vikna::Tracer.templates{$format};
+
+    my @sessions;
+    with $session {
+        @sessions = $tr.session($_)
+    }
+    else {
+        @sessions = $tr.sessions;
+    }
+
+    my %data = session => [];
+    for @sessions -> $sess {
+        my %sess = id => .id, started => ~DateTime.new(.started), name => .name with $sess;
+        my @flows = $sess.records.map( *.flow ).unique.sort;
+        my @flow-names = '' xx +@flows;
+        my %fl-idx = @flows.antipairs;
+        %sess<flows> = @flows.map( { { flow => ~$_ } } ).list;
+        %sess<tbl_columns> = @flows.elems + 2;
+        %sess<rows> = (gather {
+            for $sess.records {
+                my %rec;
+                my $fl-idx = %fl-idx{ .flow };
+
+                if @flow-names[$fl-idx] ne .flow-name {
+                    my %flow-row;
+                    my @flow-cols = [ { cell => { } } xx +@flow-names ];
+                    @flow-cols[$fl-idx]<cell> = %( flow_name => (.flow-name || '*anon*') );
+                    @flow-names[$fl-idx] = .flow-name;
+                    %flow-row<id> = .id;
+                    %flow-row<time> = ~DateTime.new(.time);
+                    %flow-row<cols> = @flow-cols;
+                    # say Dump(%flow-row, :skip-methods);
+                    take { flow_name => %flow-row };
+                }
+
+                %rec<cols> = [ { cell => { } } xx +@flows ];
+                %rec<time> = ~DateTime.new(.time);
+                %rec<id> = .id;
+                %rec<cols>[ $fl-idx ]<cell> = %(
+                    object_id   => .object-id,
+                    message     => [ .message.split("\n").map( { %( line => $_ ) } ) ],
+                    rec_class   => 'tracer_' ~ .class,
+                );
+                take { record => %rec };
+            }
+        }).eager.list;
+        %data<session>.push: %sess;
+    }
+
+    # say Dump(%data, :skip-methods);
+    my $mustache = Template::Mustache.new;
+    $fh.print: $mustache.render( slurp(~$tmpl), %data );
+}
+
+multi MAIN( Str $format, |c) {
+    die "Unsupported format {$format}. Choose any of: ", Vikna::Tracer.templates.keys.join(", ");
+}
