@@ -47,7 +47,7 @@ submethod TWEAK(Bool:D :$border = True) {
                     :parent(self),
                     :group( self ),
                     :x( $cx ), :y( $cy ), :w( $cw ), :h( $ch ),
-                    :bg-pattern('∙-□-'),
+                    :bg-pattern(self.bg-pattern // '∙-□-'), # DEBUG
                     :color<black blue>,
                     :auto-clear( self.auto-clear );
     self.Vikna::Parent::add-child($!client);
