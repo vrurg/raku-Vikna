@@ -17,7 +17,7 @@ class MyApp is Vikna::App {
         $.desktop.sync-events: :transitive;
         # return;
 
-        for ^10 {
+        for ^10 -> $stage {
             my $nw = 79.rand.Int + 4;
             my $nh = 30.rand.Int + 4;
             my $nx = ($.desktop.w - $nw).rand.Int;
@@ -36,6 +36,7 @@ class MyApp is Vikna::App {
                 my $cy = ($oy + $dy × ($step / $steps)).Int;
                 $mw.set-geom($cx, $cy, $cw, $ch);
                 $mw.set-title: "test: $cw × $ch";
+                $w.set-title: "test " ~ ($stage * 10 + $step);
                 # sleep .1;
                 $mw.sync-events;
             }
