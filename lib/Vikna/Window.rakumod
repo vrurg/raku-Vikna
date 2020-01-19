@@ -61,7 +61,9 @@ submethod TWEAK(Bool:D :$border = True) {
 method cmd-settitle(Str:D $title) {
     my $old-title = $!title;
     $!title = $title;
-    self.dispatch: Event::TitleChange, :$old-title, :$!title
+    $.border.invalidate: 0, 0, $.w, 1;
+    $.redraw;
+    self.dispatch: Event::TitleChange, :$old-title, :$!title;
 }
 
 method cmd-setgeom(Vikna::Rect:D $geom) {
@@ -102,9 +104,4 @@ method resize(Int:D $w is copy where * > 0 = $.w, Int:D $h is copy where * > 0 =
 method client-size(Vikna::Rect:D $geom) {
     my $bw = $!border ?? 2 !! 0;
     ($geom.w - $bw, $geom.h - $bw)
-}
-
-multi method event(::?CLASS:D: Event::TitleChange:D) {
-    $.invalidate: 0, 0, $.w, 1;
-    $.redraw;
 }
