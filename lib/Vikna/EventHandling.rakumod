@@ -24,7 +24,7 @@ method !run-ev-loop {
     $.trace: "Starting event handling", :event;
     react {
         whenever $!ev-queue -> $ev {
-            my $*VIKNA-FLOW = $vf; # Workaround lost dynamic variables.
+            my $*VIKNA-FLOW = $vf; # Preserve the flow
             $!ev-lock.protect: {
                 $.trace: "EVENT ", $ev.WHICH, " START HANDLING", :event;
                 self.handle-event($ev);
@@ -67,7 +67,7 @@ method stop-event-handling(::?ROLE:D:) {
 
 method handle-event(::?ROLE:D: Event:D $ev) {
     # Make sure only one event is being handled at a time.
-    $.trace: "HANDLING ", $ev.WHICH, " on ", self.^name, :event;
+    $.trace: "HANDLING ", $ev.WHICH, :event;
     self.event($ev);
     $.trace: "EMITTING EVENT for subscribers: ", $ev.WHICH, :event;
     $.flow: { $!events.emit: $ev }, :name('EVENT SUBSCRIBERS ' ~ self.WHICH);
@@ -96,22 +96,22 @@ method send-event(Vikna::Event:D $ev) {
         $.trace: "  ---> FILTERED EVENTS:\n",
                     @events.map( { "      . " ~ .WHICH } ).join("\n"), :event;
     }
-        for @events -> $filtered {
-            $.trace: " ---> QUEUEING ", $filtered.WHICH, :event;
-            # If event queue is not initialized then work synchronously.
-            if $!ev-queue {
-                $!ev-queue.send: $filtered;
-                CATCH {
-                    when X::Channel::SendOnClosed {
-                        self.throw: X::Event::Stopped, ev => $filtered;
-                    }
+    for @events -> $filtered {
+        $.trace: " ---> QUEUEING ", $filtered.WHICH, :event;
+        # If event queue is not initialized then work synchronously.
+        if $!ev-queue {
+            $!ev-queue.send: $filtered;
+            CATCH {
+                when X::Channel::SendOnClosed {
+                    self.throw: X::Event::Stopped, ev => $filtered;
                 }
             }
-            else {
-                $.flow: { $.handle-event: $filtered }, :sync, :name('SYNC EVENT HANDLING');
-            }
         }
-        $ev
+        else {
+            $.flow: { $.handle-event: $filtered }, :sync, :name('SYNC EVENT HANDLING');
+        }
+    }
+    $ev
 }
 
 multi method dispatch(::?ROLE:D: Vikna::Event:D $ev) {
@@ -119,8 +119,9 @@ multi method dispatch(::?ROLE:D: Vikna::Event:D $ev) {
 }
 
 multi method dispatch(::?ROLE:D: Vikna::Event:U \EvType, *%params) {
-    $.trace: "NEW EVENT OF ", EvType.^name, " with params:\n", %params.pairs».map("  " ~ *).join("\n");
-    $.send-event: self.create(EvType, :dispatcher( self ), |%params );
+    my $ev = self.create(EvType, :dispatcher( self ), |%params );
+    $.trace: "NEW EVENT ", $ev.WHICH, " with params:\n", %params.pairs».map("  " ~ *).join("\n");
+    $.send-event: $ev;
 }
 
 # Preserve event's dispatcher. send-event sugar, for readability.
