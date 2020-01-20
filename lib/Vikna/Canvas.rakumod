@@ -152,7 +152,7 @@ method clear {
     $.clear-cells
 }
 
-proto method imprint(UInt:D $x where * < $.w, UInt:D $y where * < $.h, |) {
+proto method imprint(UInt:D $x, UInt:D $y, |) {
     {*}
 }
 
