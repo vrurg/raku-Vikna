@@ -65,15 +65,10 @@ method free-flow(CodeFlow:D $flow) {
 
 method flow(&code, Str :$name?, :$sync = False) {
     my $flow = $.allocate-flow(:$name);
-    my $*VIKNA-FLOW = $flow;
 
     sub flow-start {
+        my $*VIKNA-FLOW = $flow;
         LEAVE $.free-flow($flow);
-        CATCH {
-            default {
-                .rethrow;
-            }
-        }
         &code();
     }
 
@@ -81,7 +76,12 @@ method flow(&code, Str :$name?, :$sync = False) {
         Promise.kept(flow-start);
     }
     else {
-        # TODO Guarantee that when thread starts $flow.promise is set.
-        $flow.promise = Promise.start(&flow-start);
+        ( $flow.promise = Promise.start(&flow-start) ).then: {
+            if .status ~~ Broken {
+                $.trace: ~ .cause, :error;
+                note "===SORRY!=== Flow `$name` exploded with:\n", .cause, .cause.backtrace;
+                exit 1;
+            }
+        };
     }
 }
