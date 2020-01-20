@@ -103,6 +103,7 @@ class Event::Cmd::AddChild            does Event::Command { }
 class Event::Cmd::RemoveChild         does Event::Command { }
 class Event::Cmd::Clear               does Event::Command { }
 class Event::Cmd::SetTitle            does Event::Command { }
+class Event::Cmd::SetText             does Event::Command { }
 class Event::Cmd::Scroll::By          does Event::Command { }
 class Event::Cmd::Scroll::To          does Event::Command { }
 class Event::Cmd::Scroll::SetArea     does Event::Command { }
@@ -128,6 +129,11 @@ class Event::Cmd::CanvasReq does Event::Command {
 class Event::TitleChange does Event::Informative {
     has $.old-title;
     has $.title;
+}
+
+class Event::TextChange does Event::Informative {
+    has $.old-text;
+    has $.text;
 }
 
 class Event::WidgetColor does Event::Informative does Event::ColorChange { }
