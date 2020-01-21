@@ -318,8 +318,10 @@ method set-color(BasicColor :$fg, BasicColor :$bg) {
 
 method sync-events(:$transitive) {
     my @p;
-    $.for-children: {
-        @p.push: .nop.completed(:transitive);
+    if $transitive {
+        $.for-children: {
+            @p.push: .nop.completed(:transitive);
+        }
     }
     @p.push: $.nop.completed;
     await @p;
