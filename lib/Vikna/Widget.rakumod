@@ -217,6 +217,7 @@ method cmd-redraw(Promise:D $redrawn) {
     my @chld-canvas;
     $.trace: "REQ CHILDREN CANVAS";
     $.for-children: -> $chld {
+        next unless $chld.visible;
         $.trace: "REQ FROM CHILD ", $chld.WHICH;
         @cpromises.push: $chld.send-command( Event::Cmd::CanvasReq ).response;
     };
