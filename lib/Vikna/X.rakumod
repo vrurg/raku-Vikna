@@ -59,15 +59,16 @@ class X::Event::Unsubscribe {
     }
 }
 
-class X::Event::LostRedraw does X::Eventish {
-    method message {
-        "Lost redraw command produced by " ~ $.ev.^name;
-    }
-}
-
 class X::Event::Stopped does X::Eventish {
     method message {
         "Can't send " ~ $.ev.^name ~ ": event handling is stopped"
+    }
+}
+
+class X::Redraw::OverUnblock is X::Base {
+    has $.count is required;
+    method message {
+        "Over-unblocked redraw: " ~ $!count ~ " too much. Check your balance of block/unblock calls"
     }
 }
 
