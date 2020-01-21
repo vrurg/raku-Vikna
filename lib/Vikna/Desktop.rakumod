@@ -30,21 +30,5 @@ method cmd-redraw(|) {
 
 ### Utility methods ###
 
-# method redraw {
-#     $.trace: "DESKTOP REDRAW";
-#     $.draw-protect: {
-#         $.trace: " -> redrawing, invalidations: ", +@.invalidations;
-#         if @.invalidations {
-#             $.trace: "DESKTOP self invalidate";
-#             $.invalidate if $.auto-clear;
-#             my @invalidations = @.invalidations;
-#             $.trace: "DESKTOP self clear invalidations";
-#             $.clear-invalidations;
-#             $.trace: "DISPATCHING DESKTOP REDRAW COMMAND";
-#             self.send-command: Event::Cmd::Redraw, @invalidations;
-#         }
-#     }
-# }
-
 # Desktop doesn't allow resize unless through screen resize
 method resize(|) { }

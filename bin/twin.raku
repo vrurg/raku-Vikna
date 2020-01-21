@@ -36,12 +36,13 @@ class MyApp is Vikna::App {
                 my $ch = ($oh + $dh × ($step / $steps)).Int;
                 my $cx = ($ox + $dx × ($step / $steps)).Int;
                 my $cy = ($oy + $dy × ($step / $steps)).Int;
-                $mw.set-geom($cx, $cy, $cw, $ch);
-                $mw.set-title: "test: $cw × $ch";
-                $w.set-title: "test " ~ ($stage * 10 + $step);
-                $lbl.set_text: "lbl $step";
-                # sleep .1;
-                $mw.sync-events;
+                $.desktop.redraw-hold: {
+                    $mw.set-geom($cx, $cy, $cw, $ch);
+                    $mw.set-title: "test: $cw × $ch";
+                    $w.set-title: "test " ~ ($stage * 10 + $step);
+                    $lbl.set_text: "lbl $step";
+                }
+                $.desktop.sync-events;
             }
         }
     }

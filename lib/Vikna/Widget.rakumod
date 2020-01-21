@@ -32,12 +32,12 @@ has $.fg;
 has $.bg;
 has Bool:D $.auto-clear = False;
 has Vikna::Canvas $.canvas is mooish(:lazy, :clearer, :predicate);
-has $!draw-lock = Lock::Async.new;
 # Widget's geom at the moment when canvas has been drawn.
 has Vikna::Rect $!canvas-geom;
 
 has Event $!redraw-on-hold;
 has Semaphore:D $!redraws .= new(1);
+has atomicint $!redraw-blocks = 0;
 
 has @.invalidations;
 # Invalidations mapped into parent's coords. To be pulled out together with widget canvas for imprinting into parent's
@@ -394,20 +394,33 @@ method begin-draw(Vikna::Canvas $canvas? is copy --> Vikna::Canvas) {
 
 method end-draw( :$canvas! ) {
     $.trace: "END DRAW";
-    $.draw-protect: {
-        $!inv-for-parent.append: @$!stash-parent-invs;
-        $!stash-parent-invs = [];
-    }
+    $!inv-for-parent.append: @$!stash-parent-invs;
+    $!stash-parent-invs = [];
     self.clear-invalidations;
     $.dispatch: Event::Updated, geom => $!canvas-geom;
 }
 
-method draw-protect(&code) is raw {
-    $!draw-lock.lock;
-    LEAVE {
-        $!draw-lock.unlock;
+method redraw-block {
+    ++$!redraw-blocks;
+    $.for-children: { .redraw-block };
+}
+
+method redraw-unblock {
+    $.for-children: { .redraw-unblock };
+    given --$!redraw-blocks {
+        when 0 {
+            self!release-redraw-event;
+        }
+        when * < 0 {
+            self.throw: X::Redraw::OverUnblock, :count( .abs );
+        }
     }
-    &code()
+}
+
+method redraw-hold(&code, |c) {
+    $.redraw-block;
+    LEAVE $.redraw-unblock;
+    &code(|c)
 }
 
 method draw(:$canvas) {
@@ -423,40 +436,52 @@ method draw-background( :$canvas ) {
     }
 }
 
+method !release-redraw-event {
+    # Don't release if redraws are blocked
+    return if $!redraw-blocks;
+    my $rh;
+    cas $!redraw-on-hold, {
+        # If there is a redraw event pending then release it into the wild.
+        # self.trace: "RELEASE HELD EVENT with invs: ", $rh.invalidations.elems;
+        $rh = $_;
+        Nil
+    };
+    with $rh {
+        $.trace: "Held redraw event: " ~ .WHICH;
+        self.send-event: $_;
+    }
+}
+
+method !hold-redraw-event($ev) {
+    cas $!redraw-on-hold, {
+        if $_ {
+            $ev.redrawn.keep(True);
+            $_
+        }
+        else {
+            $ev
+        }
+    }
+}
+
 # Filters are protected from concurrency by EventHandling
 multi method event-filter(Event::Cmd::Redraw:D $ev) {
     $.trace: "WIDGET EV FILTER: ", $ev.^name;
-    if $!redraws.try_acquire {
+    if $!redraw-blocks == 0 && $!redraws.try_acquire {
         # There is no current redraws, we just proceed further but first make sure we release the resource when done.
-        my $vf = $*VIKNA-FLOW;
         $ev.redrawn.then: {
-            my $*VIKNA-FLOW = $vf; # Workaround lost dynamic variables.
-            $.trace: "RELEASING REDRAW SEMAPHORE" ~ ($!redraw-on-hold ?? "\n  Held redraw event: " ~ $!redraw-on-hold.WHICH !! "");
-            my $rh;
-            cas $!redraw-on-hold, {
-                # If there is a redraw event pending then release it into the wild.
-                # self.trace: "RELEASE HELD EVENT with invs: ", $rh.invalidations.elems;
-                $rh = $_;
-                Nil
-            };
-            $!redraws.release;
-            self.send-event: $rh if $rh;
-            $.trace: "REDRAW RELEASE DONE";
+            $.flow: :name('REDRAW RELEASE'), {
+                $.trace: "RELEASING REDRAW SEMAPHORE";
+                $!redraws.release;
+                self!release-redraw-event;
+            }
         };
         [$ev]
     }
     else {
         # There is another redraw active.
         $.trace: "PUT ", $ev.WHICH, " on hold";
-        cas $!redraw-on-hold, {
-            if $_ {
-                $ev.redrawn.keep(True);
-                $_
-            }
-            else {
-                $ev
-            }
-        }
+        self!hold-redraw-event: $ev;
         # This event won't go any further...
         []
     }
