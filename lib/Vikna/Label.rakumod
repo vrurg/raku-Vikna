@@ -17,7 +17,7 @@ method new(|c) {
 method cmd-settext(Str:D $text) {
     my $old-text = $!text;
     $!text = $text;
-    self.dispatch: Event::TextChange, :$old-text, :$text;
+    self.dispatch: Event::Changed::Text, :$old-text, :$text;
     self.invalidate;
     self.redraw;
 }

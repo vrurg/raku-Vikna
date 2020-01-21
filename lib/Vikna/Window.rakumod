@@ -22,7 +22,7 @@ class Client is Vikna::Widget::GroupMember {
 
 has Str:D $.title = "";
 has Vikna::Border $.border;
-has Client $.client handles <cmd-addchild cmd-removechild>;
+has Client $.client handles <cmd-addchild cmd-removechild cmd-setbgpattern>;
 
 submethod TWEAK(Bool:D :$border = True) {
     my ($cx, $cy, $cw, $ch) = (0, 0, self.w, self.h);
@@ -63,7 +63,7 @@ method cmd-settitle(Str:D $title) {
     $!title = $title;
     $.border.invalidate: 0, 0, $.w, 1;
     $.redraw;
-    self.dispatch: Event::TitleChange, :$old-title, :$!title;
+    self.dispatch: Event::Changed::Title, :$old-title, :$!title;
 }
 
 method cmd-setgeom(Vikna::Rect:D $geom) {

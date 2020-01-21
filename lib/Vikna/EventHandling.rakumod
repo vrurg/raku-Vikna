@@ -120,7 +120,7 @@ multi method dispatch(::?ROLE:D: Vikna::Event:D $ev) {
 
 multi method dispatch(::?ROLE:D: Vikna::Event:U \EvType, *%params) {
     my $ev = self.create(EvType, :dispatcher( self ), |%params );
-    $.trace: "NEW EVENT ", $ev.WHICH, " with params:\n", %params.pairs».map("  " ~ *).join("\n");
+    $.trace: "NEW EVENT ", $ev.WHICH, " with params:\n", %params.pairs».map({ "  " ~ .key ~ " => " ~ (.value // '*undef*') }).join("\n");
     $.send-event: $ev;
 }
 

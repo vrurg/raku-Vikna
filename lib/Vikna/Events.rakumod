@@ -95,19 +95,22 @@ role Event::Kbd does Event { }
 
 #### Commands ####
 
-class Event::Cmd::Nop                 does Event::Command { }
-class Event::Cmd::Close               does Event::Command { }
-class Event::Cmd::SetGeom             does Event::Command { }
-class Event::Cmd::SetColor            does Event::Command { }
 class Event::Cmd::AddChild            does Event::Command { }
-class Event::Cmd::RemoveChild         does Event::Command { }
 class Event::Cmd::Clear               does Event::Command { }
-class Event::Cmd::SetTitle            does Event::Command { }
-class Event::Cmd::SetText             does Event::Command { }
+class Event::Cmd::Close               does Event::Command { }
+class Event::Cmd::Nop                 does Event::Command { }
+class Event::Cmd::RemoveChild         does Event::Command { }
 class Event::Cmd::Scroll::By          does Event::Command { }
-class Event::Cmd::Scroll::To          does Event::Command { }
-class Event::Cmd::Scroll::SetArea     does Event::Command { }
 class Event::Cmd::Scroll::Fit         does Event::Command { }
+class Event::Cmd::Scroll::SetArea     does Event::Command { }
+class Event::Cmd::Scroll::To          does Event::Command { }
+class Event::Cmd::SetBgPattern        does Event::Command { }
+class Event::Cmd::SetColor            does Event::Command { }
+class Event::Cmd::SetHidden           does Event::Command { }
+class Event::Cmd::SetGeom             does Event::Command { }
+class Event::Cmd::SetText             does Event::Command { }
+class Event::Cmd::SetTitle            does Event::Command { }
+class Event::Cmd::SetInvisible        does Event::Command { }
 class Event::Cmd::TextScroll::AddText does Event::Command { }
 
 class Event::Cmd::Redraw does Event::Command {
@@ -126,19 +129,29 @@ class Event::Cmd::CanvasReq does Event::Command {
 
 #### Informative ####
 
-class Event::TitleChange does Event::Informative {
+class Event::Changed::Title does Event::Informative {
     has $.old-title;
     has $.title;
 }
 
-class Event::TextChange does Event::Informative {
+class Event::Changed::Text does Event::Informative {
     has $.old-text;
     has $.text;
 }
 
+class Event::Changed::BgPattern does Event::Informative {
+    has $.old-bg-pattern;
+    has $.bg-pattern;
+}
+
+class Event::Hide      does Event::Informative { }
+class Event::Show      does Event::Informative { }
+class Event::Visible   does Event::Informative { }
+class Event::Invisible does Event::Informative { }
+
 class Event::WidgetColor does Event::Informative does Event::ColorChange { }
 
-class Event::GeomChanged does Event::Informative does Event::Transformish { }
+class Event::Changed::Geom does Event::Informative does Event::Transformish { }
 
 class Event::ScreenGeom does Event::Informative does Event::Transformish { }
 

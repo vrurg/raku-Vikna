@@ -31,6 +31,10 @@ has $.bg-pattern;
 has $.fg;
 has $.bg;
 has Bool:D $.auto-clear = False;
+# Is widget invisible on purpose?
+has Bool:D $.hidden = False;
+# Is widget visible within its parent?
+has Bool:D $.invisible = False;
 has Vikna::Canvas $.canvas is mooish(:lazy, :clearer, :predicate);
 # Widget's geom at the moment when canvas has been drawn.
 has Vikna::Rect $!canvas-geom;
@@ -159,7 +163,35 @@ method cmd-removechild(::?CLASS:D: Vikna::Widget:D $child) {
 method cmd-clear() {
     $.for-children: { .clear },
                     post => { self.clear-canvas };
+    self.invalidate;
     self.redraw;
+}
+
+method cmd-setbgpattern(Str $pattern) {
+    my $old-bg-pattern = $!bg-pattern;
+    $!bg-pattern = $pattern;
+    self.dispatch: Event::Changed::BgPattern, :$old-bg-pattern, :$!bg-pattern;
+    self.invalidate;
+    self.redraw;
+}
+
+method cmd-sethidden($hidden) {
+    if $hidden ^^ $!hidden {
+        my $was-visible = $.visible;
+        $!hidden = $hidden;
+        $.dispatch: $!hidden ?? Event::Hide !! Event::Show;
+        if $!hidden {
+            $.parent.invalidate: $!geom;
+            $.parent.redraw;
+        }
+        else {
+            $.invalidate;
+            $.redraw;
+        }
+        if $was-visible ^^ $.visible {
+            $.dispatch: $.visible ?? Event::Visible !! Event::Invisible;
+        }
+    }
 }
 
 method cmd-close {
@@ -179,6 +211,7 @@ method cmd-close {
 }
 
 method cmd-redraw(Promise:D $redrawn) {
+    return unless $.visible;
     my Vikna::Canvas:D $canvas = $!canvas;
     my @cpromises;
     my @chld-canvas;
@@ -215,7 +248,7 @@ method cmd-redraw(Promise:D $redrawn) {
 }
 
 method cmd-canvasreq(Promise:D $response) {
-    if $!canvas-geom {
+    if $!canvas-geom && $.visible {
         my @invalidations;
         $.trace: "CANVAS REQ COMMAND\nHas ", $!inv-for-parent.elems, " invalidations for parent";
         cas $!inv-for-parent, {
@@ -245,9 +278,13 @@ method cmd-setgeom(Vikna::Rect:D $geom) {
     $.trace: "? setgeom redraw";
     $.redraw;
     $.trace: "? setgeom notify";
-    self.dispatch: Event::GeomChanged, :$from, to => $!geom
+    self.dispatch: Event::Changed::Geom, :$from, to => $!geom
         if    $from.x != $!geom.x || $from.y != $!geom.y
            || $from.w != $!geom.w || $from.h != $!geom.h;
+    my $view-rect = Vikna::Rect.new: 0, 0, $!geom.w, $!geom.h;
+    $.for-children: {
+        .set-invisible: ! $view-rect.overlap( .geom );
+    }
 }
 
 method cmd-setcolor(BasicColor :$fg, BasicColor :$bg) {
@@ -280,40 +317,62 @@ multi method send-command(Event::Command \evType, |args) {
 }
 
 method add-child(::?CLASS:D $child) {
-    self.send-command: Event::Cmd::AddChild, $child;
+    $.send-command: Event::Cmd::AddChild, $child;
 }
 
 method remove-child(::?CLASS:D $child) {
-    self.send-command: Event::Cmd::RemoveChild, $child;
+    $.send-command: Event::Cmd::RemoveChild, $child;
 }
 
 method redraw {
     $.trace: "SENDING REDRAW COMMAND";
-    self.send-command: Event::Cmd::Redraw;
+    $.send-command: Event::Cmd::Redraw;
 }
 
 method clear {
-    self.send-command: Event::Cmd::Clear;
+    $.send-command: Event::Cmd::Clear;
 }
 
 method close {
-    self.send-command: Event::Cmd::Close;
+    $.send-command: Event::Cmd::Close;
 }
 
 method resize(Dimension:D $w, Dimension:D $h) {
-    self.send-command: Event::Cmd::SetGeom, $!geom.clone( :$w, :$h );
+    $.send-command: Event::Cmd::SetGeom, $!geom.clone( :$w, :$h );
 }
 
 method move(Int:D $x, Int:D $y) {
-    self.send-command: Event::Cmd::SetGeom, $!geom.clone( :$x, :$y );
+    $.send-command: Event::Cmd::SetGeom, $!geom.clone( :$x, :$y );
 }
 
 multi method set-geom(Int:D $x, Int:D $y, Dimension:D $w, Dimension:D $h) {
-    self.send-command: Event::Cmd::SetGeom, Vikna::Rect.new(:$x, :$y, :$w, :$h)
+    $.send-command: Event::Cmd::SetGeom, Vikna::Rect.new(:$x, :$y, :$w, :$h)
 }
 
 method set-color(BasicColor :$fg, BasicColor :$bg) {
-    self.send-command: Event::Cmd::SetColor, :$fg, :$bg
+    $.send-command: Event::Cmd::SetColor, :$fg, :$bg
+}
+
+method set-bg-pattern($pattern) {
+    self.send-command: Event::Cmd::SetBgPattern, $pattern;
+}
+
+method set-hidden($hidden) {
+    $.send-command: Event::Cmd::SetHidden, ?$hidden;
+}
+
+method hide { $.set-hidden: True }
+method show { $.set-hidden: False }
+
+method set-invisible($invisible) {
+    my $changed;
+    cas $!invisible, {
+        $changed = $_ ^^ $invisible;
+        $invisible
+    };
+    if $changed {
+        $.dispatch: $.visible ?? Event::Visible !! Event::Invisible;
+    }
 }
 
 method sync-events(:$transitive) {
@@ -330,6 +389,10 @@ method sync-events(:$transitive) {
 method nop {
     $.send-command: Event::Cmd::Nop
 }
+
+### State methods ###
+
+method visible { ! ($!hidden || $!invisible) }
 
 ### Utility methods ###
 

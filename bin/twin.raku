@@ -3,6 +3,7 @@ use v6.d;
 use Vikna::App;
 use Vikna::Window;
 use Vikna::Label;
+use Vikna::Events;
 
 class MyWin is Vikna::Window {
 }
@@ -17,7 +18,18 @@ class MyApp is Vikna::App {
         $mw.redraw;
         $.trace: "--- Sync desktop events";
         $.desktop.sync-events: :transitive;
-        # return;
+
+        my $ttl-pfx = "";
+        my $hid = False;
+
+        $lbl does role :: {
+            multi method event(Event::Visible:D $ev) {
+                $ttl-pfx = "V:";
+            }
+            multi method event(Event::Invisible:D $ev) {
+                $ttl-pfx = "I:";
+            }
+        };
 
         for ^10 -> $stage {
             my $nw = 79.rand.Int + 4;
@@ -39,10 +51,14 @@ class MyApp is Vikna::App {
                 $.desktop.redraw-hold: {
                     $mw.set-geom($cx, $cy, $cw, $ch);
                     $mw.set-title: "test: $cw × $ch";
-                    $w.set-title: "test " ~ ($stage * 10 + $step);
+                    $w.set-title: "{$ttl-pfx}test " ~ ($stage * 10 + $step);
                     $lbl.set_text: "lbl $step";
                 }
                 $.desktop.sync-events;
+            }
+            $.desktop.redraw-hold: {
+                $w.set-bg-pattern: "[{$stage}]";
+                $lbl.set-hidden($hid = !$hid);
             }
         }
     }
