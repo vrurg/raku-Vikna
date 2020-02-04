@@ -3,7 +3,7 @@ use Red:api<2>;
 unit model Vikna::Tracer::Record is table<vikna_record>;
 use Vikna::Tracer::Session;
 
-has UInt $.id           is id;
+has Int  $.id           is column{ :unique };
 has Rat  $.time         is column;
 has Int  $.flow         is column;
 has Str  $.flow-name    is column;

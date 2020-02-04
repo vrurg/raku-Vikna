@@ -3,28 +3,43 @@ use Vikna::Widget;
 unit class Vikna::Desktop is Vikna::Widget is export;
 
 use Vikna::Events;
+use Vikna::EventEmitter;
 use Vikna::Rect;
 use Vikna::Utils;
+use Vikna::Dev::Kbd;
 
 submethod TWEAK {
-    self.redraw;
+    self.app.screen.init;
 }
 
-method on-screen-resize {
-    my $old-w = $.w;
-    my $old-h = $.h;
-    $.app.screen.setup(:reset);
-    $.app.trace: "Desktop resized to ", $.w, " x ", $.h;
-    # Do it in two events as screen resize might be handy for a child widget. But otherwise it's a normal resize event.
-    self.dispatch: Event::ScreenResize, :$old-w, :$old-h, :$.w, :$.h;
-    self.dispatch: Event::Resize, :$old-w, :$old-h, :$.w, :$.h;
+### Event handlers ###
+multi method event(Event::ScreenGeom:D $ev) {
+    self.set-geom: $ev.to;
+}
+
+has $.presses = 0;
+multi method event(Event::Kbd::Control:D $ev) {
+    if K_Control ∈ $ev.modifiers && $ev.key eq 'C' {
+        $.close;
+        if ++$!presses > 2 {
+            die "oops...";
+            $.shutdown;
+            exit 1;
+        }
+    }
 }
 
 ### Command handlers ###
-
 method cmd-redraw(|) {
     callsame;
-    $.trace: "-> screen!";
+    $.trace: "DESKTOP REDRAW -> screen";
+    $.app.screen.print: 0, 0, $.canvas;
+}
+
+method cmd-childcanvas(|) {
+    callsame;
+    $.trace: "DESKTOP CHILD CANVAS -> screen";
+    # $.redraw;
     $.app.screen.print: 0, 0, $.canvas;
 }
 
@@ -32,3 +47,26 @@ method cmd-redraw(|) {
 
 # Desktop doesn't allow resize unless through screen resize
 method resize(|) { }
+
+method start-event-handling {
+    callsame;
+    $.add-event-source: $_ for $.app.inputs;
+}
+
+method panic-shutdown($cause) {
+    $.trace: "DESKTOP PANIC SHUTDOWN: " ~ $cause;
+    $.stop-event-handling;
+    $.app.screen.shutdown;
+    $.dismissed.keep(False) if $.dismissed.status ~~ Planned;
+    CATCH {
+        default {
+            note "DESKTOP PANIC PANICED: ", .message, ~ .backtrace;
+            .resume;
+        }
+    }
+}
+
+method shutdown {
+    callsame;
+    $.app.screen.shutdown;
+}

@@ -2,7 +2,7 @@
 use v6.e.PREVIEW;
 use Vikna::Tracer;
 use Template::Mustache;
-use Data::Dump;
+# use Data::Dump;
 
 my %*SUB-MAIN-OPTS =
     :named-anywhere,
@@ -41,16 +41,22 @@ multi MAIN( Str:D $format where * ~~ (any Vikna::Tracer.templates.keys),
         @sessions = $tr.sessions;
     }
 
+    say "Loaded ", +@sessions, " sessions";
+
     my %data = session => [];
     for @sessions -> $sess {
+        say "Processing session ", $sess.id, ", records: ", $sess.records.elems;
         my %sess = id => .id, started => ~DateTime.new(.started), name => .name with $sess;
         my @flows = $sess.records.map( *.flow ).unique.sort;
         my @flow-names = '' xx +@flows;
         my %fl-idx = @flows.antipairs;
         %sess<flows> = @flows.map( { { flow => ~$_ } } ).list;
         %sess<tbl_columns> = @flows.elems + 2;
+        my $reccount = 0;
         %sess<rows> = (gather {
             for $sess.records {
+                ++$reccount;
+                $*ERR.print: $reccount.fmt("REC: %6d\r") if $reccount % 100 == 0;
                 my %rec;
                 my $fl-idx = %fl-idx{ .flow };
 
@@ -69,6 +75,7 @@ multi MAIN( Str:D $format where * ~~ (any Vikna::Tracer.templates.keys),
                 %rec<cols> = [ { cell => { } } xx +@flows ];
                 %rec<time> = ~DateTime.new(.time);
                 %rec<id> = .id;
+                %rec<flow_name> = .flow-name;
                 %rec<cols>[ $fl-idx ]<cell> = %(
                     object_id   => .object-id,
                     message     => [ .message.split("\n").map( { %( line => $_ ) } ) ],
@@ -81,6 +88,7 @@ multi MAIN( Str:D $format where * ~~ (any Vikna::Tracer.templates.keys),
     }
 
     # say Dump(%data, :skip-methods);
+    say "Rendering the page...";
     my $mustache = Template::Mustache.new;
     $fh.print: $mustache.render( slurp(~$tmpl), %data );
 }

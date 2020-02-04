@@ -1,30 +1,26 @@
 use v6.e.PREVIEW;
-unit role Vikna::Parent[::ChldType] is export;
+unit role Vikna::Parent[::ChldType];
 
 has $!children-lock = Lock.new;
 has @.children;
 
 method add-child(ChldType:D $child) {
-    return Nil if @!children.grep: *<> =:= $child<>;
+    return Nil if @!children.grep: * === $child;
     @!children.push: $child;
-    $child.?attach(:parent(self));
+    $child.set-parent(self);
 }
 
 method remove-child(ChldType:D $child) {
-    my \child := $child<>;
-    @.children .= grep(! *<> =:= child);
-    child.?detach(:parent(self));
+    @!children .= grep: * !=== $child;
+    $child.set-parent(Nil)
 }
 
 method to-top(ChldType:D $child) {
-    my \child := $child<>;
-    self.remove-child($child);
-    self.add-child($child);
+    @!children = flat @!children.grep( * !=== $child ), $child;
 }
 
 method to-bottom(ChldType:D $child) {
-    my \child := $child<>;
-    @!children = flat $child, @!children.grep: ! *<> =:= child;
+    @!children = flat $child, @!children.grep:  * !=== $child;
 }
 
 method for-children(&code, :&pre?, :&post? --> Nil) {

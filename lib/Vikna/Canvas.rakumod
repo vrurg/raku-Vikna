@@ -157,7 +157,7 @@ proto method imprint(UInt:D $x, UInt:D $y, |) {
 }
 
 # a string
-multi method imprint($x, $y, $line, :$fg? is copy, :$bg? is copy, Int :$span?)
+multi method imprint($x, $y, Str:D() $line, :$fg? is copy, :$bg? is copy, Int :$span?)
 {
     return if $y >= $.h || $x >= $.w;
     self!build-paintable-mask;
@@ -436,3 +436,7 @@ method vx { $!vp-geom.x }
 method vy { $!vp-geom.y }
 method vw { $!vp-geom.w }
 method vh { $!vp-geom.h }
+
+multi method Str(::?CLASS:D) {
+    "{self.^name}|{self.^id}[{$.w}x{$.h}]"
+}

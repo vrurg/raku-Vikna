@@ -1,0 +1,46 @@
+{
+  "production": true,
+  "authors": [
+    "Vadim Belman <vrurg@cpan.org>"
+  ],
+  "version": "0.0.1",
+  "meta-version": "0",
+  "resources": [
+    "tracer/html.tmpl"
+  ],
+  "depends": [
+    "Red",
+    "Template::Mustache",
+    "Red",
+    "Terminal::Print",
+    "AttrX::Mooish",
+    "Color",
+    "Color::Names",
+    "Data::Dump"
+  ],
+  "build-depends": [
+    "Pod::To::Markdown"
+  ],
+  "support": {
+    "source": "git://github.com/vrurg/raku-Vikna.git"
+  },
+  "source-url": "git://github.com/vrurg/raku-Vikna.git",
+  "name": "Vikna",
+  "provides": {
+    "Vikna::App": "lib/Vikna/App.rakumod"
+  },
+  "license": "Artistic-2.0",
+  "tags": [
+    "Vikna",
+    "UI",
+    "console"
+  ],
+  "auth": "github:vrurg",
+  "description": "Console UI toolkit",
+  "perl": "6.e",
+  "test-depends": [
+    "Test",
+    "Test::META",
+    "Test::When"
+  ]
+}

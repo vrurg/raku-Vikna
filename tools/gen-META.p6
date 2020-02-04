@@ -9,7 +9,7 @@ my $m = META6.new(
     description    => 'Console UI toolkit',
     version        => Vikna.^ver,
     perl-version   => Version.new('6.e'),
-    depends        => <Red Template::Mustache>,
+    depends        => <Red Template::Mustache Red Terminal::Print AttrX::Mooish Color Color::Names>,
     test-depends   => <Test Test::META Test::When>,
     build-depends  => <Pod::To::Markdown>,
     tags           => <Vikna UI console>,
@@ -28,7 +28,3 @@ my $m = META6.new(
 );
 
 print $m.to-json;
-
-#my $m = META6.new(file => './META6.json');
-#$m<version description> = v0.0.2, 'Work with Perl 6 META files even better';
-#spurt('./META6.json', $m.to-json);

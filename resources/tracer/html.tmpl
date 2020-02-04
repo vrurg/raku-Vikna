@@ -49,6 +49,10 @@
             color: blue;
             font-style: oblique;
         }
+        .record_cell .flow_name {
+            background-color: #fefdd5;
+            font-size: 70%;
+        }
         td[class=flow_name_cell] {
             background-color: #9fd8fe;
         }
@@ -83,6 +87,7 @@
                     {{#cols}}
                     {{#cell}}
                     <td class="record_cell">
+                        <div class="flow_name">{{flow_name}}</div>
                         <div class="object_id">{{object_id}}</div>
                         {{#message}}
                         <div class="record_message {{rec_class}}">{{line}}</div>

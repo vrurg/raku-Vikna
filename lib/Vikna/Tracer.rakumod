@@ -12,16 +12,32 @@ has Str $.session-name is rw is mooish(:lazy, :predicate, :filter);
 has Vikna::Tracer::Session $.session is mooish(:lazy, :predicate, :clearer);
 has Channel $!msg-queue is mooish(:lazy, :clearer);
 has Bool $.to-err = False;
+has Bool $!shutdown;
+has atomicint $!record-id = 0;
 
 submethod TWEAK {
     red-defaults default => (database "SQLite", database => $!db-name);
+    red-do {
+        $*RED-DB.execute('PRAGMA synchronous = OFF');
+        # $*RED-DB.execute('PRAGMA journal_mode = MEMORY');
+        $*RED-DB.execute('PRAGMA temp_store = MEMORY');
+        $*RED-DB.execute('PRAGMA cache_size = 100000');
+    }
 }
 
 method !build-msg-queue {
     my Channel $queue .= new;
+    my $count = 0;
     start react {
         whenever $queue -> &block {
             &block();
+            $*ERR.print: "✔︎" if $!shutdown && (++$count % 10) == 0;
+            if $!shutdown && ($count == 1) {
+            }
+            CATCH {
+                note "TRACER FAILURE: ", .message ~ .backtrace;
+                exit 1;
+            }
         }
     }
     $queue;
@@ -43,19 +59,27 @@ method build-session {
         Vikna::Tracer::Session.^create-table: :unless-exists;
         Vikna::Tracer::Record.^create-table: :unless-exists;
 
+        $!record-id ⚛= 0;
         Vikna::Tracer::Session.^create: :started(now.Rat), :name($!session-name);
     }
 }
 
 method cue(&code) {
     my $p = Promise.new;
+    CATCH {
+        when X::Channel::SendOnClosed {
+            $p.keep(False);
+            .resume;
+        }
+        default { .rethrow }
+    }
     $!msg-queue.send: {
         red-do {
             $p.keep(&code());
         }
         CATCH {
             default {
-                $p.break(Failure.new($_))
+                $p.break($_)
             }
         }
     }
@@ -84,8 +108,9 @@ multi method record(
 {
     my $session-id = $!session.id;
     note $message if $!to-err;
-    await $.cue: {
+    $.cue: {
         Vikna::Tracer::Record.^create:
+            id => ++⚛$!record-id,
             session-id => $session-id,
             :flow($flow.id),
             :flow-name($flow.name),
@@ -99,8 +124,10 @@ multi method record($object, Str:D $message, *%c) {
 
 method shutdown {
     # Flush all queued events.
-    await $.cue: { True };
+    my $last = $.cue: { True };
+    $!shutdown = True;
     $!msg-queue.close;
+    await $last;
 }
 
 method templates {

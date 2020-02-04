@@ -23,7 +23,7 @@ method cmd-settext(Str:D $text) {
 }
 
 ### Command senders ###
-method set_text(::?CLASS:D: Str:D $text) {
+method set-text(::?CLASS:D: Str:D $text) {
     self.send-command: Event::Cmd::SetText, $text;
 }
 

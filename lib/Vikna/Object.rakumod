@@ -2,6 +2,7 @@ use v6.e.PREVIEW;
 unit class Vikna::Object;
 
 use Vikna::X;
+use AttrX::Mooish;
 
 my class CodeFlow {
     has UInt $.id;
@@ -10,6 +11,12 @@ my class CodeFlow {
 }
 
 has $.app;
+has Int $.id is mooish(:lazy);
+
+method build-id {
+    use nqp;
+    nqp::objectid(self)
+}
 
 multi method throw(X::Base:D $ex) {
     $ex.rethrow
@@ -77,11 +84,28 @@ method flow(&code, Str :$name?, :$sync = False) {
     }
     else {
         ( $flow.promise = Promise.start(&flow-start) ).then: {
+            my $*VIKNA-FLOW = $flow;
             if .status ~~ Broken {
-                $.trace: ~ .cause, :error;
-                note "===SORRY!=== Flow `$name` exploded with:\n", .cause, .cause.backtrace;
-                exit 1;
+                $.trace: "FLOW BROKEN: " ~ .cause, ~.cause.backtrace, :error;
+                note "===FLOW `{$name}` PANIC!=== ", .cause.message, .cause.backtrace.Str;
+                self.panic(.cause);
+                .cause.rethrow;
             }
         };
     }
+}
+
+method panic(Exception:D $cause) {
+    my $bail-out = True;
+    if $.app {
+        $.app.desktop.dismissed.then: { $bail-out = False; };
+        await Promise.anyof(
+            Promise.in(10),
+            start $.app.panic($cause, :object(self))
+        );
+    }
+    else {
+        note "===PANIC!=== On object ", self.?name // self.WHICH, "\n", $cause.message, ~$cause.backtrace;
+    }
+    exit 1 if $bail-out;
 }

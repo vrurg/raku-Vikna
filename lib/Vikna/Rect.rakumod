@@ -191,7 +191,7 @@ multi method move-by(::?CLASS:D: Int:D $dx, Int:D $dy) {
 }
 
 method Str {
-    "x:$!x, y:$!y, w:$!w, h:$!h"
+    "\{x:$!x, y:$!y, w:$!w, h:$!h\}"
 }
 
 method CALL-ME(*@pos) { ::?CLASS.new: |@pos }

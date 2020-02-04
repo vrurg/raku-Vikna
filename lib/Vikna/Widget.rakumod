@@ -3,13 +3,11 @@ unit class Vikna::Widget;
 use Vikna::Object;
 use Vikna::Parent;
 use Vikna::Child;
-use Vikna::Belongable;
 use Vikna::EventHandling;
 
 also is Vikna::Object;
 also does Vikna::Parent[::?CLASS];
 also does Vikna::Child;
-# also does Vikna::Belongable[::?CLASS];
 also does Vikna::EventHandling;
 
 use Vikna::Rect;
@@ -20,11 +18,12 @@ use Vikna::Canvas;
 use Vikna::Utils;
 use AttrX::Mooish;
 
-my class CanvasReqRecord {
-    has @.invalidations;
+my class CanvasRecord {
     has Vikna::Rect:D $.geom is required;
     has Vikna::Canvas:D $.canvas is required;
 }
+
+has $.name is mooish(:lazy);
 
 has Vikna::Rect:D $.geom is required handles <x y w h>;
 has $.bg-pattern;
@@ -39,15 +38,24 @@ has Vikna::Canvas $.canvas is mooish(:lazy, :clearer, :predicate);
 # Widget's geom at the moment when canvas has been drawn.
 has Vikna::Rect $!canvas-geom;
 
+has Promise:D $!closed .= new;
+has Promise:D $.dismissed .= new;
+
 has Event $!redraw-on-hold;
 has Semaphore:D $!redraws .= new(1);
 has atomicint $!redraw-blocks = 0;
 
 has @.invalidations;
+has Lock $.inv-lock .= new;
 # Invalidations mapped into parent's coords. To be pulled out together with widget canvas for imprinting into parent's
 # canvas.
 has $!stash-parent-invs = []; # Invalidations for parent widget are to be stashed here first ...
 has $!inv-for-parent = [];    # ... and then added here when redraw finalizes
+has Lock:D $!inv4parent-lock .= new;
+
+# Keys are Vikna::Object.id
+has %!child-by-id;
+has %!child-by-name; # Maps name into id
 
 has $.inv-mark-color is rw; # For test purposes only.
 
@@ -59,13 +67,22 @@ multi method new(Int:D :$x, Int:D :$y, Dimension :$w, Dimension :$h, *%c) {
     self.new: geom => Vikna::Rect.new(:$x, :$y, :$w, :$h), |%c
 }
 
+multi method new(*%c where { $_<geom>:!exists }) {
+    self.new: geom => Vikna::Rect.new(:0x, :0y, :20w, :10h), |%c
+}
+
+method build-name {
+    self.^name ~ "<" ~ $.id ~ ">"
+}
+
 method build-canvas {
     $.create: Vikna::Canvas, geom => $!geom.clone;
 }
 
-method create-child(Vikna::Widget:U $wtype, |c) {
-    $.trace: "CREATING A CHILD OF ", $wtype.^name;
-    my $child = $.create: $wtype, :parent(self), |c;
+method create-child(Vikna::Widget:U \wtype, |c) {
+    $.trace: "CREATING A CHILD OF ", wtype.^name;
+    my $child = $.create: wtype, |c;
+    $.trace: "NEW CHILD: ", $child.name, " // ", $child.WHICH;
     self.add-child: $child;
     $child
 }
@@ -77,27 +94,30 @@ method subscribe-to-child(Vikna::Widget:D $child) {
     };
 }
 
-proto method event(::?CLASS:D: Event:D $ev) {
-    {*}
-
-    # Commands are not to be re-dispatched to children. If any changes in children are required they're to be initiated
-    # via their respective methods.
-    unless $ev ~~ Event::Command {
-        self.for-children: {
-            .event($ev) unless $_ === $ev.dispatcher | $ev.origin;
-        }
-    }
-    CONTROL {
-        when CX::Event::Last {
-            $.trace: "STOP EVENT HANDLING for ", $ev.^name;
-        }
-        default {
-            .rethrow
-        }
-    }
-}
+proto method event(::?CLASS:D: Event:D $ev) {*}
+#     {*}
+#
+#     # Commands are not to be re-dispatched to children. If any changes in children are required they're to be initiated
+#     # via their respective methods.
+#     unless $ev ~~ Event::Command || $ev.dispatcher !=== self {
+#         self.for-children: {
+#             .event($ev) unless $_ === $ev.dispatcher | $ev.origin;
+#         }
+#     }
+#     CONTROL {
+#         when CX::Event::Last {
+#             $.trace: "STOP EVENT HANDLING for ", $ev.^name;
+#         }
+#         default {
+#             .rethrow
+#         }
+#     }
+# }
 
 multi method event(::?CLASS:D: Event::Command:D $ev) {
+    # Only process commands sent by ourselves. Protect from stray events.
+    $.throw: X::Event::CommandOrigin, :$ev, dest => self
+        unless $ev.origin === self;
     # To form a default command name everything up to and including Event in event's class FQN is stripped off. The
     # remaining elements are lowercased and joined with a dash:
     # Vikna::Event::Cmd::Name -> cmd-name
@@ -111,15 +131,21 @@ multi method event(::?CLASS:D: Event::Command:D $ev) {
                           .join( '-' );
     $.trace: "COMMAND EVENT: ", $cmd-name;
     if self.^can($cmd-name) {
-        $ev.completed.keep( self."$cmd-name"( |$ev.args ) );
-        $.trace: "COMPLETED COMMAND EVENT: ", $cmd-name;
+        $ev.complete( self."$cmd-name"( |$ev.args ) );
+        CATCH {
+            default {
+                note "Failed keeping completed promise on $ev: ", ~($ev.completed-at // "*no idea where*");
+                $.trace: "EVENT {$ev} HAS BEEN COMPLETED AT ", ~($ev.completed-at // "*no idea where*"),
+                        "\n", .message ~ .backtrace,
+                        :error;
+                $.panic: $_
+            }
+        }
     }
     elsif self.^can('CMD-FALLBACK') {
         $.trace: "PASSING TO CMD-FALLBACK";
-        $ev.completed.keep( self.CMD-FALLBACK($ev) );
-        $.trace: "COMPLETED COMMAND FALLBACK";
+        $ev.complete( self.CMD-FALLBACK($ev) );
     }
-    nextsame
 }
 
 # Sink any unhandled event. Clear if we dispatched it (this is what makes it different from EventHandling sinker).
@@ -132,32 +158,94 @@ multi method event(::?CLASS:D: Event::Attached:D $ev) {
         $.invalidate;
         $.redraw;
     }
+    if $ev.parent === self {
+        $.invalidate: $ev.child.geom;
+    }
+}
+
+multi method event(::?CLASS:D: Event::Detached:D $ev) {
+    if $ev.child === self {
+        if $.closed {
+            # If a closed widget gets detached it's time to stop every activity.
+            $.shutdown;
+        }
+    }
+    elsif $ev.parent === self {
+        $.redraw;
+    }
 }
 
 proto method child-event(::?CLASS:D: Event:D) {*}
 
-multi method child-event(::?CLASS:D: Event::Updated:D $ev) {
-    $.trace: "CHILD ", $ev.origin.WHICH, " updated";
+# multi method child-event(::?CLASS:D: Event::Updated:D $ev) {
+#     $.trace: "CHILD ", $ev.origin.WHICH, " updated";
+#     $.redraw;
+# }
+
+multi method child-event(::?CLASS:D: Event::Closing:D $ev) {
+    $.invalidate: $ev.origin.geom;
     $.redraw;
 }
 
-multi method child-event(::?CLASS:D: Event:D) { }
+multi method child-event(::?CLASS:D: Event::Changed::Geom:D $ev) {
+    $.trace: "CHILD {$ev.origin} GEOM CHANGED {$ev.from} => {$ev.to}";
+    $.invalidate: [ $ev.from, $ev.to ];
+    $.redraw;
+}
+
+multi method child-event(::?CLASS:D: Event:D)        { }
+
+proto method subscription-event(::?CLASS:D: Event:D) {*}
+multi method subscription-event(::?CLASS:D: Event:D) { }
+
+proto method drop-event(::?CLASS:D: Event:D)  {*}
+multi method drop-event(Event::Command:D $ev) {
+    $.trace: "DROPPING ", $ev;
+    $ev.complete(False);
+}
+multi method drop-event(Event:D)              { }
 
 ### Command handlers ###
 
-method cmd-addchild(::?CLASS:D: Vikna::Widget:D $child) {
-    $.trace: "ADDING CHILD ", $child.WHICH;
-    self.Vikna::Parent::add-child: $child;
-    self.subscribe-to-child($child);
-    $child.invalidate;
-    $child.redraw;
-    self.dispatch: Event::Attached, :$child, :parent(self);
+method cmd-addchild(::?CLASS:D: Vikna::Widget:D $child, :$subscribe = True) {
+    $.trace: "ADDING CHILD ", $child.name;
+
+    my $child-name = $child.name;
+    $.throw: X::Widget::DuplicateName, :parent(self), :name($child-name)
+        if %!child-by-name{$child-name}:exists;
+
+    if self.Vikna::Parent::add-child: $child {
+        $.trace: " ADDED CHILD ", $child.name, " with parent: ", $child.parent.name;
+        %!child-by-id{
+            %!child-by-name{$child-name} = $child.id;
+        } = %( :$child );
+        # note self.name, " ADDED CHILD ", $child.name, " with parent: ", $child.parent.name;
+        self.subscribe-to-child($child) if $subscribe;
+        $child.invalidate;
+        $child.redraw;
+        $child.dispatch: Event::Attached, :$child, :parent(self);
+        self.dispatch:   Event::Attached, :$child, :parent(self);
+    }
 }
 
-method cmd-removechild(::?CLASS:D: Vikna::Widget:D $child) {
-    self.unsubscribe: $child;
-    self.Vikna::Parent::remove-child: $child;
-    self.dispatch: Event::Detached, :$child, :parent(self)
+method cmd-removechild(::?CLASS:D: Vikna::Widget:D $child, :$unsubscribe = True) {
+    self.unsubscribe: $child if $unsubscribe;
+    # If a child is closing then we're its last parent and have to wait until it fully dismisses. Otherwise the child is
+    # going to stick around for a while and somebody else must take care of it. Most likely it's re-parenting taking
+    # place.
+    %!child-by-id{$child.id}:delete;
+    %!child-by-name{$child.name}:delete;
+    if $child.closed {
+        $child.dismissed.then: {
+            self.Vikna::Parent::remove-child: $child;
+            self.dispatch: Event::Detached, :$child, :parent(self);
+        }
+    }
+    else {
+        self.Vikna::Parent::remove-child: $child;
+        self.dispatch: Event::Detached, :$child, :parent(self);
+    }
+    $child.dispatch: Event::Detached, :$child, :parent(self);
 }
 
 method cmd-clear() {
@@ -195,97 +283,90 @@ method cmd-sethidden($hidden) {
 }
 
 method cmd-close {
-    my @completions;
+    return if $.closed;
     $.trace: "CLOSING";
-    $.trace: "REMOVING SELF FROM PARENT";
-    .remove-child(self) with $.parent;
+    $!closed.keep(True);
 
+    my @dismissed;
     $.for-children: {
-        @completions.push: .close.completed
+        @dismissed.push: .dismissed;
+        # Don't bother if child is already closing. Slightly relieve event flood.
+        next if .closed;
+        .close
     }
-    $.trace: "AWAITING FOR CHILDREN TO CLOSE";
-    await Promise.allof(@completions);
-    $.trace: "FINISHING SELF";
-    self.?finish;
-    self.stop-event-handling;
-}
-
-method cmd-redraw(Promise:D $redrawn) {
-    return unless $.visible;
-    my Vikna::Canvas:D $canvas = $!canvas;
-    my @cpromises;
-    my @chld-canvas;
-    $.trace: "REQ CHILDREN CANVAS";
-    $.for-children: -> $chld {
-        next unless $chld.visible;
-        $.trace: "REQ FROM CHILD ", $chld.WHICH;
-        @cpromises.push: $chld.send-command( Event::Cmd::CanvasReq ).response;
+    $.dispatch: Event::Closing;
+    Promise.allof(@dismissed).then: {
+        $.trace: "CHILDREN DISMISSED, DETACHING";
+        $.detach;
     };
-    $.trace: "AWATING FOR CHILDREN RESPONSE";
-    await Promise.allof(@cpromises) if @cpromises;
-    $.trace: "DONE AWATING FOR CHILDREN RESPONSE";
-    @chld-canvas = eager @cpromises.grep( { .status ~~ Kept } ).map: *.result;
-    $.invalidate: .invalidations for @chld-canvas;
-    $.trace: "CMD REDRAW: invalidations: ", @!invalidations.elems, "\n", @!invalidations.map( "  . " ~ *.Str ).join("\n");
-    if @!invalidations {
-        $.trace: "BEGIN DRAW";
-        $canvas = self.begin-draw;
-        self.draw( :$canvas );
-        self.end-draw( :$canvas );
-        $.trace: "END DRAW";
-        for @chld-canvas {
-            $.trace: " ... applying child canvas at {.geom.x},{.geom.y}";
-            $canvas.imprint: .geom.x, .geom.y, .canvas;
-        }
-        # We've done drawing itself, wait for children to complete.
-        $.trace: "ALL CHILDREN CANVAS IMPRINTED";
-        $!canvas = $canvas;
-        .redraw with $.parent;
-    }
-    LEAVE {
-        $.trace: "REDRAWN";
-        $redrawn.keep($.geom.clone);
-    }
 }
 
-method cmd-canvasreq(Promise:D $response) {
-    if $!canvas-geom && $.visible {
-        my @invalidations;
-        $.trace: "CANVAS REQ COMMAND\nHas ", $!inv-for-parent.elems, " invalidations for parent";
-        cas $!inv-for-parent, {
-            @invalidations = $_;
-            []
-        };
-        $.trace: "CANVAS REQ: KEEPING THE RESPONSE";
-        $response.keep( CanvasReqRecord.new: :@invalidations, :$!canvas, geom => $!canvas-geom );
-        $.trace: "CANVAS REQ: KEPT THE RESPONSE";
+method !flatten-canvas {
+    $.for-children: -> $child {
+        # Newly added children might not have drawn yet. It's ok to skip 'em.
+        next unless $child.visible;
+        $!canvas.imprint: .geom.x, .geom.y, .canvas with %!child-by-id{$child.id}<canvas>;
+    }
+    .child-canvas: self, $!canvas-geom, $!canvas, $!inv-for-parent with $.parent;
+    $!inv4parent-lock.protect: {
+        $!inv-for-parent = [];
+    }
+    $.dispatch: Event::Updated, geom => $!canvas-geom;
+}
+
+method cmd-redraw() {
+    return unless $.visible;
+    if $.redraw-blocked {
+        $.trace: "SKIP REDRAW UNTIL UNBLOCKED";
+        $.redraw;
     }
     else {
-        $response.break( Nil )
+        my Vikna::Canvas:D $canvas = $!canvas;
+        $.trace: "CMD REDRAW: invalidations: ", @!invalidations.elems, "\n", @!invalidations.map( "  . " ~ *.Str ).join("\n");
+        if @!invalidations {
+            $.trace: "STARTED DRAW";
+            $canvas = self.begin-draw;
+            self.draw( :$canvas );
+            self.end-draw( :$canvas );
+            $.trace: "FINISHED DRAW";
+            $!canvas = $canvas;
+            self!flatten-canvas;
+            $.trace: "REDRAWN";
+        }
     }
 }
 
-method cmd-setgeom(Vikna::Rect:D $geom) {
-    $.trace: "? changing geom to ", $geom;
+method cmd-childcanvas(::?CLASS:D $child, Vikna::Rect:D $canvas-geom, Vikna::Canvas:D $canvas, @invalidations) {
+    $.trace: "CHILD CANVAS FROM ", $child.name, " AT {$canvas-geom} WITH ", +@invalidations, " INVALIDATIONS:\n",
+                @invalidations.map({ "  " ~ $_ }).join("\n");
+    %!child-by-id{$child.id}<canvas> = CanvasRecord.new: :$canvas, geom => $canvas-geom;
+    if @invalidations {
+        $.invalidate: @invalidations;
+    }
+}
+
+method cmd-setgeom(Vikna::Rect:D $geom, :$no-draw?) {
+    $.trace: "Changing geom to ", $geom;
     my $from;
     cas $!geom, {
         $from = $_;
         $geom.clone
     };
-    $.trace: "? setgeom invalidations";
+    $.trace: "Setgeom invalidations";
     $.add-inv-parent-rect: $from;
-    $.add-inv-parent-rect: $geom;
     $.invalidate;
-    $.trace: "? setgeom redraw";
-    $.redraw;
-    $.trace: "? setgeom notify";
+    unless $no-draw {
+        $.trace: "Setgeom children visibility";
+        my $view-rect = Vikna::Rect.new: 0, 0, $!geom.w, $!geom.h;
+        $.for-children: {
+            .set-invisible: ! $view-rect.overlap( .geom );
+        }
+        $.trace: "Setgeom redraw";
+        $.redraw;
+    }
     self.dispatch: Event::Changed::Geom, :$from, to => $!geom
         if    $from.x != $!geom.x || $from.y != $!geom.y
            || $from.w != $!geom.w || $from.h != $!geom.h;
-    my $view-rect = Vikna::Rect.new: 0, 0, $!geom.w, $!geom.h;
-    $.for-children: {
-        .set-invisible: ! $view-rect.overlap( .geom );
-    }
 }
 
 method cmd-setcolor(BasicColor :$fg, BasicColor :$bg) {
@@ -304,7 +385,7 @@ method cmd-nop() { }
 proto method setnd-command(|) {
     {*}
 }
-multi method send-command(Event::Command \evType, |args) {
+multi method send-command(Event::Command:U \evType, |args) {
     CATCH {
         when X::Event::Stopped {
             .ev.completed.break($_);
@@ -323,6 +404,13 @@ method add-child(::?CLASS:D $child) {
 
 method remove-child(::?CLASS:D $child) {
     $.send-command: Event::Cmd::RemoveChild, $child;
+}
+
+method child-canvas(::?CLASS:D $child, Vikna::Rect:D $canvas-geom, Vikna::Canvas:D $canvas, @invalidations) {
+    $.trace: "COMMAND child-canvas for child ", $child.name, " with ", +@invalidations, " invalidations";
+    my $ev = $.send-command: Event::Cmd::ChildCanvas, $child, $canvas-geom, $canvas, @invalidations;
+    # $.trace: "{$ev} {$canvas.w} x {$canvas.h}, invalidations:", @invalidations.map({ "\n  $_" });
+    $.redraw;
 }
 
 method redraw {
@@ -348,6 +436,9 @@ method move(Int:D $x, Int:D $y) {
 
 multi method set-geom(Int:D $x, Int:D $y, Dimension:D $w, Dimension:D $h) {
     $.send-command: Event::Cmd::SetGeom, Vikna::Rect.new(:$x, :$y, :$w, :$h)
+}
+multi method set-geom(Vikna::Rect:D $rect) {
+    $.send-command: Event::Cmd::SetGeom, $rect
 }
 
 method set-color(BasicColor :$fg, BasicColor :$bg) {
@@ -378,42 +469,61 @@ method set-invisible($invisible) {
 
 method sync-events(:$transitive) {
     my @p;
+    my $irresponsive = [];
     if $transitive {
-        $.for-children: {
-            @p.push: .nop.completed(:transitive);
+        $.for-children: -> $chld {
+            @p.push: %( widget => $chld, promise => $chld.nop.completed(:transitive) );
         }
     }
-    @p.push: $.nop.completed;
-    await @p;
+    @p.push: %( widget => self, promise => $.nop.completed );
+    $.trace: "LIST OF NOPS:\n", @p.map({ "  " ~ .<widget>.name ~ " p:" ~ .<promise>.^name }).join("\n");
+    my $succeed = False;
+    await Promise.anyof(
+        Promise.in(30),
+        $.flow: :name('SYNC EVENTS'), { await eager @p.map( { $_<promise> } ); $succeed = True; }
+    );
+    unless $succeed {
+        for @p {
+            note $_<widget>.WHICH, " nop ", $_<promise>.?status.^name;
+        }
+        note $.name ~ " INTERNAL: {$transitive ?? "transitive " !! ""}sync-events timeout exceeded";
+        self.panic: X::AdHoc.new: payload => $.name ~ " INTERNAL: {$transitive ?? "transitive " !! ""}sync-events timeout exceeded";
+    }
 }
 
 method nop {
+    # note self.name, " NOP";
     $.send-command: Event::Cmd::Nop
 }
 
 ### State methods ###
 
-method visible { ! ($!hidden || $!invisible) }
+method visible { ! ($!hidden || $!invisible || $.closed) }
+
+method closed { ! ($!closed.status ~~ Planned) }
 
 ### Utility methods ###
 
 method add-inv-parent-rect(Vikna::Rect:D $rect) {
     if $.parent {
         $.trace: "ADD TO STASH OF PARENT INVS: ", ~$rect;
-        cas $!stash-parent-invs, {
-            .push: $rect;
-            $_
+        $!inv4parent-lock.protect: {
+            $!stash-parent-invs.push: $rect
         }
     }
 }
 
 method add-inv-rect(Vikna::Rect:D $rect) {
-    @!invalidations.push: $rect;
+    $!inv-lock.protect: {
+        @!invalidations.push: $rect;
+    }
     $.add-inv-parent-rect: $rect.absolute($!geom);
 }
 
 method clear-invalidations {
-    @!invalidations = [];
+    $!inv-lock.protect: {
+        @!invalidations = [];
+    }
 }
 
 proto method invalidate(|) {*}
@@ -431,19 +541,19 @@ multi method invalidate(UInt:D :$x, UInt:D :$y, Dimension :$w, Dimension :$h) {
     $.invalidate: Vikna::Rect.new( :$x, :$y, :$w, :$h )
 }
 
-multi method invalidate() {
-    $.invalidate: Vikna::Rect.new( :0x, :0y, :$.w, :$.h );
-}
-
 multi method invalidate(@invalidations) {
     $.invalidate: $_ for @invalidations
+}
+
+multi method invalidate() {
+    $.invalidate: Vikna::Rect.new( :0x, :0y, :$.w, :$.h );
 }
 
 method begin-draw(Vikna::Canvas $canvas? is copy --> Vikna::Canvas) {
     $!canvas-geom = $!geom.clone;
     $canvas //= $.create:
                     Vikna::Canvas,
-                    geom => $!geom.clone,
+                    :$.w, :$.h,
                     :$!inv-mark-color,
                     |($!auto-clear ?? () !! :from($!canvas));
     $.invalidate if $!auto-clear;
@@ -458,14 +568,16 @@ method begin-draw(Vikna::Canvas $canvas? is copy --> Vikna::Canvas) {
 
 method end-draw( :$canvas! ) {
     $.trace: "END DRAW";
-    $!inv-for-parent.append: @$!stash-parent-invs;
-    $!stash-parent-invs = [];
+    $!inv4parent-lock.protect: {
+        $!inv-for-parent.append: @$!stash-parent-invs;
+        $!stash-parent-invs = [];
+    }
     self.clear-invalidations;
-    $.dispatch: Event::Updated, geom => $!canvas-geom;
 }
 
 method redraw-block {
     ++$!redraw-blocks;
+    $.trace: "REDRAW BLOCK, block count: ", $!redraw-blocks;
     $.for-children: { .redraw-block };
 }
 
@@ -479,7 +591,10 @@ method redraw-unblock {
             self.throw: X::Redraw::OverUnblock, :count( .abs );
         }
     }
+    $.trace: "REDRAW UNBLOCK, block count: ", $!redraw-blocks;
 }
+
+method redraw-blocked { ? $!redraw-blocks }
 
 method redraw-hold(&code, |c) {
     $.redraw-block;
@@ -493,6 +608,7 @@ method draw(:$canvas) {
 
 method draw-background( :$canvas ) {
     if $!bg-pattern {
+        $.trace: "DRAWING BACKGROUND";
         my $back-row = ( $!bg-pattern x ($.w.Num / $!bg-pattern.chars).ceiling );
         for ^$.h -> $row {
             $canvas.imprint(0, $row, $back-row, :$!fg, :$!bg)
@@ -510,30 +626,37 @@ method !release-redraw-event {
         $rh = $_;
         Nil
     };
-    with $rh {
-        $.trace: "Held redraw event: " ~ .WHICH;
-        self.send-event: $_;
+    if $rh && !$.closed {
+        $.trace: "Held redraw event: " ~ $rh;
+        self.send-event: $rh unless $.closed;
     }
 }
 
 method !hold-redraw-event($ev) {
+    my $drop;
+    # cas block can be ran more than once. Thus, no irreversible actions should be done and $drop flag must be set on
+    # both branches of if for consistency.
     cas $!redraw-on-hold, {
         if $_ {
-            $ev.redrawn.keep(True);
+            $.trace: "ALREADY HOLDING ", $_;
+            $drop = True;
             $_
         }
         else {
+            $.trace: "RECORDING FOR HOLD ", $ev;
+            $drop = False;
             $ev
         }
-    }
+    };
+    $.drop-event: $ev if $drop;
 }
 
 # Filters are protected from concurrency by EventHandling
 multi method event-filter(Event::Cmd::Redraw:D $ev) {
-    $.trace: "WIDGET EV FILTER: ", $ev.^name;
+    $.trace: "WIDGET EV FILTER: ", $ev, ", redraw blocks: $!redraw-blocks";
     if $!redraw-blocks == 0 && $!redraws.try_acquire {
         # There is no current redraws, we just proceed further but first make sure we release the resource when done.
-        $ev.redrawn.then: {
+        $ev.completed.then: {
             $.flow: :name('REDRAW RELEASE'), {
                 $.trace: "RELEASING REDRAW SEMAPHORE";
                 $!redraws.release;
@@ -544,9 +667,58 @@ multi method event-filter(Event::Cmd::Redraw:D $ev) {
     }
     else {
         # There is another redraw active.
-        $.trace: "PUT ", $ev.WHICH, " on hold";
+        $.trace: "PUT ", $ev, " on hold";
         self!hold-redraw-event: $ev;
         # This event won't go any further...
         []
     }
+}
+
+method detach {
+    with $.parent {
+        .remove-child: self;
+    }
+    else {
+        $.dispatch: Event::Detached, :child(self), :parent(self);
+    }
+}
+
+method shutdown {
+    $.stop-event-handling.then: {
+        $!dismissed.keep(True);
+    }
+}
+
+proto method get-child(::?CLASS:D: |) {*}
+multi method get-child(Str:D $name --> Vikna::Widget) {
+    %!child-by-name{$name}:exists ?? %!child-by-id{ %!child-by-name{$name} }<child> !! Nil
+}
+multi method get-child(Int:D $id --> Vikna::Widget) {
+    %!child-by-id{$id}:exists ?? %!child-by-id{$id}<child> !! Nil
+}
+
+proto method AT-KEY(|) {*}
+multi method AT-KEY(::?CLASS:D: Str:D $wname) {
+    %!child-by-name{$wname} ?? %!child-by-id{ %!child-by-name{$wname} }<child> !! Nil
+}
+multi method AT-KEY(::?CLASS:D: Int $id) {
+    %!child-by-id{ $id }<child>
+}
+multi method AT-KEY(::?CLASS:U: |) { Nil }
+
+proto method EXISTS-KEY(|) {*}
+multi method EXISTS-KEY(::?CLASS:D: Str:D $wname) {
+    %!child-by-name{$wname}:exists
+}
+multi method EXISTS-KEY(::?CLASS:D: Int:D $id) {
+    %!child-by-id{$id}:exists
+}
+multi method EXISTS-KEY(::?CLASS:U: |) { False }
+
+proto method DELETE-KEY(|) {*}
+multi method DELETE-KEY(::?CLASS:D: Str:D $wname) {
+    $.remove-child: $_ with $.get-child($wname);
+}
+multi method DELETE-KEY(::?CLASS:D: Int:D $id) {
+    $.remove-child: $_ with $.get-child($id);
 }

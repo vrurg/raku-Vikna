@@ -2,11 +2,9 @@ use v6.e.PREVIEW;
 use nqp;
 use Vikna::Screen;
 use Vikna::Color;
-use Vikna::Object;
 
 unit class Vikna::Screen::ANSI;
 also does Vikna::Screen;
-also is Vikna::Object;
 
 use Color::Names;
 use Color;
@@ -24,6 +22,7 @@ has Str $.terminal-profile = 'ansi'; # or universal
 has &.cursor-sub is mooish(:lazy);
 
 submethod TWEAK {
+    self.throw: X::Terminal::NoTERM unless %*ENV<TERM>:exists;
     signal(SIGWINCH).tap: { self.screen-resize }
 }
 
@@ -168,15 +167,6 @@ multi method color(Vikna::Color:D $c) {
     $c.clone
 }
 
-method init {
-}
+method init { }
 
-method shutdown {
-}
-
-method screen-resize {
-    my $old = $!geom;
-    $.clear-geom;
-    # TODO Find elegant and less application dependent way of signalling the resize.
-    $.app.desktop.dispatch: Event::ScreenGeom, :$old, new => $!geom
-}
+method shutdown { }

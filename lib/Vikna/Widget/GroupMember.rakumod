@@ -11,9 +11,23 @@ has Vikna::Widget:D $.group is required;
 method start-event-handling { }
 
 proto method dispatch(|) {*}
-multi method dispatch(Event::Command \event, |c) {
-    self.Vikna::Widget::dispatch: event, |c;
+# multi method dispatch(::?CLASS:D: Event::Command:D $ev, |c) {
+#     # note self.name, " COMMAND ", $ev.^shortname, " DISPATCH DIRECTLY";
+#     self.send-event: $ev
+# }
+multi method dispatch(::?CLASS:D: Event:U \event, |c) {
+    self.Vikna::Widget::dispatch: event, |c
 }
-multi method dispatch(Event \event, |c) {
-    $.group.dispatch: event, |c;
+multi method dispatch(::?CLASS:D: Event:D $ev, |c) {
+    $.trace: "GROUP MEMBER {self.name} DISPATCH [$ev] VIA {$.group.name}";
+    $.group.re-dispatch: $ev, |c
+}
+
+method detach {
+    with $.parent {
+        .remove-member: self;
+    }
+    else {
+        $.throw: X::Detach::NoParent;
+    }
 }

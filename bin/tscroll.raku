@@ -29,12 +29,6 @@ class ScrollApp is Vikna::App {
         $ts.print: "\rLB";
         # sleep 1;
         $.trace: "Bench result: ", ($et - $st), " seconds, ", $count / ($et - $st), " lines/sec";
-        CATCH {
-            default {
-                $.trace: "BOOM! ", .message, .backtrace;
-                .rethrow;
-            }
-        }
     }
 }
 
