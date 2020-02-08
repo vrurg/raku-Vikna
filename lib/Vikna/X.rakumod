@@ -63,6 +63,12 @@ class X::Event::Stopped does X::Eventish {
     }
 }
 
+class X::Event::Dropped does X::Eventish {
+    method message {
+        "Attempt to use result of a dropped event " ~ $.ev;
+    }
+}
+
 class X::Event::CommandOrigin does X::Eventish {
     has Any:D $.dest is required;
     method message {
@@ -110,6 +116,24 @@ class X::Widget::DuplicateName does X::Widget {
     has Str:D $.name is required;
     method message {
         "Child with name `$!name` already exists on " ~ $!parent.name;
+    }
+}
+
+class X::PChannel::NoData is Exception {
+    method message {
+        "receive called on empty PChannel"
+    }
+}
+
+class X::PChannel::ReceiveOnClosed is Exception {
+    method message {
+        "receive called on closed PChannel"
+    }
+}
+
+class X::PChannel::SendOnClosed is Exception {
+    method message {
+        "send called on closed PChannel"
     }
 }
 

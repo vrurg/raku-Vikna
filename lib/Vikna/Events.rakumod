@@ -10,11 +10,16 @@ use AttrX::Mooish;
 
 my atomicint $sequence = -1;
 
+enum EventPriority is export ( PrioIdle => 0, |<PrioDefault PrioCommand PrioReleased PrioIO>);
+
 role Event is export {
     has Int $.seq is built(False);
     has $.origin is mooish(:lazy);  # Originating object.
     has $.dispatcher is required;   # Dispatching object. Changes on re-dispatch.
     has Bool:D $.cleared = False;
+    has EventPriority $.priority is mooish(:lazy);
+
+    method build-priority { ... }
 
     submethod TWEAK {
         self!set-seq;
@@ -52,11 +57,19 @@ role Event is export {
 
 ### EVENT CATEGORIES ###
 
+# Quick priority setting
+
+role Event::Prio::Idle     { method build-priority { PrioIdle     } }
+role Event::Prio::Default  { method build-priority { PrioDefault  } }
+role Event::Prio::Command  { method build-priority { PrioCommand  } }
+role Event::Prio::Released { method build-priority { PrioReleased } }
+role Event::Prio::IO       { method build-priority { PrioIO       } }
+
 # Informational events. Usually consequences of actions.
-role Event::Informative does Event { }
+role Event::Informative does Event does Event::Prio::Default { }
 
 # Commanding events like 'move', or 'resize', or 'redraw'
-role Event::Command does Event {
+role Event::Command does Event does Event::Prio::Command {
     has Promise:D $.completed .= new;
     has $.completed-at;
     has Capture:D $.args = \();
@@ -67,8 +80,7 @@ role Event::Command does Event {
     }
 }
 
-# Input events are subject to
-role Event::Input does Event { }
+role Event::Input does Event does Event::Prio::IO { }
 
 ### EVENT SUBTYPES ###
 
@@ -150,9 +162,9 @@ role Event::Mouse does Event::Input {
 
 class Event::Cmd::AddChild            does Event::Command { }
 class Event::Cmd::AddMember           does Event::Command { }
-class Event::Cmd::ChildCanvas         does Event::Command { }
+class Event::Cmd::ChildCanvas         does Event::Command { method build-priority { PrioReleased } }
 class Event::Cmd::Clear               does Event::Command { }
-class Event::Cmd::Close               does Event::Command { }
+class Event::Cmd::Close               does Event::Command { method build-priority { PrioCommand } }
 class Event::Cmd::Nop                 does Event::Command { }
 class Event::Cmd::Redraw              does Event::Command { }
 class Event::Cmd::RemoveChild         does Event::Command { }
@@ -171,6 +183,10 @@ class Event::Cmd::SetInvisible        does Event::Command { }
 class Event::Cmd::TextScroll::AddText does Event::Command { }
 
 #### Informative ####
+
+class Event::Idle does Event::Informative {
+    method build-priority { PrioIdle }
+}
 
 class Event::Changed::Title does Event::Informative {
     has $.old-title;

@@ -35,6 +35,13 @@ method cmd-removemember(::?CLASS:D: Vikna::Widget::GroupMember:D $member) {
     self.Vikna::Widget::cmd-removechild($member, :!unsubscribe)
 }
 
+method cmd-redraw {
+    $.for-children: {
+        .cmd-redraw;
+    }
+    nextsame;
+}
+
 ### Command senders ###
 
 method add-member(::?CLASS:D: Vikna::Widget::GroupMember:D $member) {

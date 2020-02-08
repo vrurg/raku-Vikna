@@ -54,7 +54,7 @@ method build-desktop {
                     :geom($.screen.geom.clone),
                     :bg-pattern<.>,
                     :!auto-clear,
-                    # :bg<black>,
+                    :bg<black>,
                     # :inv-mark-color<00,00,50>,
                     ;
 }

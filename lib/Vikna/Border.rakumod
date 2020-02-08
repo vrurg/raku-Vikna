@@ -42,3 +42,8 @@ method draw( :$canvas ) {
         $canvas.imprint($r, $y, %b<r>);
     }
 }
+
+### Command senders ###
+
+# Prevent voluntary geom changes
+method set-geom(|) { }

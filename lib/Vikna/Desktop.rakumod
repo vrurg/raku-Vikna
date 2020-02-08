@@ -30,18 +30,26 @@ multi method event(Event::Kbd::Control:D $ev) {
 }
 
 ### Command handlers ###
+has atomicint $!redraws = 0;
 method cmd-redraw(|) {
     callsame;
     $.trace: "DESKTOP REDRAW -> screen";
+    $.canvas.invalidate(0,0,20,1);
+    $.canvas.imprint: 0,0, "r:" ~ ++⚛$!redraws;
     $.app.screen.print: 0, 0, $.canvas;
 }
 
-method cmd-childcanvas(|) {
-    callsame;
-    $.trace: "DESKTOP CHILD CANVAS -> screen";
-    # $.redraw;
-    $.app.screen.print: 0, 0, $.canvas;
-}
+# method cmd-childcanvas($child, Vikna::Rect:D $canvas-geom, Vikna::Canvas:D $canvas, @invalidations) {
+#     callsame;
+#     $.trace: "DESKTOP CHILD CANVAS -> screen";
+#     if $child.name eq 'Moveable' {
+#         $.app.screen.print: 0, $.app.screen.geom.h - $canvas.h, $canvas;
+#     }
+#     # $.redraw;
+#     # $.canvas.invalidate(0,0,20,1);
+#     # $.canvas.imprint: 0,0, "r:" ~ ++⚛$!redraws;
+#     # $.app.screen.print: 0, 0, $.canvas;
+# }
 
 ### Utility methods ###
 

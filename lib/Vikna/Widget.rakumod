@@ -153,15 +153,15 @@ multi method event(::?CLASS:D: Event:D $ev) {
     $ev.clear if $ev.dispatcher === self
 }
 
-multi method event(::?CLASS:D: Event::Attached:D $ev) {
-    if self === $ev.child {
-        $.invalidate;
-        $.redraw;
-    }
-    if $ev.parent === self {
-        $.invalidate: $ev.child.geom;
-    }
-}
+# multi method event(::?CLASS:D: Event::Attached:D $ev) {
+#     if self === $ev.child {
+#         $.invalidate;
+#         $.redraw;
+#     }
+#     if $ev.parent === self {
+#         $.invalidate: $ev.child.geom;
+#     }
+# }
 
 multi method event(::?CLASS:D: Event::Detached:D $ev) {
     if $ev.child === self {
@@ -182,16 +182,15 @@ proto method child-event(::?CLASS:D: Event:D) {*}
 #     $.redraw;
 # }
 
-multi method child-event(::?CLASS:D: Event::Closing:D $ev) {
-    $.invalidate: $ev.origin.geom;
-    $.redraw;
-}
+# multi method child-event(::?CLASS:D: Event::Closing:D $ev) {
+#     $.invalidate: $ev.origin.geom;
+#     $.redraw;
+# }
 
-multi method child-event(::?CLASS:D: Event::Changed::Geom:D $ev) {
-    $.trace: "CHILD {$ev.origin} GEOM CHANGED {$ev.from} => {$ev.to}";
-    $.invalidate: [ $ev.from, $ev.to ];
-    $.redraw;
-}
+# multi method child-event(::?CLASS:D: Event::Changed::Geom:D $ev) {
+#     $.trace: "CHILD {$ev.origin} GEOM CHANGED {$ev.from} => {$ev.to}";
+#     $.invalidate: [ $ev.from, $ev.to ];
+# }
 
 multi method child-event(::?CLASS:D: Event:D)        { }
 
@@ -201,7 +200,7 @@ multi method subscription-event(::?CLASS:D: Event:D) { }
 proto method drop-event(::?CLASS:D: Event:D)  {*}
 multi method drop-event(Event::Command:D $ev) {
     $.trace: "DROPPING ", $ev;
-    $ev.complete(False);
+    $ev.complete(X::Event::Dropped.new( :obj(self), :$ev ) but False);
 }
 multi method drop-event(Event:D)              { }
 
@@ -305,11 +304,21 @@ method !flatten-canvas {
     $.for-children: -> $child {
         # Newly added children might not have drawn yet. It's ok to skip 'em.
         next unless $child.visible;
-        $!canvas.imprint: .geom.x, .geom.y, .canvas with %!child-by-id{$child.id}<canvas>;
+        with %!child-by-id{$child.id}<canvas> {
+            $!canvas.imprint: .geom.x, .geom.y, .canvas;
+            $child.dispatch: Event::Updated,
+                                origin => self,
+                                geom => .geom;
+        }
     }
-    .child-canvas: self, $!canvas-geom, $!canvas, $!inv-for-parent with $.parent;
-    $!inv4parent-lock.protect: {
-        $!inv-for-parent = [];
+    if $!canvas-geom {
+        with $.parent {
+            $.trace: "Sending self canvas to ", .name;
+            .child-canvas(self, $!canvas-geom.clone, $!canvas, $!inv-for-parent);
+        }
+        $!inv4parent-lock.protect: {
+            $!inv-for-parent = [];
+        }
     }
     $.dispatch: Event::Updated, geom => $!canvas-geom;
 }
@@ -338,7 +347,8 @@ method cmd-redraw() {
 
 method cmd-childcanvas(::?CLASS:D $child, Vikna::Rect:D $canvas-geom, Vikna::Canvas:D $canvas, @invalidations) {
     $.trace: "CHILD CANVAS FROM ", $child.name, " AT {$canvas-geom} WITH ", +@invalidations, " INVALIDATIONS:\n",
-                @invalidations.map({ "  " ~ $_ }).join("\n");
+                @invalidations.map({ "  " ~ $_ }).join("\n"),
+                "\nMY GEOM: " ~ $.geom;
     %!child-by-id{$child.id}<canvas> = CanvasRecord.new: :$canvas, geom => $canvas-geom;
     if @invalidations {
         $.invalidate: @invalidations;
@@ -382,7 +392,7 @@ method cmd-setcolor(BasicColor :$fg, BasicColor :$bg) {
 method cmd-nop() { }
 
 ### Command senders ###
-proto method setnd-command(|) {
+proto method send-command(|) {
     {*}
 }
 multi method send-command(Event::Command:U \evType, |args) {
@@ -427,15 +437,16 @@ method close {
 }
 
 method resize(Dimension:D $w, Dimension:D $h) {
-    $.send-command: Event::Cmd::SetGeom, $!geom.clone( :$w, :$h );
+    $.set-geom: $!geom.clone( :$w, :$h );
 }
 
 method move(Int:D $x, Int:D $y) {
-    $.send-command: Event::Cmd::SetGeom, $!geom.clone( :$x, :$y );
+    $.set-geom: $!geom.clone( :$x, :$y );
 }
 
+proto method set-geom(::?CLASS:D: |) {*}
 multi method set-geom(Int:D $x, Int:D $y, Dimension:D $w, Dimension:D $h) {
-    $.send-command: Event::Cmd::SetGeom, Vikna::Rect.new(:$x, :$y, :$w, :$h)
+    $.set-geom: Vikna::Rect.new(:$x, :$y, :$w, :$h)
 }
 multi method set-geom(Vikna::Rect:D $rect) {
     $.send-command: Event::Cmd::SetGeom, $rect
@@ -576,14 +587,14 @@ method end-draw( :$canvas! ) {
 }
 
 method redraw-block {
-    ++$!redraw-blocks;
+    ++⚛$!redraw-blocks;
     $.trace: "REDRAW BLOCK, block count: ", $!redraw-blocks;
     $.for-children: { .redraw-block };
 }
 
 method redraw-unblock {
     $.for-children: { .redraw-unblock };
-    given --$!redraw-blocks {
+    given --⚛$!redraw-blocks {
         when 0 {
             self!release-redraw-event;
         }
@@ -628,7 +639,7 @@ method !release-redraw-event {
     };
     if $rh && !$.closed {
         $.trace: "Held redraw event: " ~ $rh;
-        self.send-event: $rh unless $.closed;
+        self.send-event: $rh, PrioReleased unless $.closed;
     }
 }
 

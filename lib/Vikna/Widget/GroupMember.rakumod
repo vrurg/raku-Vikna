@@ -23,6 +23,14 @@ multi method dispatch(::?CLASS:D: Event:D $ev, |c) {
     $.group.re-dispatch: $ev, |c
 }
 
+### Command senders ###
+
+method redraw {
+    $.group.redraw;
+}
+
+### Utility methods ###
+
 method detach {
     with $.parent {
         .remove-member: self;

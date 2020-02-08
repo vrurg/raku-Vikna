@@ -48,10 +48,16 @@ class Moveable is Vikna::Window {
         has Vikna::Rect:D $.geom is required;
     }
 
+    method TWEAK {
+        self.dispatch: Event::Idle;
+    }
+
     my class Event::NextStage does Event::Informative {
         has Int:D $.stage is required;
     }
-    my class Event::Cmd::NextStep does Event::Command { }
+    my class Event::Cmd::NextStep does Event::Command {
+        method build-priority { PrioIdle }
+    }
 
     method !build-stages {
         my Int:D $stage = 0;
@@ -61,8 +67,8 @@ class Moveable is Vikna::Window {
         my ($dw, $dh, $dx, $dy);
         my Vikna::Rect $orig;
         Seq.from-loop({
-            if $stage < 3 {
-                if $step >= $steps {
+            if $stage < 5 {
+                if $step >= ($steps min 100) {
                     $orig = $.geom.clone;
                     my $desktop-w = $.app.desktop.w;
                     my $desktop-h = $.app.desktop.h;
@@ -108,26 +114,39 @@ class Moveable is Vikna::Window {
         my $ttl-pfx = $lbl ?? $lbl.ttl-pfx !! "";
         my $desktop = $.app.desktop;
         my $sw = $desktop<Static>;
-        $.app.desktop.redraw-hold: {
+        $.redraw-hold: {
+            $.set-bg-pattern($stage.step % 2 ?? '*' !! '#');
             $.set-geom: $stage.geom.clone;
-            $.set-title: $ttl-pfx ~ "geom: " ~ $stage.geom;
+            $.set-title: $ttl-pfx ~ "geom({$stage.stage}): " ~ $stage.geom;
             $sw.set-title: "Stage " ~ $stage.stage;
-            $sw<info-lbl>.set-text: ~$stage.geom;
+            $sw<s-info-lbl>.set-text: ~$stage.geom;
             .set-text: "Step " ~ $stage.step with $lbl;
         }
         $.next-step;
     }
 
     multi method event(Event::NextStage:D $ev) {
-        self<info-lbl>.set-hidden( $ev.stage % 2 );
+        self<info-lbl>.set-hidden( ! $ev.stage % 2 );
         $.app.desktop<Static>.set-bg-pattern("[{$ev.stage}]");
     }
 
+    # multi method event(Event::Updated:D $ev) {
+    #     if $ev.origin === $.app.desktop {
+    #         $.next-step;
+    #     }
+    #     nextsame;
+    # }
+
     multi method event(Event::Attached:D $ev) {
-        if $ev.origin === self {
+        if $ev.child === self {
             $.next-step;
         }
         nextsame;
+    }
+
+    multi method event(Event::Idle:D $ev) {
+        $.trace: "IDLED";
+        $.dispatch: Event::Idle;
     }
 
     method next-step {
@@ -138,7 +157,10 @@ class Moveable is Vikna::Window {
 class MovingApp is Vikna::App {
     method main {
         my $mw = $.desktop.create-child: Moveable, :0x, :0y, w => ($.desktop.w / 3).Int, h => ($.desktop.h / 3).Int,
-                                                :name<Moveable>, :title('Moveable Window'), :bg-pattern<#>;
+                                                :name<Moveable>, :title('Moveable Window'), :bg-pattern<#>,
+                                                # :auto-clear, :bg<blue>,
+                                                # :inv-mark-color<00,50,00>,
+                                                ;
         my $lbl = $mw.create-child: Vikna::Label, :3x, :10y, :1h, :15w, :name<info-lbl>, :text('Info Label');
         $lbl does role {
             has $.ttl-pfx = "";
@@ -150,7 +172,7 @@ class MovingApp is Vikna::App {
             }
         };
         my $sw = $.desktop.create-child: Vikna::Window, :30x, :5y, :40w, :5h, :name<Static>, :title('Static Window');
-        $sw.create-child: Vikna::Label, :0x, :0y, :38w, :1h, :name<info-lbl>, :text('info lbl');
+        $sw.create-child: Vikna::Label, :0x, :0y, :38w, :1h, :name<s-info-lbl>, :text('info lbl');
         $.desktop.sync-events;
     }
 }
