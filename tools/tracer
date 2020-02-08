@@ -46,8 +46,8 @@ multi MAIN( Str:D $format where * ~~ (any Vikna::Tracer.templates.keys),
     my %data = session => [];
     for @sessions -> $sess {
         say "Processing session ", $sess.id, ", records: ", $sess.records.elems;
-        my %sess = id => .id, started => ~DateTime.new(.started), name => .name with $sess;
-        my @flows = $sess.records.map( *.flow ).unique.sort;
+        my %sess = id => .id, started => .started, name => .name with $sess;
+        my @flows = $sess.records.flows; # $sess.records.map( *.flow-id ).unique.sort;
         my @flow-names = '' xx +@flows;
         my %fl-idx = @flows.antipairs;
         %sess<flows> = @flows.map( { { flow => ~$_ } } ).list;
@@ -58,7 +58,7 @@ multi MAIN( Str:D $format where * ~~ (any Vikna::Tracer.templates.keys),
                 ++$reccount;
                 $*ERR.print: $reccount.fmt("REC: %6d\r") if $reccount % 100 == 0;
                 my %rec;
-                my $fl-idx = %fl-idx{ .flow };
+                my $fl-idx = %fl-idx{ .flow-id };
 
                 if @flow-names[$fl-idx] ne .flow-name {
                     my %flow-row;
@@ -66,14 +66,14 @@ multi MAIN( Str:D $format where * ~~ (any Vikna::Tracer.templates.keys),
                     @flow-cols[$fl-idx]<cell> = %( flow_name => (.flow-name || '*anon*') );
                     @flow-names[$fl-idx] = .flow-name;
                     %flow-row<id> = .id;
-                    %flow-row<time> = ~DateTime.new(.time);
+                    %flow-row<time> = .time;
                     %flow-row<cols> = @flow-cols;
                     # say Dump(%flow-row, :skip-methods);
                     take { flow_name => %flow-row };
                 }
 
                 %rec<cols> = [ { cell => { } } xx +@flows ];
-                %rec<time> = ~DateTime.new(.time);
+                %rec<time> = .time;
                 %rec<id> = .id;
                 %rec<flow_name> = .flow-name;
                 %rec<cols>[ $fl-idx ]<cell> = %(
@@ -83,7 +83,7 @@ multi MAIN( Str:D $format where * ~~ (any Vikna::Tracer.templates.keys),
                 );
                 take { record => %rec };
             }
-        }).eager.list;
+        }).list;
         %data<session>.push: %sess;
     }
 
