@@ -59,17 +59,20 @@ method color2esc(BasicColor $color) {
     $color ?? color($color) !! ''
 }
 
-# multi method print(::?CLASS:D: Int:D $x, Int:D $y, Vikna::Canvas:D $canvas, *%c) {
-#     self.print: $x, $y, $canvas.viewport, |%c
-# }
-multi method print(::?CLASS:D: Int:D $x, Int:D $y, Vikna::Canvas:D $viewport, *%c ) {
-    $*OUT.print: $.print( $x, $y, $viewport, :str, |%c )
+proto method screen-print(::?CLASS:D: Int:D, Int:D, |) {*}
+
+multi method screen-print(Int:D $x, Int:D $y, Vikna::Canvas:D $viewport, *%c ) {
+    $*OUT.print: $.ANSI-str( $x, $y, $viewport, :str, |%c )
 }
 
-multi method print( ::?CLASS:D: Int:D $x, Int:D $y, Vikna::Canvas:D $viewport, :$str!, *%c )
+multi method screen-print(Int:D $x, Int:D $y, Str:D $string, Vikna::Color:D :$fg?, Vikna::Color:D :$bg?) {
+    $*OUT.print: &!cursor-sub($x, $y) ~ $.color2esc(self.ansi-color: :$fg, :$bg) ~ $string ~ RESET-COLOR
+}
+
+multi method ANSI-str( ::?CLASS:D: Int:D $x, Int:D $y, Vikna::Canvas:D $viewport, :$default-fg?, :$default-bg?)
 {
     my $vlines := nqp::list();
-    my $default-color := $.color2esc( $.ansi-color(fg => %c<default-fg>, bg => %c<default-bg>) );
+    my $default-color := $.color2esc( $.ansi-color(fg => $default-fg, bg => $default-bg) );
     my ($cplane, $fgplane, $bgplane);
     $viewport.get-planes($cplane, $fgplane, $bgplane);
     my $vw = $viewport.w;
@@ -127,10 +130,6 @@ multi method print( ::?CLASS:D: Int:D $x, Int:D $y, Vikna::Canvas:D $viewport, :
     # my @v = $vlines;
     # note @v.perl;
     nqp::join("", $vlines);
-}
-
-multi method print(::?CLASS:D: Int:D $x, Int:D $y, Str:D $string, Vikna::Color:D :$fg?, Vikna::Color:D :$bg?) {
-    $*OUT.print: &!cursor-sub($x, $y) ~ $.color2esc(self.ansi-color: :$fg, :$bg) ~ $string ~ RESET-COLOR
 }
 
 multi method color(Str:D $name) {

@@ -40,7 +40,10 @@ method build-os {
     $.create: ::($os-module);
 }
 
-method build-screen { $.os.screen }
+method build-screen {
+    $.os.screen.init: |%!screen-params;
+    $.os.screen
+}
 
 method build-tracer {
     my $db-name = .subst(":", "_", :g) ~ ".sqlite" with self.^name;

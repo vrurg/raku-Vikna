@@ -26,5 +26,5 @@ method shutdown {
 }
 
 method panic($cause) {
-    $!ev-supplier.fail($cause);
+    $!ev-supplier.quit($cause);
 }

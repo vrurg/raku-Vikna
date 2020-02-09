@@ -12,10 +12,15 @@ my class CodeFlow {
 
 has $.app;
 has Int $.id is mooish(:lazy);
+has $.name is mooish(:lazy);
 
 method build-id {
     use nqp;
     nqp::objectid(self)
+}
+
+method build-name {
+    self.^name ~ "<" ~ $.id ~ ">"
 }
 
 multi method throw(X::Base:D $ex) {
@@ -96,16 +101,6 @@ method flow(&code, Str :$name?, :$sync = False) {
 }
 
 method panic(Exception:D $cause) {
-    my $bail-out = True;
-    if $.app {
-        $.app.desktop.dismissed.then: { $bail-out = False; };
-        await Promise.anyof(
-            Promise.in(10),
-            start $.app.panic($cause, :object(self))
-        );
-    }
-    else {
-        note "===PANIC!=== On object ", self.?name // self.WHICH, "\n", $cause.message, ~$cause.backtrace;
-    }
-    exit 1 if $bail-out;
+    note "===PANIC!=== On object ", self.?name // self.WHICH, "\n", $cause.message, ~$cause.backtrace;
+    exit 1;
 }

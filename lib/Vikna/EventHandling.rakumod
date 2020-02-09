@@ -68,6 +68,7 @@ method start-event-handling(::?ROLE:D:) {
             $.flow: { self!run-ev-loop }, :name('EVENT LOOP ' ~ (self.?name // self.WHICH));
         }
     }
+    $.dispatch: Event::Init;
 }
 
 method stop-event-handling(::?ROLE:D:) {
@@ -179,6 +180,29 @@ multi method dispatch(::?ROLE:D: Vikna::Event:U \EvType, EventPriority $priority
 method re-dispatch(::?ROLE:D: Vikna::Event:D $ev) {
     $.send-event: $ev
 }
+
+proto method send-command(|) {
+    {*}
+}
+multi method send-command(Event::Command:U \evType, |args) {
+    CATCH {
+        when X::Event::Stopped {
+            .ev.completed.break($_);
+            return .ev
+        }
+        default {
+            .rethrow;
+        }
+    }
+    self.dispatch: evType, :args(args);
+}
+
+proto method drop-event(::?CLASS:D: Event:D)  {*}
+multi method drop-event(Event::Command:D $ev) {
+    $.trace: "DROPPING ", $ev;
+    $ev.complete(X::Event::Dropped.new( :obj(self), :$ev ) but False);
+}
+multi method drop-event(Event:D)              { }
 
 proto method event(::?ROLE:D: Event:D $ev) {*}
 multi method event(::?ROLE:D: Event:D $ev) { #`<Sink method> }

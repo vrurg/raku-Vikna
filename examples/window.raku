@@ -67,7 +67,7 @@ class Moveable is Vikna::Window {
         my ($dw, $dh, $dx, $dy);
         my Vikna::Rect $orig;
         Seq.from-loop({
-            if $stage < 5 {
+            if $stage <= 10 {
                 if $step >= ($steps min 100) {
                     $orig = $.geom.clone;
                     my $desktop-w = $.app.desktop.w;
@@ -122,7 +122,6 @@ class Moveable is Vikna::Window {
             $sw<s-info-lbl>.set-text: ~$stage.geom;
             .set-text: "Step " ~ $stage.step with $lbl;
         }
-        $.next-step;
     }
 
     multi method event(Event::NextStage:D $ev) {
@@ -130,12 +129,12 @@ class Moveable is Vikna::Window {
         $.app.desktop<Static>.set-bg-pattern("[{$ev.stage}]");
     }
 
-    # multi method event(Event::Updated:D $ev) {
-    #     if $ev.origin === $.app.desktop {
-    #         $.next-step;
-    #     }
-    #     nextsame;
-    # }
+    multi method event(Event::Updated:D $ev) {
+        if $ev.origin === $.app.desktop {
+            $.next-step;
+        }
+        nextsame;
+    }
 
     multi method event(Event::Attached:D $ev) {
         if $ev.child === self {

@@ -10,7 +10,8 @@ use AttrX::Mooish;
 
 my atomicint $sequence = -1;
 
-enum EventPriority is export ( PrioIdle => 0, |<PrioDefault PrioCommand PrioReleased PrioIO>);
+# PrioImmediate must always be the highest level of all.
+enum EventPriority is export ( PrioIdle => 0, |<PrioDefault PrioCommand PrioReleased PrioOut PrioIn PrioImmediate>);
 
 role Event is export {
     has Int $.seq is built(False);
@@ -63,10 +64,14 @@ role Event::Prio::Idle     { method build-priority { PrioIdle     } }
 role Event::Prio::Default  { method build-priority { PrioDefault  } }
 role Event::Prio::Command  { method build-priority { PrioCommand  } }
 role Event::Prio::Released { method build-priority { PrioReleased } }
-role Event::Prio::IO       { method build-priority { PrioIO       } }
+role Event::Prio::In       { method build-priority { PrioIn       } }
+role Event::Prio::Out      { method build-priority { PrioOut      } }
 
 # Informational events. Usually consequences of actions.
 role Event::Informative does Event does Event::Prio::Default { }
+
+# Events which should be auto-dispatched to children
+role Event::Spreadable { }
 
 # Commanding events like 'move', or 'resize', or 'redraw'
 role Event::Command does Event does Event::Prio::Command {
@@ -80,7 +85,8 @@ role Event::Command does Event does Event::Prio::Command {
     }
 }
 
-role Event::Input does Event does Event::Prio::IO { }
+role Event::Input does Event does Event::Prio::In   { }
+role Event::Output does Event does Event::Prio::Out { }
 
 ### EVENT SUBTYPES ###
 
@@ -162,13 +168,14 @@ role Event::Mouse does Event::Input {
 
 class Event::Cmd::AddChild            does Event::Command { }
 class Event::Cmd::AddMember           does Event::Command { }
-class Event::Cmd::ChildCanvas         does Event::Command { method build-priority { PrioReleased } }
+class Event::Cmd::ChildCanvas         does Event::Command { method build-priority { PrioOut } }
 class Event::Cmd::Clear               does Event::Command { }
-class Event::Cmd::Close               does Event::Command { method build-priority { PrioCommand } }
+class Event::Cmd::Close               does Event::Command { method build-priority { PrioIdle } }
 class Event::Cmd::Nop                 does Event::Command { }
 class Event::Cmd::Redraw              does Event::Command { }
 class Event::Cmd::RemoveChild         does Event::Command { }
 class Event::Cmd::RemoveMember        does Event::Command { }
+class Event::Cmd::ScreenPrint         does Event::Command { method build-pririty { PrioOut } }
 class Event::Cmd::Scroll::By          does Event::Command { }
 class Event::Cmd::Scroll::Fit         does Event::Command { }
 class Event::Cmd::Scroll::SetArea     does Event::Command { }
@@ -183,6 +190,9 @@ class Event::Cmd::SetInvisible        does Event::Command { }
 class Event::Cmd::TextScroll::AddText does Event::Command { }
 
 #### Informative ####
+
+# Normally sent once only. Has to be delivered ASAP to be the first event ever.
+class Event::Init does Event::Informative { method priority { PrioImmediate } }
 
 class Event::Idle does Event::Informative {
     method build-priority { PrioIdle }
@@ -213,8 +223,6 @@ class Event::Closing   does Event::Informative { }
 class Event::WidgetColor does Event::Informative does Event::ColorChange { }
 
 class Event::Changed::Geom does Event::Informative does Event::Transformish { }
-
-class Event::ScreenGeom does Event::Informative does Event::Transformish { }
 
 # Dispatched whenever widget content might have changed.
 class Event::Updated does Event::Informative {
@@ -248,6 +256,17 @@ class Event::FocusIn    does Event::Input { }
 class Event::FocusOut   does Event::Input { }
 class Event::PasteStart does Event::Input { }
 class Event::PasteEnd   does Event::Input { }
+
+# Emitted when screen has done an output job.
+class Event::Screen::Ready does Event::Input { }
+
+class Event::Screen::Geom
+        does Event::Informative
+        does Event::Transformish
+        does Event::Spreadable
+{
+    method build-priority { PrioOut }
+}
 
 class Event::Attached does Event::Informative does Event::Relational { }
 class Event::Detached does Event::Informative does Event::Relational { }

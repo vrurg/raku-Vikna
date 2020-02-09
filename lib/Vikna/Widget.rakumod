@@ -4,11 +4,13 @@ use Vikna::Object;
 use Vikna::Parent;
 use Vikna::Child;
 use Vikna::EventHandling;
+use Vikna::CommandHandling;
 
 also is Vikna::Object;
 also does Vikna::Parent[::?CLASS];
 also does Vikna::Child;
 also does Vikna::EventHandling;
+also does Vikna::CommandHandling;
 
 use Vikna::Rect;
 use Vikna::Events;
@@ -22,8 +24,6 @@ my class CanvasRecord {
     has Vikna::Rect:D $.geom is required;
     has Vikna::Canvas:D $.canvas is required;
 }
-
-has $.name is mooish(:lazy);
 
 has Vikna::Rect:D $.geom is required handles <x y w h>;
 has $.bg-pattern;
@@ -71,10 +71,6 @@ multi method new(*%c where { $_<geom>:!exists }) {
     self.new: geom => Vikna::Rect.new(:0x, :0y, :20w, :10h), |%c
 }
 
-method build-name {
-    self.^name ~ "<" ~ $.id ~ ">"
-}
-
 method build-canvas {
     $.create: Vikna::Canvas, geom => $!geom.clone;
 }
@@ -94,57 +90,14 @@ method subscribe-to-child(Vikna::Widget:D $child) {
     };
 }
 
-proto method event(::?CLASS:D: Event:D $ev) {*}
-#     {*}
-#
-#     # Commands are not to be re-dispatched to children. If any changes in children are required they're to be initiated
-#     # via their respective methods.
-#     unless $ev ~~ Event::Command || $ev.dispatcher !=== self {
-#         self.for-children: {
-#             .event($ev) unless $_ === $ev.dispatcher | $ev.origin;
-#         }
-#     }
-#     CONTROL {
-#         when CX::Event::Last {
-#             $.trace: "STOP EVENT HANDLING for ", $ev.^name;
-#         }
-#         default {
-#             .rethrow
-#         }
-#     }
-# }
+proto method event(::?CLASS:D: Event:D $ev) {
+    {*}
 
-multi method event(::?CLASS:D: Event::Command:D $ev) {
-    # Only process commands sent by ourselves. Protect from stray events.
-    $.throw: X::Event::CommandOrigin, :$ev, dest => self
-        unless $ev.origin === self;
-    # To form a default command name everything up to and including Event in event's class FQN is stripped off. The
-    # remaining elements are lowercased and joined with a dash:
-    # Vikna::Event::Cmd::Name -> cmd-name
-    # Vikna::TextScroll::Event::SomeCmd::Name -> somecmd-name
-    my $cmd-name = $ev.^can("cmd")
-                    ?? $ev.cmd
-                    !! $ev.^name
-                          .split( '::' )
-                          .grep({ "Event" ^ff * })
-                          .map( *.lc )
-                          .join( '-' );
-    $.trace: "COMMAND EVENT: ", $cmd-name;
-    if self.^can($cmd-name) {
-        $ev.complete( self."$cmd-name"( |$ev.args ) );
-        CATCH {
-            default {
-                note "Failed keeping completed promise on $ev: ", ~($ev.completed-at // "*no idea where*");
-                $.trace: "EVENT {$ev} HAS BEEN COMPLETED AT ", ~($ev.completed-at // "*no idea where*"),
-                        "\n", .message ~ .backtrace,
-                        :error;
-                $.panic: $_
-            }
+    # Re-dispatch spreadable events.
+    if $ev ~~ Event::Spreadable && $ev.dispatcher === self {
+        self.for-children: {
+            .dispatch($ev) unless $_ === $ev.dispatcher;
         }
-    }
-    elsif self.^can('CMD-FALLBACK') {
-        $.trace: "PASSING TO CMD-FALLBACK";
-        $ev.complete( self.CMD-FALLBACK($ev) );
     }
 }
 
@@ -196,13 +149,6 @@ multi method child-event(::?CLASS:D: Event:D)        { }
 
 proto method subscription-event(::?CLASS:D: Event:D) {*}
 multi method subscription-event(::?CLASS:D: Event:D) { }
-
-proto method drop-event(::?CLASS:D: Event:D)  {*}
-multi method drop-event(Event::Command:D $ev) {
-    $.trace: "DROPPING ", $ev;
-    $ev.complete(X::Event::Dropped.new( :obj(self), :$ev ) but False);
-}
-multi method drop-event(Event:D)              { }
 
 ### Command handlers ###
 
@@ -392,21 +338,6 @@ method cmd-setcolor(BasicColor :$fg, BasicColor :$bg) {
 method cmd-nop() { }
 
 ### Command senders ###
-proto method send-command(|) {
-    {*}
-}
-multi method send-command(Event::Command:U \evType, |args) {
-    CATCH {
-        when X::Event::Stopped {
-            .ev.completed.break($_);
-            return .ev
-        }
-        default {
-            .rethrow;
-        }
-    }
-    self.dispatch: evType, :args(args);
-}
 
 method add-child(::?CLASS:D $child) {
     $.send-command: Event::Cmd::AddChild, $child;
@@ -698,6 +629,22 @@ method shutdown {
     $.stop-event-handling.then: {
         $!dismissed.keep(True);
     }
+}
+
+method panic($cause) {
+    my $bail-out = True;
+    self.Vikna::EventEmitter::panic($cause);
+    if $.app && $.app.desktop {
+        $.app.desktop.dismissed.then: { $bail-out = False; };
+        await Promise.anyof(
+            Promise.in(10),
+            start $.app.panic($cause, :object(self))
+        );
+    }
+    else {
+        nextsame;
+    }
+    exit 1 if $bail-out;
 }
 
 proto method get-child(::?CLASS:D: |) {*}
