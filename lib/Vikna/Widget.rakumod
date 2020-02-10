@@ -213,11 +213,7 @@ method cmd-sethidden($hidden) {
         my $was-visible = $.visible;
         $!hidden = $hidden;
         $.dispatch: $!hidden ?? Event::Hide !! Event::Show;
-        if $!hidden {
-            # $.parent.invalidate: $!geom;
-            # $.parent.redraw;
-        }
-        else {
+        unless $!hidden {
             $.invalidate;
             $.redraw;
         }

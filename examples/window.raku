@@ -55,9 +55,7 @@ class Moveable is Vikna::Window {
     my class Event::NextStage does Event::Informative {
         has Int:D $.stage is required;
     }
-    my class Event::Cmd::NextStep does Event::Command {
-        method build-priority { PrioIdle }
-    }
+    my class Event::Cmd::NextStep does Event::Command { }
 
     method !build-stages {
         my Int:D $stage = 0;
@@ -115,13 +113,14 @@ class Moveable is Vikna::Window {
         my $desktop = $.app.desktop;
         my $sw = $desktop<Static>;
         $.redraw-hold: {
-            $.set-bg-pattern($stage.step % 2 ?? '*' !! '#');
+            # $.set-bg-pattern($stage.step % 2 ?? '*' !! '#');
             $.set-geom: $stage.geom.clone;
             $.set-title: $ttl-pfx ~ "geom({$stage.stage}): " ~ $stage.geom;
             $sw.set-title: "Stage " ~ $stage.stage;
             $sw<s-info-lbl>.set-text: ~$stage.geom;
             .set-text: "Step " ~ $stage.step with $lbl;
         }
+        # $.next-step;
     }
 
     multi method event(Event::NextStage:D $ev) {
