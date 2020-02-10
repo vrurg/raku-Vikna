@@ -214,8 +214,8 @@ method cmd-sethidden($hidden) {
         $!hidden = $hidden;
         $.dispatch: $!hidden ?? Event::Hide !! Event::Show;
         if $!hidden {
-            $.parent.invalidate: $!geom;
-            $.parent.redraw;
+            # $.parent.invalidate: $!geom;
+            # $.parent.redraw;
         }
         else {
             $.invalidate;
@@ -246,27 +246,33 @@ method cmd-close {
     };
 }
 
-method !flatten-canvas {
+method flatten-canvas {
+    return unless $!canvas-geom; # No paints were done yet.
+    my $pcanvas = $!canvas.clone;
+    $pcanvas.invalidate: $_ for $!canvas.invalidations;
     $.for-children: -> $child {
         # Newly added children might not have drawn yet. It's ok to skip 'em.
         next unless $child.visible;
         with %!child-by-id{$child.id}<canvas> {
-            $!canvas.imprint: .geom.x, .geom.y, .canvas;
+            $pcanvas.imprint: .geom.x, .geom.y, .canvas;
             $child.dispatch: Event::Updated,
                                 origin => self,
                                 geom => .geom;
         }
     }
-    if $!canvas-geom {
-        with $.parent {
-            $.trace: "Sending self canvas to ", .name;
-            .child-canvas(self, $!canvas-geom.clone, $!canvas, $!inv-for-parent);
-        }
-        $!inv4parent-lock.protect: {
-            $!inv-for-parent = [];
-        }
+    # note self.name, " pick: ", $pcanvas.pick(0,0) if self.name ~~ /Moveable/;
+    with $.parent {
+        $.trace: "Sending self canvas to ", .name;
+        .child-canvas(self, $!canvas-geom.clone, $pcanvas, $!inv-for-parent);
     }
-    $.dispatch: Event::Updated, geom => $!canvas-geom;
+    else {
+        # If no parent then try sending to console.
+        self.?print($pcanvas);
+        $.dispatch: Event::Updated, geom => $!canvas-geom;
+    }
+    $!inv4parent-lock.protect: {
+        $!inv-for-parent = [];
+    }
 }
 
 method cmd-redraw() {
@@ -285,7 +291,7 @@ method cmd-redraw() {
             self.end-draw( :$canvas );
             $.trace: "FINISHED DRAW";
             $!canvas = $canvas;
-            self!flatten-canvas;
+            $.flatten-canvas;
             $.trace: "REDRAWN";
         }
     }
@@ -299,6 +305,7 @@ method cmd-childcanvas(::?CLASS:D $child, Vikna::Rect:D $canvas-geom, Vikna::Can
     if @invalidations {
         $.invalidate: @invalidations;
     }
+    $.flatten-canvas;
 }
 
 method cmd-setgeom(Vikna::Rect:D $geom, :$no-draw?) {
@@ -351,7 +358,7 @@ method child-canvas(::?CLASS:D $child, Vikna::Rect:D $canvas-geom, Vikna::Canvas
     $.trace: "COMMAND child-canvas for child ", $child.name, " with ", +@invalidations, " invalidations";
     my $ev = $.send-command: Event::Cmd::ChildCanvas, $child, $canvas-geom, $canvas, @invalidations;
     # $.trace: "{$ev} {$canvas.w} x {$canvas.h}, invalidations:", @invalidations.map({ "\n  $_" });
-    $.redraw;
+    # $.redraw;
 }
 
 method redraw {
@@ -633,7 +640,6 @@ method shutdown {
 
 method panic($cause) {
     my $bail-out = True;
-    self.Vikna::EventEmitter::panic($cause);
     if $.app && $.app.desktop {
         $.app.desktop.dismissed.then: { $bail-out = False; };
         await Promise.anyof(

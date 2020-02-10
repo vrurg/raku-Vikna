@@ -91,7 +91,6 @@ method resize(Int:D $w is copy where * > 0 = $.w, Int:D $h is copy where * > 0 =
 
 method child-canvas(::?CLASS:D: |c) {
     $.cmd-childcanvas: |c;
-    $.redraw;
 }
 
 ### Utility methods ###

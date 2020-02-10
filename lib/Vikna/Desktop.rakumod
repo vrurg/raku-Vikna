@@ -9,6 +9,7 @@ use Vikna::Utils;
 use Vikna::Dev::Kbd;
 
 has Bool:D $!print-needed = False;
+has Vikna::Canvas $!pcanvas;
 
 ### Event handlers ###
 multi method event(Event::Screen::Geom:D $ev) {
@@ -17,7 +18,9 @@ multi method event(Event::Screen::Geom:D $ev) {
 
 multi method event(Event::Screen::Ready:D $ev) {
     if $!print-needed {
-        $.app.screen.print: 0, 0, $.canvas;
+        $.trace: "SCREEN READY, trying printing again";
+        $!print-needed = False;
+        $.print: $!pcanvas;
     }
 }
 
@@ -34,32 +37,25 @@ multi method event(Event::Kbd::Control:D $ev) {
 }
 
 ### Command handlers ###
-has atomicint $!redraws = 0;
-method cmd-redraw(|) {
-    callsame;
-    $.trace: "DESKTOP REDRAW -> screen";
-    # $.canvas.invalidate(0,0,20,1);
-    # $.canvas.imprint: 0,0, "r:" ~ ++⚛$!redraws;
-    $.app.screen.print: 0, 0, $.canvas;
-}
-
-method cmd-childcanvas($child, Vikna::Rect:D $canvas-geom, Vikna::Canvas:D $canvas, @invalidations) {
-    callsame;
-    $!print-needed = True;
-#     $.trace: "DESKTOP CHILD CANVAS -> screen";
-#     if $child.name eq 'Moveable' {
-#         $.app.screen.print: 0, $.app.screen.geom.h - $canvas.h, $canvas;
-#     }
-#     # $.redraw;
-#     # $.canvas.invalidate(0,0,20,1);
-#     # $.canvas.imprint: 0,0, "r:" ~ ++⚛$!redraws;
-#     # $.app.screen.print: 0, 0, $.canvas;
-}
+# method cmd-childcanvas($child, Vikna::Rect:D $canvas-geom, Vikna::Canvas:D $canvas, @invalidations) {
+#     callsame;
+#     $.canvas.imprint(0,0,$canvas);
+#     0
+# }
 
 ### Utility methods ###
 
 # Desktop doesn't allow resize unless through screen resize
 method resize(|) { }
+
+method print(::?CLASS:D: Vikna::Canvas:D $canvas?) {
+    $.trace: "DESKTOP REDRAW -> screen";
+    $!pcanvas = $_ with $canvas;
+    unless $.app.screen.print(0, 0, $!pcanvas) {
+        $.trace: "POSTPONE, screen not ready.";
+        $!print-needed = True;
+    }
+}
 
 method start-event-handling {
     callsame;
