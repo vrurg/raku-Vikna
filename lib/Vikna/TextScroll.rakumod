@@ -26,6 +26,11 @@ my class BufLine {
         self
     }
 
+    method append(Str:D() $str) {
+        $!str ~= $str;
+        $!pos = $!str.chars;
+    }
+
     method substr($pos, $count) {
         $!str.chars < $pos ?? "" !! $!str.substr($pos,$count);
     }
@@ -52,7 +57,9 @@ method cmd-textscroll-addtext(Str:D $text is copy) {
 
     while $text {
         my $m = $text ~~ s/$<line>=[ \N ** {0..$text-width} ] [ $<nl>=\n ]?//;
+        $.trace: "IMPRINTING LINE ‘{$m<line>}’ into ‘{$.cur-line.str}’:{$.cur-line.pos}";
         my $cur-line = $.cur-line.imprint($m<line>);
+        $.trace: "RESULTING LINE: ‘{$cur-line.str}’";
 
         my $line-length = $cur-line.str.chars;
         $max-cols = $line-length if $max-cols < $line-length;
@@ -60,14 +67,18 @@ method cmd-textscroll-addtext(Str:D $text is copy) {
         given $m<nl> {
             when Nil { }
             when "\c[VERTICAL TABULATION]" | "\c[FORM FEED]" {
+                $.trace: "VERTICAL FEED, cur line is: ", $cur-line.str;
                 self!next-line.pos = $m<line>.chars;
                 $cur-line.imprint($m<nl>);
             }
             when "\c[CARRIAGE RETURN]" {
-                $.cur-line.pos = 0;
+                $.trace: "CARRIAGE RETURN, cur line is: ", $cur-line.str;
+                $cur-line.pos = 0;
             }
             default {
-                $cur-line.imprint($m<nl>);
+                $.trace: "PRINT «{$m<nl>}» into «{$cur-line.str}»:{$cur-line.pos}";
+                $cur-line.append($m<nl>);
+                # $.trace: "PRINTED «{$m<nl>}» into «{$cur-line.str}»:{$cur-line.pos}";
                 self!next-line;
             }
         }
@@ -84,6 +95,8 @@ method cmd-textscroll-addtext(Str:D $text is copy) {
         }
     }
     $.dispatch: Event::TextScroll::BufChange, :$old-size, :size( @!buffer.elems );
+    $.invalidate;
+    $.redraw;
 }
 
 method cmd-scroll-by(Int:D $dx, Int:D $dy) {
@@ -137,11 +150,11 @@ method fit(Bool:D :$width?, Bool:D :$height?) {
 
 ### Event handlers ###
 
-multi method event(Event::TextScroll::BufChange:D $ev) {
-    $.trace: "TEXTSCROLL -- REDRAW";
-    $.invalidate;
-    $.redraw;
-}
+# multi method event(Event::TextScroll::BufChange:D $ev) {
+#     $.trace: "TEXTSCROLL -- REDRAW";
+#     $.invalidate;
+#     $.redraw;
+# }
 
 ### Utility methods ###
 method cur-line(--> BufLine) {

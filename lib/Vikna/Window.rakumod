@@ -21,7 +21,6 @@ has Client $.client handles qw<
                             >;
 
 submethod TWEAK(Bool:D :$border = True) {
-    self.trace: "ADDING CLIENT";
     if $border {
         self.trace: "ADDING BORDER";
         $!border = self.create-member:
@@ -30,6 +29,7 @@ submethod TWEAK(Bool:D :$border = True) {
                         :w( self.w ), :h( self.h ), :x(0), :y(0),
                         :auto-clear;
     }
+    self.trace: "ADDING CLIENT";
     $!client = self.create-member:
                     Client,
                     :name(self.name ~ ":Client"),
