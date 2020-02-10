@@ -58,6 +58,7 @@ has Bool $!paintable-expired = True;
 # 1 - fg color
 # 2 - bg color
 # Each plane is nqp::list() of rows, each row is nqp::list() of elems.
+my constant PLANE-COUNT = 3;
 has Mu $!planes;
 
 # Viewport
@@ -77,6 +78,31 @@ multi method new(Dimension :$w, Dimension :$h, *%c) {
 submethod TWEAK(*%c) {
     $!inv-rects := nqp::list();
     self!setup-planes(|%c);
+}
+
+method clone {
+    $.trace: "Cloning ", self.WHICH;
+    my $cloned = callsame;
+    my $p-idx = -1;
+    my $planes := nqp::list();
+    nqp::while(
+        (++$p-idx < PLANE-COUNT),
+        nqp::stmts(
+            (my $src-plane := nqp::atpos($!planes, $p-idx)),
+            (my $plane := nqp::list()),
+            (my $iter := nqp::iterator($src-plane)),
+            nqp::while(
+                $iter,
+                nqp::stmts(
+                    nqp::shift($iter),
+                    nqp::push($plane, nqp::clone(nqp::iterval($iter)))
+                )
+            ),
+            nqp::push($planes, $plane)
+        )
+    );
+    nqp::bindattr(nqp::decont($cloned), Vikna::Canvas, '$!planes', $planes);
+    $cloned
 }
 
 method !setup-planes(:$from?, :$viewport?) {
@@ -103,7 +129,7 @@ method !setup-planes(:$from?, :$viewport?) {
     my $p-idx = -1;
     $!planes := nqp::list();
     nqp::while(
-        (++$p-idx < 3),
+        (++$p-idx < PLANE-COUNT),
         nqp::stmts(
             (my $plane := nqp::list()),
             (my $from-plane := nqp::if($from, nqp::atpos($from-planes, $p-idx), Nil)),
