@@ -59,7 +59,7 @@ subtest "Paintable rectangles" => {
     nok $c.is-paintable(130, 1), "too big X";
     nok $c.is-paintable(1, 50), "too big Y";
 
-    $c.clear-inv-rect;
+    $c.clear-inv-rects;
     $c.add-inv-rect: 10, 15, 20, 5;
     $c.add-inv-rect: 50, 10, 10, 20;
 
@@ -100,7 +100,7 @@ subtest "Invalidated painting" => {
     for ^$c.h {
         $c.imprint(0, $_, '.' x $c.w);
     }
-    $c.clear-inv-rect;
+    $c.clear-inv-rects;
 
     test-points
         '.' => (
@@ -230,7 +230,7 @@ subtest "Canvas -> canvas imprinting" => {
     # $app.screen.print(30,10, $cbase);
     # sleep 1;
 
-    $cbase.clear-inv-rect;
+    $cbase.clear-inv-rects;
 
     $ctop = $cbase.new-from-self;
     $ctop.invalidate;
@@ -251,12 +251,12 @@ subtest "Canvas -> canvas imprinting" => {
     test-filled-rect $cbase, 0, 5, $cbase.w, 2, "*", "area outside of invalidation is untouched #3";
     test-filled-rect $cbase, 10, 0, 14, 7, "*", "area outside of invalidation is untouched #4";
 
-    $cbase.clear-inv-rect;
+    $cbase.clear-inv-rects;
     $cbase.invalidate;
     $ctop = $cbase.new-from-self;
     $ctop.invalidate(0,1,24,9);
     $ctop.fill("⚛", :fg<green>);
-    $ctop.clear-inv-rect;
+    $ctop.clear-inv-rects;
     $ctop.invalidate(0,0,25,1);
     $ctop.imprint(0,0,25,1, :bg<blue>);
     $cbase.imprint(8,4,$ctop);

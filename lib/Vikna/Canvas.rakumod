@@ -439,7 +439,7 @@ multi method add-inv-rect(Vikna::Rect:D $r) {
     # self!clear-paintable-mask;
 }
 
-method clear-inv-rect {
+method clear-inv-rects {
     $!inv-rects := nqp::list()
 }
 
