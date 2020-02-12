@@ -51,9 +51,9 @@ method !run-ev-loop {
                 $.trace: "EVENT HANDLING THROWN:\n", .message, .backtrace, :error;
                 unless self.?on-event-queue-fail($_) {
                     $!ev-queue.fail($_) if $!ev-queue;
-                    self.stop-event-handling;
+                    # self.stop-event-handling;
                     $.trace: "RETHROWING ", $_.WHICH;
-                    .rethrow
+                    $.panic($_)
                 }
             }
         }
