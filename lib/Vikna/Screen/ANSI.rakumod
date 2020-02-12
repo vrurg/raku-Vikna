@@ -23,7 +23,7 @@ has &.cursor-sub is mooish(:lazy);
 
 submethod TWEAK {
     self.throw: X::Terminal::NoTERM unless %*ENV<TERM>:exists;
-    signal(SIGWINCH).tap: { self.screen-resize }
+    signal(SIGWINCH).tap: { self.flow: :sync, :name('SCREEN RESIZE'), { self.screen-resize } }
 }
 
 method build-is-unicode {
