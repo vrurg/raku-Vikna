@@ -41,6 +41,7 @@ class EventReporter is Vikna::TextScroll {
 
 class Moveable is Vikna::Window {
     has Iterator $!stages is mooish(:lazy);
+    has $!done;
 
     my class Stage {
         has Int:D $.stage is required;
@@ -54,6 +55,7 @@ class Moveable is Vikna::Window {
 
     my class Event::NextStage does Event::Informative {
         has Int:D $.stage is required;
+        method priority { PrioImmediate }
     }
     my class Event::Cmd::NextStep does Event::Command { }
 
@@ -103,7 +105,8 @@ class Moveable is Vikna::Window {
         return if $.closed;
         my $stage = $!stages.pull-one;
         unless $stage {
-            $.app.desktop.close;
+            $!done = True;
+            $.quit;
             return;
         }
         # $*ERR.print: "Stage ", $stage.stage, ", step ", $stage.step, ": ", $stage.geom, "\r";
@@ -116,21 +119,31 @@ class Moveable is Vikna::Window {
             # $.set-bg-pattern($stage.step % 2 ?? '*' !! '#');
             $.set-geom: $stage.geom.clone;
             $.set-title: $ttl-pfx ~ "geom({$stage.stage}): " ~ $stage.geom;
-            $sw.set-title: "Stage " ~ $stage.stage;
-            $sw<s-info-lbl>.set-text: ~$stage.geom;
+            if $sw {
+                $sw.set-title: "Stage " ~ $stage.stage;
+                .set-text: ~$stage.geom with $sw<s-info-lbl>;
+            }
             .set-text: "Step " ~ $stage.step with $lbl;
         }
-        # $.next-step;
     }
 
     multi method event(Event::NextStage:D $ev) {
         self<info-lbl>.set-hidden( ! $ev.stage % 2 );
-        $.app.desktop<Static>.set-bg-pattern("[{$ev.stage}]");
+        # my $close-at-stage = 20;
+        # if $ev.stage < $close-at-stage {
+            $.app.desktop<Static>.set-bg-pattern("[{$ev.stage}]");
+        # }
+        # elsif $ev.stage == $close-at-stage {
+        #     $.trace: "Closing Static window";
+        #     $.app.desktop<Static>.close;
+        # }
     }
 
     multi method event(Event::Updated:D $ev) {
-        if $ev.origin === $.app.desktop {
-            $.next-step;
+        if !$!done && $ev.origin === $.app.desktop {
+            $.nop.completed.then: {
+                $.next-step;
+            }
         }
         nextsame;
     }
@@ -169,7 +182,12 @@ class MovingApp is Vikna::App {
                 $!ttl-pfx = "I:";
             }
         };
-        my $sw = $.desktop.create-child: Vikna::Window, :30x, :5y, :40w, :5h, :name<Static>, :title('Static Window');
+        my $sw = $.desktop.create-child:
+                    Vikna::Window,
+                    :30x, :5y, :40w, :5h,
+                    :name<Static>,
+                    # :inv-mark-color<00,50,00>,
+                    :title('Static Window');
         $sw.create-child: Vikna::Label, :0x, :0y, :38w, :1h, :name<s-info-lbl>, :text('info lbl');
         $.desktop.sync-events;
     }

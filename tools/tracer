@@ -8,13 +8,10 @@ my %*SUB-MAIN-OPTS =
     :named-anywhere,
     ;
 
-multi MAIN('list-sessions', Str :$db-file = 'Vikna.sqlite', :$with-threads = False) {
+multi MAIN('list-sessions', Str :$db-file = 'Vikna.sqlite') {
     my $tr = Vikna::Tracer.new: db-name => $db-file;
     for $tr.sessions {
-        say .id.fmt('%4d '), ~DateTime.new(.started).local, " [{.records.elems.fmt('%6d')}] ", .name;
-        if $with-threads {
-            say "\tthreads: ", .records.map( *.thread ).unique.sort.join(", ");
-        }
+        say .id.fmt('%4d '), ~.started.local, " [{.records.elems.fmt('%6d')}] ", .name;
     }
 }
 

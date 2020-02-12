@@ -12,8 +12,13 @@ has Bool:D $!print-needed = False;
 has Vikna::Canvas $!pcanvas;
 
 ### Event handlers ###
+my @bg-chars = <+ * .>;
 multi method event(Event::Screen::Geom:D $ev) {
-    self.set-geom: $ev.to;
+    my $chr = @bg-chars.shift;
+    $.cmd-setbgpattern: $chr;
+    @bg-chars.push: $chr;
+    $.cmd-setgeom: $ev.to, :no-draw;
+    $.cmd-redraw;
 }
 
 multi method event(Event::Screen::Ready:D $ev) {
@@ -27,10 +32,10 @@ multi method event(Event::Screen::Ready:D $ev) {
 has $.presses = 0;
 multi method event(Event::Kbd::Control:D $ev) {
     if K_Control ∈ $ev.modifiers && $ev.key eq 'C' {
-        $.close;
-        if ++$!presses > 2 {
-            die "oops...";
-            $.shutdown;
+        $.dispatch: Event::Quit;
+        $.cmd-quit;
+        if ++$!presses > 1 {
+            $.app.panic( X::AdHoc.new: :payload("oops..."), :object(self) );
             exit 1;
         }
     }
@@ -42,6 +47,19 @@ multi method event(Event::Kbd::Control:D $ev) {
 #     $.canvas.imprint(0,0,$canvas);
 #     0
 # }
+
+method cmd-quit {
+    $.cmd-close;
+}
+
+### Command senders ###
+
+method quit {
+    # Exceptional case: pre-send notification event prior to command execution. Event::Quit has immediate priority thus
+    # will give child widgets time to take care of themselves.
+    $.dispatch: Event::Quit;
+    $.send-command: Event::Cmd::Quit;
+}
 
 ### Utility methods ###
 
