@@ -5,22 +5,36 @@ has $!children-lock = Lock.new;
 has @.children;
 
 method add-child(ChldType:D $child) {
-    return Nil if @!children.grep: * === $child;
-    @!children.push: $child;
-    $child.set-parent(self);
+    $!children-lock.protect: {
+        if @!children.grep: * === $child {
+            Nil
+        }
+        else {
+            @!children.push: $child;
+            $child.set-parent(self);
+            $child
+        }
+    }
 }
 
 method remove-child(ChldType:D $child) {
-    @!children .= grep: * !=== $child;
-    $child.set-parent(Nil)
+    $!children-lock.protect: {
+        @!children .= grep: * !=== $child;
+        $child.set-parent(Nil);
+        $child
+    }
 }
 
-method to-top(ChldType:D $child) {
-    @!children = flat @!children.grep( * !=== $child ), $child;
+method to-top(ChldType:D $child --> Nil) {
+    $!children-lock.protect: {
+        @!children = flat @!children.grep( * !=== $child ), $child;
+    }
 }
 
-method to-bottom(ChldType:D $child) {
-    @!children = flat $child, @!children.grep:  * !=== $child;
+method to-bottom(ChldType:D $child --> Nil) {
+    $!children-lock.protect: {
+        @!children = flat $child, @!children.grep:  * !=== $child;
+    }
 }
 
 method for-children(&code, :&pre?, :&post? --> Nil) {
