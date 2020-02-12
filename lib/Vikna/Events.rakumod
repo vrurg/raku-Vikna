@@ -168,14 +168,15 @@ role Event::Mouse does Event::Input {
 
 class Event::Cmd::AddChild            does Event::Command { }
 class Event::Cmd::AddMember           does Event::Command { }
-class Event::Cmd::ChildCanvas         does Event::Command { method build-priority { PrioOut } }
+class Event::Cmd::ChildCanvas         does Event::Command { }
 class Event::Cmd::Clear               does Event::Command { }
-class Event::Cmd::Close               does Event::Command { method build-priority { PrioIdle } }
+class Event::Cmd::Close               does Event::Command { }
+class Event::Cmd::Quit                does Event::Command { }
 class Event::Cmd::Nop                 does Event::Command { }
 class Event::Cmd::Redraw              does Event::Command { }
 class Event::Cmd::RemoveChild         does Event::Command { }
 class Event::Cmd::RemoveMember        does Event::Command { }
-class Event::Cmd::ScreenPrint         does Event::Command { method build-pririty { PrioOut } }
+class Event::Cmd::ScreenPrint         does Event::Command { }
 class Event::Cmd::Scroll::By          does Event::Command { }
 class Event::Cmd::Scroll::Fit         does Event::Command { }
 class Event::Cmd::Scroll::SetArea     does Event::Command { }
@@ -184,6 +185,7 @@ class Event::Cmd::SetBgPattern        does Event::Command { }
 class Event::Cmd::SetColor            does Event::Command { }
 class Event::Cmd::SetHidden           does Event::Command { }
 class Event::Cmd::SetGeom             does Event::Command { }
+class Event::Cmd::ScreenGeom          does Event::Command { }
 class Event::Cmd::SetText             does Event::Command { }
 class Event::Cmd::SetTitle            does Event::Command { }
 class Event::Cmd::SetInvisible        does Event::Command { }
@@ -193,6 +195,8 @@ class Event::Cmd::TextScroll::AddText does Event::Command { }
 
 # Normally sent once only. Has to be delivered ASAP to be the first event ever.
 class Event::Init does Event::Informative { method priority { PrioImmediate } }
+
+class Event::Quit does Event::Informative does Event::Spreadable { method priority { PrioImmediate } }
 
 class Event::Idle does Event::Informative {
     method build-priority { PrioIdle }
@@ -258,7 +262,7 @@ class Event::PasteStart does Event::Input { }
 class Event::PasteEnd   does Event::Input { }
 
 # Emitted when screen has done an output job.
-class Event::Screen::Ready does Event::Input { }
+class Event::Screen::Ready does Event::Informative { }
 
 class Event::Screen::Geom
         does Event::Informative
