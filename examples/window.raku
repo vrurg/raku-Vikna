@@ -47,6 +47,8 @@ class Moveable is Vikna::Window {
         has Int:D $.stage is required;
         has Int:D $.step is required;
         has Vikna::Rect:D $.geom is required;
+        has $.bg is required;
+        has $.fg is required;
     }
 
     method TWEAK {
@@ -65,6 +67,8 @@ class Moveable is Vikna::Window {
         my Int:D $steps = 0;
         my ($dest-w, $dest-h, $dest-x, $dest-y);
         my ($dw, $dh, $dx, $dy);
+        my ($green, $red, $dc);
+        my $color-trend = 1;
         my Vikna::Rect $orig;
         Seq.from-loop({
             if $stage <= 10 {
@@ -81,6 +85,10 @@ class Moveable is Vikna::Window {
                     $dx = $dest-x - $orig.x;
                     $dy = $dest-y - $orig.y;
                     $steps = $dx.abs max $dy.abs; # Iterate over the longer change
+                    $color-trend = -$color-trend;
+                    $green = 150 + (50 * -$color-trend);
+                    $red  = 150 + (50 * $color-trend);
+                    $dc = 100 / $steps;
                     $step = 0;
                     ++$stage;
                     # $*ERR.print: "New stage $stage: moving to $dest-x, $dest-y $dest-w x $dest-h; steps: $steps";
@@ -93,7 +101,11 @@ class Moveable is Vikna::Window {
                 my $cur-y = ($orig.y + $dy × $ds).Int;
                 my $cur-w = ($orig.w + $dw × $ds).Int;
                 my $cur-h = ($orig.h + $dh × $ds).Int;
-                Stage.new: :$stage, :$step, geom => Vikna::Rect.new($cur-x, $cur-y, $cur-w, $cur-h)
+                Stage.new:
+                            :$stage, :$step,
+                            geom => Vikna::Rect.new($cur-x, $cur-y, $cur-w, $cur-h),
+                            fg => (($red + ($step * $dc * -$color-trend)).Int, ($red + ($step * $dc * -$color-trend)).Int, 0).join(","),
+                            bg => (0, ($green + ($step * $dc * $color-trend)).Int, 0).join(","),
             }
             else {
                 Nil
@@ -118,6 +130,7 @@ class Moveable is Vikna::Window {
         $.redraw-hold: {
             # $.set-bg-pattern($stage.step % 2 ?? '*' !! '#');
             $.set-geom: $stage.geom.clone;
+            $.set-color: fg => $stage.fg, bg => $stage.bg;
             $.set-title: $ttl-pfx ~ "geom({$stage.stage}): " ~ $stage.geom;
             if $sw {
                 $sw.set-title: "Stage " ~ $stage.stage;
@@ -186,6 +199,7 @@ class MovingApp is Vikna::App {
                     Vikna::Window,
                     :30x, :5y, :40w, :5h,
                     :name<Static>,
+                    # :bg<black>, :fg<white>,
                     # :inv-mark-color<00,50,00>,
                     :title('Static Window');
         $sw.create-child: Vikna::Label, :0x, :0y, :38w, :1h, :name<s-info-lbl>, :text('info lbl');
