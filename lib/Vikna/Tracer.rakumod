@@ -198,7 +198,7 @@ method sessions {
 
 method session(Int:D $id) {
     await $.cue: {
-        Session.new: :tracer(self), !$!db.query('SELECT * FROM session WHERE id == ?', $id).hash
+        Session.new: :tracer(self), |$!db.query('SELECT * FROM session WHERE id == ?', $id).hash
     }
 }
 
