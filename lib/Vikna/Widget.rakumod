@@ -174,7 +174,7 @@ method cmd-removechild(::?CLASS:D: Vikna::Widget:D $child, :$unsubscribe = True)
 method cmd-clear() {
     $.for-children: { .clear }, post => { self.clear-canvas };
     $.invalidate;
-    $.redraw;
+    $.cmd-redraw;
 }
 
 method cmd-setbgpattern(Str $pattern) {

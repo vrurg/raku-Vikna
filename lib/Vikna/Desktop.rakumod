@@ -33,6 +33,7 @@ has $.presses = 0;
 multi method event(Event::Kbd::Control:D $ev) {
     if K_Control ∈ $ev.modifiers && $ev.key eq 'C' {
         $.dispatch: Event::Quit;
+        # Quick reaction expected, thus bypass the normal event handling.
         $.cmd-quit;
         if ++$!presses > 1 {
             $.app.panic( X::AdHoc.new: :payload("oops..."), :object(self) );
