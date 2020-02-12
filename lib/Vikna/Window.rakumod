@@ -56,13 +56,12 @@ method cmd-settitle(Str:D $title) {
 
 method cmd-setgeom(Vikna::Rect:D $geom) {
     $.trace: "WINDOW GEOM TO {$geom}";
-    $.redraw-hold: {
-        self.Vikna::Widget::cmd-setgeom($geom, :no-draw);
-        $!client.cmd-setgeom: $.client-rect($geom);
-        if $!border {
-            $!border.cmd-setgeom: Vikna::Rect.new(0, 0, $geom.w, $geom.h);
-        }
+    self.Vikna::Widget::cmd-setgeom($geom, :no-draw);
+    $!client.cmd-setgeom: $.client-rect($geom), :no-draw;
+    if $!border {
+        $!border.cmd-setgeom: Vikna::Rect.new(0, 0, $geom.w, $geom.h), :no-draw;
     }
+    $.cmd-redraw;
     $.trace: "WINDOW GEOM SET {$.geom}";
 }
 
