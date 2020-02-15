@@ -333,6 +333,11 @@ method cmd-setcolor(BasicColor :$fg, BasicColor :$bg) {
     self.dispatch: Event::WidgetColor, :$old-fg, :$old-bg, :$fg, :$bg if $old-fg ne $fg || $old-bg ne $bg;
 }
 
+method cmd-to-top(::?CLASS:D $child) {
+    self.Vikna::Parent::to-top($child);
+    $.cmd-redraw;
+}
+
 method cmd-nop() { }
 
 ### Command senders ###
@@ -355,6 +360,10 @@ method child-canvas(::?CLASS:D $child, Vikna::Rect:D $canvas-geom, Vikna::Canvas
 method redraw {
     $.trace: "SENDING REDRAW COMMAND";
     $.send-command: Event::Cmd::Redraw;
+}
+
+method to-top(::?CLASS:D: ::?CLASS:D $child) {
+    $.send-command: Event::Cmd::To::Top, $child;
 }
 
 method clear {

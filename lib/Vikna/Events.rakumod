@@ -190,6 +190,7 @@ class Event::Cmd::SetText             does Event::Command { }
 class Event::Cmd::SetTitle            does Event::Command { }
 class Event::Cmd::SetInvisible        does Event::Command { }
 class Event::Cmd::TextScroll::AddText does Event::Command { }
+class Event::Cmd::To::Top             does Event::Command { }
 
 #### Informative ####
 
