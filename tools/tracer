@@ -80,7 +80,7 @@ multi MAIN( Str:D $format where * ~~ (any Vikna::Tracer.templates.keys),
                 );
                 take { record => %rec };
             }
-        }).list;
+        }).hyper(:degree(32));
         %data<session>.push: %sess;
     }
 
