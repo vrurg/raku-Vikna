@@ -8,6 +8,8 @@ use Vikna::Utils;
 use Vikna::Border;
 use Vikna::Widget::GroupMember;
 
+class Event::Cmd::Window::CompleteRedraw does Event::Command is export { }
+
 class Client is Vikna::Widget::GroupMember {
     # Don't allow voluntary client geom change.
     method set-geom(|) { }
@@ -66,9 +68,18 @@ method cmd-setgeom(Vikna::Rect:D $geom) {
 }
 
 method cmd-redraw {
+    $.flatten-block;
     $!border.cmd-redraw;
     $!client.cmd-redraw;
-    nextsame;
+    # With common event queue we can guarantee that CompleteRedraw command will arrive after both border and client had
+    # their ChildCanvas events dispatched and handled accordingly. In the meanwhile their canvas would be preserved but
+    # won't result extra submission of window's canvas to the parent. In other words, we'd simulate synchronous draw.
+    $.send-command: Event::Cmd::Window::CompleteRedraw;
+}
+
+method cmd-window-completeredraw {
+    $.flatten-unblock;
+    self.Vikna::Widget::cmd-redraw
 }
 
 method cmd-setcolor(|c) {

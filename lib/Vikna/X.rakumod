@@ -78,10 +78,11 @@ class X::Event::CommandOrigin does X::Eventish {
     }
 }
 
-class X::Redraw::OverUnblock is X::Base {
-    has $.count is required;
+class X::OverUnblock is X::Base {
+    has Int:D $.count is required;
+    has Str:D $.what is required;
     method message {
-        "Over-unblocked redraw: " ~ $!count ~ " too much. Check your balance of block/unblock calls"
+        "Over-unblocked $!what: " ~ $!count ~ " too much. Check your balance of block/unblock calls"
     }
 }
 

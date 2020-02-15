@@ -269,7 +269,7 @@ class Event::Screen::Geom
         does Event::Transformish
         does Event::Spreadable
 {
-    method build-priority { PrioOut }
+    method build-priority { PrioImmediate }
 }
 
 class Event::Attached does Event::Informative does Event::Relational { }

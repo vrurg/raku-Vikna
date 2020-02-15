@@ -27,12 +27,19 @@ class EventReporter is Vikna::TextScroll {
             }
         }
     }
-    multi method subscription-event(Event::Changed::Geom:D $ev) {
-        $.fit-into
+    multi method event(Event::Screen::Geom:D $ev) {
+        $.trace: "Screen geom from subscription: ", $ev;
+        my ($pw, $ph) = .w, .h given $ev.to // $.parent.geom;
+        my $w = 10 max ($pw / 3).ceiling;
+        my $h = 5 max ($ph / 2).ceiling;
+        $.cmd-setgeom: Vikna::Rect.new($pw - $w, $ph - $h, $w, $h);
+        # $.fit-into: geom => $ev.to;
+        $.cmd-textscroll-addtext: "SCREEN GEOM: " ~ $ev.to ~ "\n";
+        # $.say: "SCREEN GEOM: ", $ev.to;
     }
-    method fit-into {
-        $.trace: "FITTING INTO PARENT: ", $.parent.WHICH;
-        my ($pw, $ph) = .w, .h given $.parent.geom;
+    method fit-into(:$geom) {
+        $.trace: "FITTING INTO PARENT: ", $.parent.name;
+        my ($pw, $ph) = .w, .h given $geom // $.parent.geom;
         my $w = 10 max ($pw / 3).ceiling;
         my $h = 5 max ($ph / 2).ceiling;
         $.set-geom: $pw - $w, $ph - $h, $w, $h;
@@ -41,6 +48,7 @@ class EventReporter is Vikna::TextScroll {
 
 class Moveable is Vikna::Window {
     has Iterator $!stages is mooish(:lazy);
+    has $!ready4next;
     has $!done;
 
     my class Stage {
@@ -89,11 +97,10 @@ class Moveable is Vikna::Window {
                     $green = 150 + (50 * -$color-trend);
                     $red  = 150 + (50 * $color-trend);
                     $dc = 100 / $steps;
-                    $step = 0;
+                    $step = -1;
                     ++$stage;
                     # $*ERR.print: "New stage $stage: moving to $dest-x, $dest-y $dest-w x $dest-h; steps: $steps";
                     $.trace: "New stage $stage: moving to $dest-x, $dest-y $dest-w x $dest-h; steps: $steps";
-                    $.dispatch: Event::NextStage, :$stage;
                 }
                 ++$step;
                 my $ds = $step / $steps;
@@ -121,6 +128,9 @@ class Moveable is Vikna::Window {
             $.quit;
             return;
         }
+
+        $.dispatch: Event::NextStage, stage => $stage.stage if $stage.step == 0;
+
         # $*ERR.print: "Stage ", $stage.stage, ", step ", $stage.step, ": ", $stage.geom, "\r";
         $.trace: "Stage ", $stage.stage, ", step ", $stage.step, ": ", $stage.geom;
         my $lbl = self<info-lbl>;
@@ -128,7 +138,6 @@ class Moveable is Vikna::Window {
         my $desktop = $.app.desktop;
         my $sw = $desktop<Static>;
         $.redraw-hold: {
-            # $.set-bg-pattern($stage.step % 2 ?? '*' !! '#');
             $.set-geom: $stage.geom.clone;
             $.set-color: fg => $stage.fg, bg => $stage.bg;
             $.set-title: $ttl-pfx ~ "geom({$stage.stage}): " ~ $stage.geom;
@@ -138,32 +147,39 @@ class Moveable is Vikna::Window {
             }
             .set-text: "Step " ~ $stage.step with $lbl;
         }
+        $!ready4next = True;
     }
 
     multi method event(Event::NextStage:D $ev) {
         self<info-lbl>.set-hidden( ! $ev.stage % 2 );
-        # my $close-at-stage = 20;
-        # if $ev.stage < $close-at-stage {
+        my $close-at-stage = 7;
+        if $ev.stage < $close-at-stage {
             $.app.desktop<Static>.set-bg-pattern("[{$ev.stage}]");
-        # }
-        # elsif $ev.stage == $close-at-stage {
-        #     $.trace: "Closing Static window";
-        #     $.app.desktop<Static>.close;
-        # }
+        }
+        elsif $ev.stage == $close-at-stage {
+            $.trace: "Closing Static window";
+            $.app.desktop<Static>.close;
+        }
     }
 
     multi method event(Event::Updated:D $ev) {
-        if !$!done && $ev.origin === $.app.desktop {
-            $.nop.completed.then: {
-                $.next-step;
-            }
+        if !$!done
+            && $!ready4next
+            && $ev.origin === $.app.desktop
+            && $ev.dispatcher === self
+        {
+            $.trace: "Next step upon ", $ev;
+            $!ready4next = False;
+            $.next-step;
         }
         nextsame;
     }
 
     multi method event(Event::Attached:D $ev) {
         if $ev.child === self {
-            $.next-step;
+            $.nop.completed.then: {
+                $.next-step;
+            }
         }
         nextsame;
     }
@@ -180,12 +196,17 @@ class Moveable is Vikna::Window {
 
 class MovingApp is Vikna::App {
     method main {
+        $.desktop.create-child: EventReporter, x => $.desktop.w - 50, y => $.desktop.h - 20, :50w, :20h,
+                                :name<EventList>, :bg-pattern(' ');
         my $mw = $.desktop.create-child: Moveable, :0x, :0y, w => ($.desktop.w / 3).Int, h => ($.desktop.h / 3).Int,
                                                 :name<Moveable>, :title('Moveable Window'), :bg-pattern<#>,
                                                 # :auto-clear, :bg<blue>,
                                                 # :inv-mark-color<00,50,00>,
                                                 ;
-        my $lbl = $mw.create-child: Vikna::Label, :3x, :10y, :1h, :15w, :name<info-lbl>, :text('Info Label');
+        my $lbl = $mw.create-child: Vikna::Label,
+                                    :3x, :10y, :1h, :15w,
+                                    :name<info-lbl>, :text('Info Label'),
+                                    :bg('0,80,150 underline');
         $lbl does role {
             has $.ttl-pfx = "";
             multi method event(Event::Visible:D $ev) {
@@ -199,7 +220,7 @@ class MovingApp is Vikna::App {
                     Vikna::Window,
                     :30x, :5y, :40w, :5h,
                     :name<Static>,
-                    # :bg<black>, :fg<white>,
+                    :bg<black>, :fg<white>,
                     # :inv-mark-color<00,50,00>,
                     :title('Static Window');
         $sw.create-child: Vikna::Label, :0x, :0y, :38w, :1h, :name<s-info-lbl>, :text('info lbl');
@@ -207,4 +228,4 @@ class MovingApp is Vikna::App {
     }
 }
 
-MovingApp.new( :!debugging ).run;
+MovingApp.new( :debugging ).run;

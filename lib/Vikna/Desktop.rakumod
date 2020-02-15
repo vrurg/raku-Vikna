@@ -22,10 +22,11 @@ multi method event(Event::Screen::Geom:D $ev) {
 }
 
 multi method event(Event::Screen::Ready:D $ev) {
+    $.flatten-unblock;
     if $!print-needed {
         $.trace: "SCREEN READY, trying printing again";
-        $!print-needed = False;
-        $.print: $!pcanvas;
+        # This would result in a call to the print method.
+        $.flatten-canvas;
     }
 }
 
@@ -70,10 +71,17 @@ method resize(|) { }
 method print(::?CLASS:D: Vikna::Canvas:D $canvas?) {
     $.trace: "DESKTOP REDRAW -> screen";
     $!pcanvas = $_ with $canvas;
-    unless $.app.screen.print(0, 0, $!pcanvas) {
-        $.trace: "POSTPONE, screen not ready.";
-        $!print-needed = True;
+    if $.app.screen.print(0, 0, $!pcanvas) {
+        $!print-needed = False;
+        $.flatten-block;
     }
+}
+
+method flatten-canvas {
+    # The print-needed flag will be reset if flattening is unblocked and screen print started successfully. Otherwise it
+    # will signal that when screen is ready again we must print again immediately.
+    $!print-needed = True;
+    nextsame;
 }
 
 method start-event-handling {

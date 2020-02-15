@@ -45,6 +45,7 @@ has Promise:D $.dismissed .= new;
 has Event $!redraw-on-hold;
 has Semaphore:D $!redraws .= new(1);
 has atomicint $!redraw-blocks = 0;
+has atomicint $!flatten-blocks = 0; # Block canvas flattenning
 
 has @.invalidations;
 has Lock $.inv-lock .= new;
@@ -238,6 +239,7 @@ method cmd-close {
 }
 
 method flatten-canvas {
+    return if $!flatten-blocks > 0;
     return unless $!canvas-geom; # No paints were done yet.
     my $pcanvas = $!canvas.clone;
     $pcanvas.clear-inv-rects;
@@ -276,11 +278,9 @@ method cmd-redraw() {
         my Vikna::Canvas:D $canvas = $!canvas;
         $.trace: "CMD REDRAW: invalidations: ", @!invalidations.elems, "\n", @!invalidations.map( "  . " ~ *.Str ).join("\n");
         if @!invalidations {
-            $.trace: "STARTED DRAW";
             $canvas = self.begin-draw;
             self.draw( :$canvas );
             self.end-draw( :$canvas );
-            $.trace: "FINISHED DRAW";
             $!canvas = $canvas;
             $.flatten-canvas;
             $.trace: "REDRAWN";
@@ -324,7 +324,7 @@ method cmd-setgeom(Vikna::Rect:D $geom, :$no-draw?) {
 }
 
 method cmd-setcolor(BasicColor :$fg, BasicColor :$bg) {
-    return if $!fg eq $fg && $!bg eq $bg;
+    return if (!$fg || ($!fg eq $fg)) && (!$bg || ($!bg eq $bg));
     my ($old-fg, $old-bg);
     $old-fg = $!fg;
     $old-bg = $!bg;
@@ -537,7 +537,7 @@ method redraw-unblock {
             self!release-redraw-event;
         }
         when * < 0 {
-            self.throw: X::Redraw::OverUnblock, :count( .abs );
+            self.throw: X::OverUnblock, :count( .abs ), :what<redraw>;
         }
     }
     $.trace: "REDRAW UNBLOCK, block count: ", $!redraw-blocks;
@@ -548,6 +548,26 @@ method redraw-blocked { ? $!redraw-blocks }
 method redraw-hold(&code, |c) {
     $.redraw-block;
     LEAVE $.redraw-unblock;
+    &code(|c)
+}
+
+# Contrary to redraw, flattenning must not be auto-blocked on children.
+method flatten-block {
+    ++⚛$!flatten-blocks;
+    $.trace: "Flattening block: ", $!flatten-blocks;
+}
+
+# Don't auto-flatten when counter is zeroed.
+method flatten-unblock {
+    if --⚛$!flatten-blocks < 0 {
+        $.throw: X::OverUnblock, :count($!flatten-blocks), :what('canvas flattenning')
+    }
+    $.trace: "Flattening un-block: ", $!flatten-blocks;
+}
+
+method flatten-hold(&code, |c) {
+    $.flatten-blocks;
+    LEAVE $.flatten-unblock;
     &code(|c)
 }
 
