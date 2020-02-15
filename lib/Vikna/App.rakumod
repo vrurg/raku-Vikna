@@ -75,7 +75,7 @@ multi method run(::?CLASS:U: |c) {
     self.new.run(|c);
 }
 
-multi method run(::?CLASS:D:) {
+multi method run(::?CLASS:D: |c) {
     $.flow: :sync, :name('MAIN'), {
         PROCESS::<$VIKNA-APP> = self;
         $.trace: "Starting app" ~ self.^name, obj => self, :phase;
@@ -84,7 +84,7 @@ multi method run(::?CLASS:D:) {
         $!desktop.redraw;
         $!desktop.sync-events: :transitive;
         $.trace: "PASSING TO MAIN", :phase;
-        $.main;
+        $.main(|c);
         $.trace: "MAIN IS DONE", :phase;
         $.desktop.sync-events(:transitive);
         $.trace: "CLOSING DESKTOP", :phase;
