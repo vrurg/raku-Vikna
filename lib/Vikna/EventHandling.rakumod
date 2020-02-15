@@ -138,9 +138,7 @@ method send-event(Vikna::Event:D $ev, EventPriority $priority?) {
     self.throw: X::Event::Stopped, :$ev if $!event-shutdown;
     my Vikna::Event:D @events = $ev;
     $!send-lock.protect: {
-        $.trace: "FILTERING EVENT ", $ev;
         @events = $_ with $ev.dispatcher.?event-filter($ev);
-        $.trace: "FILTERED EVENTS:\n", @events.join("\n"), :event;
     }
     for @events -> $filtered {
         # If event queue is not initialized then work synchronously.
@@ -156,7 +154,6 @@ method send-event(Vikna::Event:D $ev, EventPriority $priority?) {
         else {
             $.trace: "DIRECT HANDLING ", $filtered, :event;
             $ev.dispatcher.handle-event: $filtered;
-            # $.flow: { $ev.dispatcher.handle-event: $filtered }, :sync, :name('SYNC EVENT HANDLING ' ~ self.name);
         }
     }
     $ev

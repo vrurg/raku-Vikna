@@ -81,7 +81,6 @@ submethod TWEAK(*%c) {
 }
 
 method clone {
-    $.trace: "Cloning ", self.WHICH;
     my $cloned = callsame;
     my $p-idx = -1;
     my $planes := nqp::list();
