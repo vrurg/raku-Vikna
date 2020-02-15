@@ -91,9 +91,26 @@ method subscribe-to-child(Vikna::Widget:D $child) {
     };
 }
 
+multi method dispatch(::?CLASS:D: Event::Spreadable:D $ev is copy) {
+    $.trace: "REDISPATCHING A SPREADABLE DEFINITE ", $ev;
+    # If .dispatcher === self it is expected to source from method dispatch(Event::Spreadable:U). In this case the event
+    # has been re-disaptched to children already.
+    unless $ev.dispatcher === self {
+        $.flow: :name(‘Spreadable:D -> children’), {
+            $.for-children: {
+                # Set dispatcher to child because this is how a spreadable event produced from a type object would have
+                # it set.
+                $.trace: "SUBMIT SPREADABLE TO CHILD ", .name;
+                .dispatch: $ev.clone(:dispatcher($_))
+            }
+        }
+    }
+    nextsame
+}
+
 multi method dispatch(::?CLASS:D: Event::Spreadable:U \ev, |args) {
     $.trace: "DISPATCHING A SPREADABLE ", ev.^name;
-    $.flow: :name(‘Spreadable -> children’), {
+    $.flow: :name(‘Spreadable:U -> children’), {
         $.for-children: {
             .dispatch: ev, |args
         }

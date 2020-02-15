@@ -18,6 +18,15 @@ proto method dispatch(|) {*}
 multi method dispatch(::?CLASS:D: Event:U \event, |c) {
     self.Vikna::Widget::dispatch: event, |c
 }
+multi method dispatch(::?CLASS:D: Event::Spreadable:D $ev) {
+    if $ev.dispatcher === self {
+        self.Vikna::Widget::dispatch: $ev
+    }
+    else {
+        # Comes from an external source, proceed via group dispatch.
+        $.group.dispatch: $ev
+    }
+}
 multi method dispatch(::?CLASS:D: Event:D $ev, |c) {
     $.trace: "GROUP MEMBER {self.name} DISPATCH [$ev] VIA {$.group.name}";
     $.group.re-dispatch: $ev, |c
