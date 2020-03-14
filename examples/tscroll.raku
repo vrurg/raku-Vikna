@@ -12,7 +12,7 @@ class MyScroll is Vikna::TextScroll {
     has $.st;
     has $.et;
 
-    my class Event::Cmd::NextLine does Event::Command {
+    my class Event::Cmd::NextLine is Event::Command {
         # Uncommenting the following method will skyrocket the benchmark but would result in "batch-update" of the
         # widget. Only makes interest for experimental purposes.
         # method priority { PrioOut }
@@ -23,12 +23,12 @@ class MyScroll is Vikna::TextScroll {
             $!st = now;
             $.next-line(0);
             # Send lines from a separate thread.
-            $.flow: :name('Async out'), {
-                for ^$count -> $i {
-                    $.say: "app line ", $i.fmt(‘%4d’);
-                    sleep .05;
-                }
-            };
+            # $.flow: :name('Async out'), {
+            #     for ^$count -> $i {
+            #         $.say: "app line ", $i.fmt(‘%4d’);
+            #         sleep .05;
+            #     }
+            # };
         }
     }
 
@@ -66,7 +66,6 @@ class MyScroll is Vikna::TextScroll {
 class ScrollApp is Vikna::App {
     has $.ts is rw;
     method main {
-        note "VIKNA-APP: ", $*VIKNA-APP.WHICH;
         $!ts = $.desktop.create-child: MyScroll, :w(80), :h(30), :x(20), :y(3), :bg-pattern(' '), :auto-clear;
     }
 }

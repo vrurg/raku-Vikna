@@ -9,13 +9,13 @@
     "tracer/html.tmpl"
   ],
   "depends": [
-    "Red",
     "Template::Mustache",
-    "Red",
+    "DB::SQLite",
     "Terminal::Print",
     "AttrX::Mooish",
     "Color",
     "Color::Names",
+    "Concurrent::Queue",
     "Data::Dump"
   ],
   "build-depends": [

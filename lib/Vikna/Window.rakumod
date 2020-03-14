@@ -1,16 +1,27 @@
 use v6.e.PREVIEW;
-use Vikna::Widget::Group;
-unit class Vikna::Window;
-also is Vikna::Widget::Group;
 
+unit class Vikna::Window;
+
+use Vikna::Widget::Group;
+use Vikna::Focusable;
+use Vikna::Elevatable;
+use Vikna::PointerTarget;
 use Vikna::Events;
 use Vikna::Utils;
 use Vikna::Border;
 use Vikna::Widget::GroupMember;
 
-class Event::Cmd::Window::CompleteRedraw does Event::Command is export { }
+also does Vikna::Elevatable;
+also does Vikna::PointerTarget;
+also does Vikna::Focusable;
+also is Vikna::Widget::Group;
 
-class Client is Vikna::Widget::GroupMember {
+class Event::Cmd::Window::CompleteRedraw is Event::Command is export { }
+
+class Client {
+    also does Vikna::PointerTarget;
+    also does Vikna::Focusable;
+    also is Vikna::Widget::GroupMember;
     # Don't allow voluntary client geom change.
     method set-geom(|) { }
 }
@@ -36,13 +47,23 @@ submethod TWEAK(Bool:D :$border = True) {
                     Client,
                     :name(self.name ~ ":Client"),
                     geom => self.client-rect(self.geom),
-                    :bg-pattern(self.bg-pattern // ' '),
-                    :bg(self.bg), :fg(self.fg),
-                    :color<black blue>,
+                    :attr(self.attr),
+                    :focused-attr(self.focused-attr),
                     # :inv-mark-color<00,50,00>,
                     :auto-clear( self.auto-clear );
     # self.inv-mark-color = '0,50,0';
 }
+
+submethod profile-default {
+    attr => {
+        :fg<default>, :bg<default>, :pattern(' ')
+    },
+    focused-attr => {
+        :fg<default>, :bg<cyan>, :pattern(' ')
+    }
+}
+
+### Event handlers ###
 
 ### Command handlers ###
 
@@ -68,6 +89,7 @@ method cmd-setgeom(Vikna::Rect:D $geom) {
 }
 
 method cmd-redraw {
+    $.trace: "Window redraw";
     $.flatten-block;
     $!border.cmd-redraw;
     $!client.cmd-redraw;
@@ -87,6 +109,8 @@ method cmd-setcolor(|c) {
     nextsame;
 }
 
+### Event handlers ###
+
 ### Command senders ###
 method set-title(Str:D $title) {
     self.send-command: Event::Cmd::SetTitle, $title;
@@ -101,6 +125,11 @@ method resize(Int:D $w is copy where * > 0 = $.w, Int:D $h is copy where * > 0 =
 
 method child-canvas(::?CLASS:D: |c) {
     $.cmd-childcanvas: |c;
+}
+
+method maybe-to-top {
+    $.parent.to-top: self;
+    nextsame;
 }
 
 ### Utility methods ###

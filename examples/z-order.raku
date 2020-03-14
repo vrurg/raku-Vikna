@@ -15,16 +15,18 @@ class ZApp is Vikna::App {
                                 :title('Window #' ~ $_),
                                 :bg-pattern(~$_);
         }
-        $.desktop.create-child: Vikna::TextScroll,
+        my $info = $.desktop.create-child: Vikna::TextScroll,
                                 :x($.desktop.w - 40), :y($.desktop.h - 20), :40w, :20h,
                                 :name<Info>,
                                 :bg-pattern(' ');
         $.flow: :name("TIMER LOOP"), {
-            for ^20 {
-                sleep 1;
+            for ^100 -> $n {
+                sleep .1;
                 my $i = 10.rand.floor;
                 $.desktop.to-top(@!w[$i]);
-                $.desktop<Info>.say: "Window $i -> top";
+                if $info {
+                    $info.say: $n.fmt('%3d'), ". Window $i -> top"
+                }
             }
             $.desktop.quit;
         }

@@ -4,6 +4,7 @@ use Vikna::Window;
 use Vikna::Label;
 use Vikna::Events;
 use Vikna::TextScroll;
+use Vikna::Utils;
 use AttrX::Mooish;
 
 class EventReporter is Vikna::TextScroll {
@@ -63,11 +64,11 @@ class Moveable is Vikna::Window {
         self.dispatch: Event::Idle;
     }
 
-    my class Event::NextStage does Event::Informative {
+    my class Event::NextStage is Event::Informative {
         has Int:D $.stage is required;
         method priority { PrioImmediate }
     }
-    my class Event::Cmd::NextStep does Event::Command { }
+    my class Event::Cmd::NextStep is Event::Command { }
 
     method !build-stages {
         my Int:D $stage = 0;
@@ -152,7 +153,7 @@ class Moveable is Vikna::Window {
 
     multi method event(Event::NextStage:D $ev) {
         self<info-lbl>.set-hidden( ! $ev.stage % 2 );
-        my $close-at-stage = 7;
+        my $close-at-stage = -7;
         if $ev.stage < $close-at-stage {
             $.app.desktop<Static>.set-bg-pattern("[{$ev.stage}]");
         }
@@ -176,8 +177,9 @@ class Moveable is Vikna::Window {
     }
 
     multi method event(Event::Attached:D $ev) {
+        $.trace: "WINDOW ATTACHED, CLIENT CODE";
         if $ev.child === self {
-            $.nop.completed.then: {
+            $.nop.head.completed.then: {
                 $.next-step;
             }
         }
@@ -196,17 +198,18 @@ class Moveable is Vikna::Window {
 
 class MovingApp is Vikna::App {
     method main {
-        $.desktop.create-child: EventReporter, x => $.desktop.w - 50, y => $.desktop.h - 20, :50w, :20h,
-                                :name<EventList>, :bg-pattern(' ');
         my $mw = $.desktop.create-child: Moveable, :0x, :0y, w => ($.desktop.w / 3).Int, h => ($.desktop.h / 3).Int,
-                                                :name<Moveable>, :title('Moveable Window'), :bg-pattern<#>,
-                                                # :auto-clear, :bg<blue>,
+                                                :name<Moveable>, :title('Moveable Window'), :pattern<#>,
+                                                # :auto-clear,
+                                                :bg<blue>,
                                                 # :inv-mark-color<00,50,00>,
                                                 ;
         my $lbl = $mw.create-child: Vikna::Label,
                                     :3x, :10y, :1h, :15w,
                                     :name<info-lbl>, :text('Info Label'),
                                     :bg('0,80,150 underline');
+        $.desktop.create-child: EventReporter, StBack, x => $.desktop.w - 50, y => $.desktop.h - 20, :50w, :20h,
+                                :name<EventList>, :pattern(' '), :bg<black>, :fg<cyan>;
         $lbl does role {
             has $.ttl-pfx = "";
             multi method event(Event::Visible:D $ev) {
@@ -224,8 +227,8 @@ class MovingApp is Vikna::App {
                     # :inv-mark-color<00,50,00>,
                     :title('Static Window');
         $sw.create-child: Vikna::Label, :0x, :0y, :38w, :1h, :name<s-info-lbl>, :text('info lbl');
-        $.desktop.sync-events;
+        # $.desktop.sync-events;
     }
 }
 
-MovingApp.new( :debugging ).run;
+MovingApp.new( :!debugging ).run;

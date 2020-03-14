@@ -21,6 +21,8 @@ my class Input {
     has Supply $!in-supply;
     has Promise $!closed .= new;
 
+    has Vikna::Point $!last-mouse-pos;
+
     submethod TWEAK {
         set-mouse-event-mode(AnyEvents);
         $!in-supply = decoded-input-supply;
@@ -105,16 +107,16 @@ my class Input {
                     my $*VIKNA-FLOW = $vf;
                     given $term-ev {
                         when PasteStart {
-                            $.post-event: Event::PasteStart;
+                            $.post-event: Event::Screen::PasteStart;
                         }
                         when PasteEnd {
-                            $.post-event: Event::PasteEnd;
+                            $.post-event: Event::Screen::PasteEnd;
                         }
                         when FocusIn {
-                            $.post-event: Event::FocusIn;
+                            $.post-event: Event::Screen::FocusIn;
                         }
                         when FocusOut {
-                            $.post-event: Event::FocusOut;
+                            $.post-event: Event::Screen::FocusOut;
                         }
                         when SpecialKey {
                             $.post-event: Event::Kbd::Control, key => self!translate-special-key($_)
@@ -132,11 +134,14 @@ my class Input {
                                                 !! Event::Mouse::Move;
                             my %p = .button && .pressed ?? :button(.button) !! ();
                             my $ev = $.post-event: $evtype,
-                                                    x => .x,
-                                                    y => .y,
+                                                    at => Vikna::Point.new(.x, .y),
                                                     buttons => set(.button),
                                                     modifiers => self!make-modifiers($_),
+                                                    prev => $!last-mouse-pos,
                                                     |%p;
+                            # Don't share this Point object with the event packet because reckless user objects could
+                            # mangle with it.
+                            $!last-mouse-pos = Vikna::Point.new: .x, .y;
                             $.post-event: $_ for self.translate-mouse-event($ev);
                         }
                         when .ord == 13 {

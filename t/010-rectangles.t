@@ -174,7 +174,7 @@ subtest "Multi-dissect" => {
 }
 
 subtest "Relative/absolute" => {
-    plan 8;
+    plan 10;
 
     my $r1 = Vikna::Rect.new( 3, 3, 7, 4 );
     my $r2 = Vikna::Rect.new( 7, 5, 8, 5 );
@@ -200,6 +200,14 @@ subtest "Relative/absolute" => {
     $r2 = Vikna::Rect.new(3, 2, 4, 3);
     my $abs = $r2.absolute($r1);
     is-deeply ($abs.x, $abs.y, $abs.w, $abs.h), (18, 10, 4, 3), "relative -> absolute convertion";
+
+    # Clipping of absolutes
+    $r2 = Vikna::Rect.new(5, 5, 20, 10);
+    $abs = $r2.absolute($r1, :clip);
+    is-deeply ($abs.x, $abs.y, $abs.w, $abs.h), (20, 13, 5, 6), "relative -> absolute with clipping 1";
+    $r2 = Vikna::Rect.new(-5, -5, 20, 10);
+    $abs = $r2.absolute($r1, :clip);
+    is-deeply ($abs.x, $abs.y, $abs.w, $abs.h), (15, 8, 10, 5), "relative -> absolute with clipping 2";
 }
 
 done-testing;

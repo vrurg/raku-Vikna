@@ -36,7 +36,7 @@ my class BufLine {
     }
 }
 
-has @.buffer is default(BufLine.new);
+has @.buffer = BufLine.new;
 has $!cur-row = 0;
 has Int:D $.buffer-size = 200;
 has Bool:D $!wrap = True;
@@ -52,13 +52,18 @@ method cmd-textscroll-addtext(Str:D $text is copy) {
 
     $.trace: "&&& CMD ADD-TEXT «$text»";
 
-    my $text-width = $!wrap ?? $.w !! Inf;
     my $max-cols = $.columns;
 
     while $text {
+        my $cur-line = $.cur-line;
+        $.trace: "cur-line: ", $cur-line.WHICH;
+        if $!wrap && $cur-line.str.chars == $.w {
+            $cur-line = self!next-line;
+        }
+        my $text-width = $!wrap ?? $.w - $cur-line.str.chars !! Inf;
         my $m = $text ~~ s/$<line>=[ \N ** {0..$text-width} ] [ $<nl>=\n ]?//;
         $.trace: "IMPRINTING LINE ‘{$m<line>}’ into ‘{$.cur-line.str}’:{$.cur-line.pos}";
-        my $cur-line = $.cur-line.imprint($m<line>);
+        $cur-line.imprint($m<line>);
         $.trace: "RESULTING LINE: ‘{$cur-line.str}’";
 
         my $line-length = $cur-line.str.chars;

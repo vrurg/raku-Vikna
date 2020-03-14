@@ -3,6 +3,7 @@ unit class Vikna::Object;
 
 use Vikna::X;
 use AttrX::Mooish;
+use Hash::Merge;
 
 my class CodeFlow {
     has UInt $.id;
@@ -13,6 +14,30 @@ my class CodeFlow {
 has $.app;
 has Int $.id is mooish(:lazy);
 has $.name is mooish(:lazy);
+
+multi method new(*%c) {
+    my %config;
+    with %c<app> {
+        %config = .profile-config(self.^name, %c<name>)
+    }
+    my %default;
+    self.WALK(:name<profile-default>, :!methods, :roles).reverse.().map({ merge-hash %default, %$_, :no-append-array });
+    .trace: "Default profile for ", self.^name, "::new\n", %default.map({ .key ~ " => " ~ (.value ~~ Vikna::Object ?? .value.WHICH !! .value.raku) }).join("\n")
+        with %c<app>;
+    my %profile;
+    self.WALK(:name<profile-checkin>, :!methods, :roles).reverse.(%profile, %c, %default, %config);
+    .trace: "Profile for ", self.^name, "::new\n", %profile.map({ .key ~ " => " ~ (.value ~~ Vikna::Object ?? .value.WHICH !! .value.raku) }).join("\n")
+        with %c<app>;
+    nextwith |%profile;
+}
+
+submethod profile-default { %() }
+
+submethod profile-checkin(%profile, %constructor, %default, %config) {
+    merge-hash(%profile, %default,     :no-append-array);
+    merge-hash(%profile, %config,      :no-append-array);
+    merge-hash(%profile, %constructor, :no-append-array);
+}
 
 method build-id {
     use nqp;

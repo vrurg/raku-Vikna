@@ -17,7 +17,7 @@ sub test-filled-rect(Vikna::Canvas:D $c, $x, $y, $w, $h, $char, Str:D $msg,
 {
     subtest "Filled canvas rectangle: " ~ $msg => {
         plan 4;
-        ok $c.geom.contains-rect($x, $y, $w, $h), "required rectangle fits into the canvas";
+        ok $c.geom.contains($x, $y, $w, $h), "required rectangle fits into the canvas";
         my $char-matches = 0;
         my $fg-matches = 0;
         my $bg-matches = 0;
@@ -51,10 +51,10 @@ subtest "Paintable rectangles" => {
     plan 14;
     my $c = Vikna::Canvas.new: :w<120>, :h<40>;
 
-    is $c.invalidates.elems, 0, "no invalidated rects by default";
+    is $c.invalidations.elems, 0, "no invalidated rects by default";
     nok $c.is-paintable( 10, 10 ), "by default the whole canvas is unpaintable";
     $c.invalidate;
-    is $c.invalidates.elems, 1, "invalidating canvas adds one invalidation";
+    is $c.invalidations.elems, 1, "invalidating canvas adds one invalidation";
     ok $c.is-paintable( 10, 10 ), "invalidating makes whole canvas paintable";
     nok $c.is-paintable(130, 1), "too big X";
     nok $c.is-paintable(1, 50), "too big Y";
@@ -81,7 +81,7 @@ subtest "Overlapping invalidation" => {
     $c.invalidate(40, 7, 21, 12);
     $c.invalidate(33, 15, 38, 26);
     $c.invalidate(35, 10, 21, 10);
-    is $c.invalidates.elems, 3, "one invalidation is not added because covered by existing ones";
+    is $c.invalidations.elems, 3, "one invalidation is not added because covered by existing ones";
 }
 
 subtest "Invalidated painting" => {
@@ -194,7 +194,7 @@ subtest "Coloring" => {
     test-colored-rect($c, 2, 1, 5, 3, 'o', '.', "Only background color", :bg('50,80,0'));
     test-colored-rect($c, 3, 1, 2, 2, 'm', '.', "Foreground and background", :fg<red>, :bg('50,80,0'));
 
-    is $app.screen.print(30, 3, $c.viewport, :str).comb.map({ .ord == 27 ?? '<ESC>' !! $_ }).join,
+    is $app.screen.screen-print(30, 3, $c.viewport, :str).comb.map({ .ord == 27 ?? '<ESC>' !! $_ }).join,
         q{<ESC>[4;31H<ESC>[0mS<ESC>[0m<ESC>[48;2;50;80;0mo<ESC>[0m<ESC>[31;48;2;50;80;0mme<ESC>[0m<ESC>[48;2;50;80;0m t<ESC>[0mext....<ESC>[0m<ESC>[5;31H<ESC>[0m.<ESC>[0m<ESC>[48;2;50;80;0m.<ESC>[0m<ESC>[31;48;2;50;80;0m..<ESC>[0m<ESC>[48;2;50;80;0m..<ESC>[0m.......<ESC>[0m<ESC>[6;31H<ESC>[0m.<ESC>[0m<ESC>[48;2;50;80;0m.....<ESC>[0m.......<ESC>[0m<ESC>[7;31H<ESC>[0m.............<ESC>[0m},
         "resulting output string";
 }
@@ -207,7 +207,7 @@ subtest "Transparency" => {
     for ^10 {
         $c.imprint(0, $_, 'X' x 25);
     }
-    is $app.screen.print(30, 3, $c.viewport, :str).comb.map({ .ord == 27 ?? '<ESC>' !! $_ }).join,
+    is $app.screen.screen-print(30, 3, $c.viewport, :str).comb.map({ .ord == 27 ?? '<ESC>' !! $_ }).join,
         q{<ESC>[4;31H<ESC>[0mXXXXX<ESC>[4;41HXXXXX<ESC>[0m<ESC>[5;31H<ESC>[0m<ESC>[0m<ESC>[6;31H<ESC>[0m<ESC>[0m<ESC>[7;31H<ESC>[0m<ESC>[0m<ESC>[8;31H<ESC>[0m<ESC>[0m<ESC>[9;31H<ESC>[0m<ESC>[0m<ESC>[10;31H<ESC>[0m<ESC>[0m<ESC>[11;31H<ESC>[0m<ESC>[0m<ESC>[12;31H<ESC>[0m<ESC>[0m<ESC>[13;31H<ESC>[0m<ESC>[0m},
         "Transprent cells are not output";
 }

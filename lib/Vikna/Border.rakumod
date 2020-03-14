@@ -1,21 +1,62 @@
 use v6.e.PREVIEW;
+
+unit class Vikna::Border;
+
 use Vikna::Widget::GroupMember;
-unit class Vikna::Border is Vikna::Widget::GroupMember;
+use Vikna::Events;
+
+also is Vikna::Widget::GroupMember;
 
 my %borders =
         ansi => %(
-            :ul<+>, :t<->, :ur<+>,
-             :l<|>,         :r<|>,
-            :bl<+>, :b<->, :br<+>,
-            # Connectors
-            :cl<+>, :cr<+>, :ct<+>, :cb<+>,
+            passive => %(
+                :ul<+>, :t<->, :ur<+>,
+                 :l<|>,         :r<|>,
+                :bl<+>, :b<->, :br<+>,
+                # Connectors
+                :cl<+>, :cr<+>, :ct<+>, :cb<+>,
+            ),
+            active => %(
+                :ul<+>, :t<=>, :ur<+>,
+                 :l<|>,         :r<|>,
+                :bl<+>, :b<->, :br<+>,
+                # Connectors
+                :cl<+>, :cr<+>, :ct<+>, :cb<+>,
+            ),
         ),
         ;
 has $.type = 'ansi';
 
+### Event handlers
+
+# Set own 'event horizon'
+proto method event(Event:D $) {*}
+
+multi method event(Event::Attached:D $ev) {
+    if $ev.child === self {
+        $.subscribe: $.parent, -> $pev {
+            if $pev ~~ Event::Focus::In | Event::Focus::Out {
+                $.trace: "Parent focus in/out event, redraw self";
+                $.invalidate;
+                $.redraw;
+            }
+        }
+    }
+    nextsame
+}
+
+multi method event(Event:D $) { nextsame }
+
+### Command senders ###
+
+# Prevent voluntary geom changes
+method set-geom(|) { }
+
+### Utility methods ###
+
 method draw( :$canvas ) {
-    $.trace: "### BORDER DRAW, invalidations: ", $canvas.invalidations.elems;
-    my %b = %borders{ $!type };
+    my %b = %borders{ $!type }{ $.group.in-focus ?? 'active' !! 'passive' };
+    $.trace: "### BORDER DRAW, group focused: ", ?$.group.in-focus;
     my $r = $.w - 1;
     my $b = $.h - 1;
     $canvas.imprint(0,   0, %b<ul>);
@@ -42,8 +83,3 @@ method draw( :$canvas ) {
         $canvas.imprint($r, $y, %b<r>);
     }
 }
-
-### Command senders ###
-
-# Prevent voluntary geom changes
-method set-geom(|) { }

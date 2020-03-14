@@ -6,6 +6,7 @@ use Vikna::Point;
 use Vikna::Child;
 use Vikna::Parent;
 use Vikna::Dev::Kbd;
+use Vikna::X;
 use AttrX::Mooish;
 
 my atomicint $sequence = -1;
@@ -13,14 +14,14 @@ my atomicint $sequence = -1;
 # PrioImmediate must always be the highest level of all.
 enum EventPriority is export ( PrioIdle => 0, |<PrioDefault PrioCommand PrioReleased PrioOut PrioIn PrioImmediate>);
 
-role Event is export {
+class Event is export {
     has Int $.seq is built(False);
     has $.origin is mooish(:lazy);  # Originating object.
     has $.dispatcher is required;   # Dispatching object. Changes on re-dispatch.
     has Bool:D $.cleared = False;
-    has EventPriority $.priority is mooish(:lazy);
+    has EventPriority $.priority is mooish(:lazy<default-priority>);
 
-    method build-priority { ... }
+    method default-priority { PrioDefault }
 
     submethod TWEAK {
         self!set-seq;
@@ -30,51 +31,65 @@ role Event is export {
         $!seq = ++⚛$sequence;
     }
 
-    method clone {
-        my $clone = callsame;
-        $clone!set-seq;
-        $clone
+    method dup {
+        my $dup = $.clone;
+        $dup!set-seq;
+        $dup
     }
 
     method clear {
         $!cleared = True;
     }
 
-    method last {
-        require ::(Vikna::Events);
-        ::('Vikna::Events::CX::Event::Last').new(:ev(self)).throw
-    }
-
     method build-origin { $!dispatcher }
 
+    # Make a method name from event class name.
+    method to-method-name(Str:D $prefix is copy = "" --> Str) {
+        $prefix ~= "-" if $prefix && $prefix.substr(* - 1) ne '-';
+        $prefix ~ self.^name
+                    .split('::')
+                    .grep({'Event' ^ff *}) # Skipp up to and including first Event. Support events declared in other modules.
+                    .map({.lc})
+                    .join("-")
+    }
+
     proto method Str(|) {*}
-    multi method Str(::?ROLE:U:) { self.^name }
-    multi method Str(::?ROLE:D:) {
+    multi method Str(::?CLASS:U:) { nextsame }
+    multi method Str(::?CLASS:D:) {
         self.^name ~ " #{$!seq}:"
                    ~ " orig={$!origin.?name // $!origin.WHICH}"
                    ~ " disp={$!dispatcher.?name // $!dispatcher.WHICH}"
+                   ~ ($!cleared ?? " clear" !! "")
     }
+
+    method gist { self.Str }
 }
 
 ### EVENT CATEGORIES ###
 
 # Quick priority setting
 
-role Event::Prio::Idle     { method build-priority { PrioIdle     } }
-role Event::Prio::Default  { method build-priority { PrioDefault  } }
-role Event::Prio::Command  { method build-priority { PrioCommand  } }
-role Event::Prio::Released { method build-priority { PrioReleased } }
-role Event::Prio::In       { method build-priority { PrioIn       } }
-role Event::Prio::Out      { method build-priority { PrioOut      } }
-
-# Informational events. Usually consequences of actions.
-role Event::Informative does Event does Event::Prio::Default { }
+role Event::Prio::Idle     { method default-priority { PrioIdle     } }
+role Event::Prio::Default  { method default-priority { PrioDefault  } }
+role Event::Prio::Command  { method default-priority { PrioCommand  } }
+role Event::Prio::Released { method default-priority { PrioReleased } }
+role Event::Prio::In       { method default-priority { PrioIn       } }
+role Event::Prio::Out      { method default-priority { PrioOut      } }
 
 # Events which should be auto-dispatched to children
-role Event::Spreadable { }
+class Event::Spreadable { }
+
+# Events with this role must follow the rules of focused dispatching. See Event::Kbd
+role Event::Focusish { }
+
+# Anything related to the order of widgets on parent
+role Event::ZOrderish { }
+
+# Informational events. Usually consequences of actions.
+class Event::Informative is Event does Event::Prio::Default { }
 
 # Commanding events like 'move', or 'resize', or 'redraw'
-role Event::Command does Event does Event::Prio::Command {
+class Event::Command is Event does Event::Prio::Command {
     has Promise:D $.completed .= new;
     has $.completed-at;
     has Capture:D $.args = \();
@@ -85,8 +100,8 @@ role Event::Command does Event does Event::Prio::Command {
     }
 }
 
-role Event::Input does Event does Event::Prio::In   { }
-role Event::Output does Event does Event::Prio::Out { }
+class Event::Input  is Event does Event::Prio::In  { }
+class Event::Output is Event does Event::Prio::Out { }
 
 ### EVENT SUBTYPES ###
 
@@ -101,12 +116,13 @@ role Event::Transformish does Event::Geomish {
     has Vikna::Rect:D $.from is required;
 }
 
-# Non-geometry position changes; for example, scrolling-related
+# Events bound to any 2D positions. For example, mouse events.
 role Event::Positionish {
-    has Int $.x;
-    has Int $.y;
+    has Vikna::Point:D $.at is required handles <x y>;
 }
-role Event::Positional {
+
+# Events related to directional position pairs. Area scrolling, for example. Or mouse drag start/end.
+role Event::Vectorish {
     has Vikna::Point:D $.from is required;
     has Vikna::Point:D $.to is required;
 }
@@ -117,44 +133,43 @@ role Event::Colorish {
     has $.bg;
 }
 
+# Any event which might result in window moving to the top.
+class Event::Pointer::Elevatish { }
+
 # Color changes of any kind.
 role Event::ColorChange does Event::Colorish {
     has $.old-fg;
     has $.old-bg;
 }
 
-# Anything related to hold of events.
-role Event::Holdish does Event {
-    has Event:U $ev-type;
-    submethod TWEAK(:$!ev-type) { }
-}
-
 # Parent/child relations
-role Event::Childish does Event {
+role Event::Childish {
     has Vikna::Child:D $.child is required;
 }
-role Event::Parentish does Event {
+role Event::Parentish {
     has Vikna::Parent:D $.parent is required;
 }
 role Event::Relational does Event::Childish does Event::Parentish { }
 
-role Event::Kbd does Event::Input {
+class Event::Kbd is Event::Input does Event::Focusish {
     has $.raw;  # Raw char code if known
     has $.char;
     has Set:D $.modifiers = set();
 }
 
-role Event::Mouse does Event::Input {
-    has Int:D $.x is required;
-    has Int:D $.y is required;
+class Event::Pointer is Event::Input does Event::Positionish {
+    method kind(--> Str:D) {...}
+}
+
+class Event::Mouse is Event::Pointer {
     has Int $.button;
     has Set $.buttons;
     has Set $.modifiers = set();
+    has Vikna::Point $.prev; # Previous mouse position. Undef for the first mouse event.
 
     method new-from(Event::Mouse:D $ev, |c) {
         self.new:
-                x => .x,
-                y => .y,
+                at => .at.clone,
                 buttons => .buttons.clone,
                 modifiers => .modifiers.clone,
                 dispatcher => .dispatcher,
@@ -162,116 +177,146 @@ role Event::Mouse does Event::Input {
                 |c
             with $ev;
     }
+
+    method kind( --> Str:D ) { 'mouse' }
 }
 
 #### Commands ####
 
-class Event::Cmd::AddChild            does Event::Command { }
-class Event::Cmd::AddMember           does Event::Command { }
-class Event::Cmd::ChildCanvas         does Event::Command { }
-class Event::Cmd::Clear               does Event::Command { }
-class Event::Cmd::Close               does Event::Command { }
-class Event::Cmd::Quit                does Event::Command { }
-class Event::Cmd::Nop                 does Event::Command { }
-class Event::Cmd::Redraw              does Event::Command { }
-class Event::Cmd::RemoveChild         does Event::Command { }
-class Event::Cmd::RemoveMember        does Event::Command { }
-class Event::Cmd::ScreenPrint         does Event::Command { }
-class Event::Cmd::Scroll::By          does Event::Command { }
-class Event::Cmd::Scroll::Fit         does Event::Command { }
-class Event::Cmd::Scroll::SetArea     does Event::Command { }
-class Event::Cmd::Scroll::To          does Event::Command { }
-class Event::Cmd::SetBgPattern        does Event::Command { }
-class Event::Cmd::SetColor            does Event::Command { }
-class Event::Cmd::SetHidden           does Event::Command { }
-class Event::Cmd::SetGeom             does Event::Command { }
-class Event::Cmd::ScreenGeom          does Event::Command { }
-class Event::Cmd::SetText             does Event::Command { }
-class Event::Cmd::SetTitle            does Event::Command { }
-class Event::Cmd::SetInvisible        does Event::Command { }
-class Event::Cmd::TextScroll::AddText does Event::Command { }
-class Event::Cmd::To::Top             does Event::Command { }
+class Event::Cmd::AddChild            is Event::Command { }
+class Event::Cmd::AddMember           is Event::Command { }
+class Event::Cmd::ChildCanvas         is Event::Command { }
+class Event::Cmd::Clear               is Event::Command { }
+class Event::Cmd::Close               is Event::Command { }
+class Event::Cmd::Focus::Update       is Event::Command { }
+class Event::Cmd::Quit                is Event::Command { }
+class Event::Cmd::Nop                 is Event::Command { }
+class Event::Cmd::Redraw              is Event::Command { }
+class Event::Cmd::Refresh             is Event::Command { method default-priority { PrioReleased } }
+class Event::Cmd::RemoveChild         is Event::Command { }
+class Event::Cmd::RemoveMember        is Event::Command { }
+class Event::Cmd::ScreenPrint         is Event::Command { }
+class Event::Cmd::Scroll::By          is Event::Command { }
+class Event::Cmd::Scroll::Fit         is Event::Command { }
+class Event::Cmd::Scroll::SetArea     is Event::Command { }
+class Event::Cmd::Scroll::To          is Event::Command { }
+class Event::Cmd::SetBgPattern        is Event::Command { }
+class Event::Cmd::SetColor            is Event::Command { }
+class Event::Cmd::SetGeom             is Event::Command { }
+class Event::Cmd::SetHidden           is Event::Command { }
+class Event::Cmd::ScreenGeom          is Event::Command { }
+class Event::Cmd::SetText             is Event::Command { }
+class Event::Cmd::SetTitle            is Event::Command { }
+class Event::Cmd::SetInvisible        is Event::Command { }
+class Event::Cmd::TextScroll::AddText is Event::Command { }
+class Event::Cmd::To::Top             is Event::Command { }
+
+# Inquiring commands
+class Event::Cmd::Inquiry is Event::Command {
+    method default-priority { PrioImmediate }
+}
+
+class Event::Cmd::Contains is Event::Cmd::Inquiry { }
 
 #### Informative ####
 
 # Normally sent once only. Has to be delivered ASAP to be the first event ever.
-class Event::Init does Event::Informative { method priority { PrioImmediate } }
+class Event::Init is Event::Informative { method default-priority { PrioImmediate } }
 
-class Event::Quit does Event::Informative does Event::Spreadable { method priority { PrioImmediate } }
+class Event::Quit is Event::Informative is Event::Spreadable { method default-priority { PrioImmediate } }
 
-class Event::Idle does Event::Informative {
-    method build-priority { PrioIdle }
+class Event::Idle is Event::Informative {
+    method default-priority { PrioIdle }
 }
 
-class Event::Changed::Title does Event::Informative {
+class Event::Changed::Title is Event::Informative {
     has $.old-title;
     has $.title;
 }
 
-class Event::Changed::Text does Event::Informative {
+class Event::Changed::Text is Event::Informative {
     has $.old-text;
     has $.text;
 }
 
-class Event::Changed::BgPattern does Event::Informative {
-    has $.old-bg-pattern;
-    has $.bg-pattern;
+class Event::Changed::BgPattern is Event::Informative {
+    has $.old-pattern;
+    has $.new-pattern;
 }
 
-class Event::Hide      does Event::Informative { }
-class Event::Show      does Event::Informative { }
-class Event::Visible   does Event::Informative { }
-class Event::Invisible does Event::Informative { }
+class Event::Hide         is Event::Informative { }
+class Event::Show         is Event::Informative { }
+class Event::Visible      is Event::Informative { }
+class Event::Invisible    is Event::Informative { }
 
-class Event::Closing   does Event::Informative { }
+# Focus::Take is about being potentially in focus.
+# Focus::In is about receiving focus and must result in focusing the last child which got Focus::Take
+class Event::Focus::Take  is Event::Informative { } # Child is focused on parent
+class Event::Focus::Lost  is Event::Informative { } # Child lost focus on parent
+class Event::Focus::In    is Event::Informative { } # Our parent widget is in focus
+class Event::Focus::Out   is Event::Informative { } # Our parent widget is out of focus
 
-class Event::WidgetColor does Event::Informative does Event::ColorChange { }
+class Event::Closing   is Event::Informative { }
 
-class Event::Changed::Geom does Event::Informative does Event::Transformish { }
+class Event::WidgetColor is Event::Informative does Event::ColorChange { }
+
+class Event::Changed::Geom   is Event::Informative does Event::Transformish { }
+
+class Event::ZOrder::Top    is Event::Informative does Event::ZOrderish { }
+class Event::ZOrder::Bottom is Event::Informative does Event::ZOrderish { }
+class Event::ZOrder::Middle is Event::Informative does Event::ZOrderish { }
+class Event::ZOrder::Child  is Event::Informative does Event::ZOrderish does Event::Childish { }
 
 # Dispatched whenever widget content might have changed.
-class Event::Updated does Event::Informative {
+class Event::Updated is Event::Informative {
     has $.geom          is required; # Widget geometry at the point of time when the event was dispatched.
 }
 
-class Event::Scroll::Position does Event::Informative does Event::Positional { }
-class Event::Scroll::Area does Event::Informative does Event::Transformish { }
+class Event::Scroll::Position is Event::Informative does Event::Vectorish { }
+class Event::Scroll::Area     is Event::Informative does Event::Transformish { }
 
-class Event::TextScroll::BufChange does Event::Informative {
+class Event::TextScroll::BufChange is Event::Informative {
     has Int:D $.old-size is required;
     has Int:D $.size is required;
 }
 
-class Event::Kbd::Down    does Event::Kbd { }
-class Event::Kbd::Up      does Event::Kbd { }
-class Event::Kbd::Press   does Event::Kbd { }
+class Event::Kbd::Down    is Event::Kbd { }
+class Event::Kbd::Up      is Event::Kbd { }
+class Event::Kbd::Press   is Event::Kbd { }
 class Event::Kbd::Control is Event::Kbd::Press {
     has $.key is required where ControlKeys:D | Str:D;
 }
 
-class Event::Mouse::Move        does Event::Mouse { }
-class Event::Mouse::Button      does Event::Mouse { }
+class Event::Mouse::Move        is Event::Mouse { }
+class Event::Mouse::Button      is Event::Mouse { }
 class Event::Mouse::Press       is Event::Mouse::Button { }
 class Event::Mouse::Release     is Event::Mouse::Button { }
-class Event::Mouse::Click       is Event::Mouse::Button { }
+class Event::Mouse::Click       is Event::Mouse::Button is Event::Pointer::Elevatish { }
 class Event::Mouse::DoubleClick is Event::Mouse::Button { }
 class Event::Mouse::Drag        is Event::Mouse::Move { }
+class Event::Mouse::Enter       does Event::Positionish is Event::Input { }
+class Event::Mouse::Leave       does Event::Positionish is Event::Input { }
 
-class Event::FocusIn    does Event::Input { }
-class Event::FocusOut   does Event::Input { }
-class Event::PasteStart does Event::Input { }
-class Event::PasteEnd   does Event::Input { }
-
-# Emitted when screen has done an output job.
-class Event::Screen::Ready does Event::Informative { }
-
-class Event::Screen::Geom
-        does Event::Informative
-        does Event::Transformish
-        does Event::Spreadable
-{
-    method build-priority { PrioImmediate }
+class Event::Pointer::OwnerChange does Event::Positionish is Event::Input {
+    has $.old-owner;
+    has $.new-owner is required;
 }
 
-class Event::Attached does Event::Informative does Event::Relational { }
-class Event::Detached does Event::Informative does Event::Relational { }
+class Event::Screen::FocusIn    is Event::Input { }
+class Event::Screen::FocusOut   is Event::Input { }
+class Event::Screen::PasteStart is Event::Input { }
+class Event::Screen::PasteEnd   is Event::Input { }
+
+# Emitted when screen has done an output job.
+class Event::Screen::Ready is Event::Informative { }
+
+class Event::Screen::Geom
+        is Event::Informative
+        does Event::Transformish
+        is Event::Spreadable
+{
+    method default-priority { PrioImmediate }
+}
+
+class Event::Attached is Event::Informative does Event::Relational { }
+class Event::Detached is Event::Informative does Event::Relational { }

@@ -30,6 +30,13 @@ role X::System is X::Base { }
 
 role X::Input is X::System { }
 
+class X::NoChild is X::Base is export {
+    has Any:D $.child is required;
+    method message {
+        "Child " ~ $!child.WHICH ~ " doesn't exists on parent " ~ $.obj.WHICH
+    }
+}
+
 class X::Canvas::BadViewport is X::Base does X::Geometry is export {
     method message {
         callsame() ~ " Bad viewport position, possibly out of range: " ~ self.X::Geometry::Str
@@ -82,7 +89,7 @@ class X::OverUnblock is X::Base {
     has Int:D $.count is required;
     has Str:D $.what is required;
     method message {
-        "Over-unblocked $!what: " ~ $!count ~ " too much. Check your balance of block/unblock calls"
+        "Over-unblocked $!what: " ~ abs($!count) ~ " too many. Check your balance of block/unblock calls"
     }
 }
 
@@ -138,7 +145,10 @@ class X::PChannel::SendOnClosed is Exception {
     }
 }
 
-### Control exceptions ###
-class CX::Event::Last is export {
-    has Any:D $.ev is required;
+class X::PosOwner::Exists does X::Eventish {
+    method message {
+        "Cannot set owner for pointer event of type '"
+        ~ $.ev.kind
+        ~ "': it is still owned by another widget"
+    }
 }

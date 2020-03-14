@@ -57,6 +57,7 @@ has Bool $!paintable-expired = True;
 # 0 - characters
 # 1 - fg color
 # 2 - bg color
+# [planned] 3 - attributes (bold, italic, underline, etc.)
 # Each plane is nqp::list() of rows, each row is nqp::list() of elems.
 my constant PLANE-COUNT = 3;
 has Mu $!planes;
@@ -325,7 +326,7 @@ method get-planes(\cplane, \fgplane, \bgplane) is raw {
 
 #| With four parameters viewport is been set.
 multi method viewport(UInt:D $x, UInt:D $y, Int:D $w where * > 0, Int:D $h where * > 0 --> Nil) {
-    $.throw: X::Canvas::BadViewport, :$x, :$y, :$w, :$h unless $!geom.contains-rect($x, $y, $w, $h);
+    $.throw: X::Canvas::BadViewport, :$x, :$y, :$w, :$h unless $!geom.contains($x, $y, $w, $h);
     $!vp-geom = $.create: Vikna::Rect, :$x, :$y, :$w, :$h;
 }
 

@@ -22,12 +22,28 @@ has @!event-source;
 has Bool:D $!event-shutdown = False;
 
 submethod TWEAK {
-    self.start-event-handling
+    # note "TWEAK({self.WHICH}):start-event-handling";
+    # note self.^mro(:roles).map( *.^name ).join(", ");
+    self.start-event-handling;
+    # note "TWEAK:start-event-handling done";
 }
 
 method !run-ev-loop {
     $.trace: "Starting event handling", :event;
+    my $*VIKNA-EVQ-OWNER = self;
     loop {
+        CATCH {
+            default {
+                note "===EVENT KABOOM=== on {self.?name // self.WHICH}! ", .message, ~.backtrace;
+                $.trace: "EVENT HANDLING THROWN:\n", .message, .backtrace, :error;
+                unless self.?on-event-queue-fail($_) {
+                    $!ev-queue.fail($_) if $!ev-queue;
+                    # self.stop-event-handling;
+                    $.trace: "RETHROWING ", $_.WHICH;
+                    $.panic($_)
+                }
+            }
+        }
         my $ev = $!ev-queue.receive;
         if $ev ~~ Failure {
             if $ev.exception ~~ X::PChannel::ReceiveOnClosed {
@@ -45,18 +61,6 @@ method !run-ev-loop {
                 $ev.dispatcher.handle-event($ev);
             }
         }
-        CATCH {
-            default {
-                note "===EVENT KABOOM=== on {self.?name // self.WHICH}! ", .message, ~.backtrace;
-                $.trace: "EVENT HANDLING THROWN:\n", .message, .backtrace, :error;
-                unless self.?on-event-queue-fail($_) {
-                    $!ev-queue.fail($_) if $!ev-queue;
-                    # self.stop-event-handling;
-                    $.trace: "RETHROWING ", $_.WHICH;
-                    $.panic($_)
-                }
-            }
-        }
     }
     $!events.done;
 }
@@ -68,7 +72,6 @@ method start-event-handling(::?ROLE:D:) {
             $.flow: { self!run-ev-loop }, :name('EVENT LOOP ' ~ (self.?name // self.WHICH));
         }
     }
-    $.dispatch: Event::Init;
 }
 
 method stop-event-handling(::?ROLE:D:) {
@@ -92,8 +95,8 @@ method stop-event-handling(::?ROLE:D:) {
     $nop ?? $nop.completed !! Promise.kept(True)
 }
 
-method handle-event(::?ROLE:D: Event:D $ev) {
-    # Make sure only one event is being handled at a time.
+proto method handle-event(::?ROLE:D: Event:D $ev) {*}
+multi method handle-event(::?ROLE:D: Event:D $ev) {
     $.trace: "HANDLING[thread:{$*THREAD.id}] ", $ev, :event;
     my $ev-handled = Promise.new;
     my $vf = $*VIKNA-FLOW;
@@ -133,7 +136,8 @@ method unsubscribe(::?ROLE:D $obj) {
     }
 }
 
-method send-event(Vikna::Event:D $ev, EventPriority $priority?) {
+method send-event(Vikna::Event:D $ev, EventPriority :$priority?) {
+    # note "SEND-EVENT: ", $ev;
     $.trace: "SEND-EVENT: ", $ev, :event;
     self.throw: X::Event::Stopped, :$ev if $!event-shutdown;
     my Vikna::Event:D @events = $ev;
@@ -144,28 +148,37 @@ method send-event(Vikna::Event:D $ev, EventPriority $priority?) {
         # If event queue is not initialized then work synchronously.
         if $!ev-queue {
             $.trace: "QUEUEING(prio:{($priority // $filtered.priority).Int}) ", $filtered, :event;
-            $!ev-queue.send: $filtered, ($priority // $filtered.priority).Int;
             CATCH {
                 when X::Channel::SendOnClosed {
                     self.throw: X::Event::Stopped, ev => $filtered;
                 }
+                default { .rethrow }
             }
+            $!ev-queue.send: $filtered, ($priority // $filtered.priority).Int;
         }
         else {
             $.trace: "DIRECT HANDLING ", $filtered, :event;
             $ev.dispatcher.handle-event: $filtered;
         }
     }
-    $ev
+    @events
+}
+
+proto method route-event(::?ROLE:D: Event:D, |) {*}
+multi method route-event(::?ROLE:D: Event:D $ev, *%c) {
+    $.trace: "Routing event via send ", $ev, :event;
+    self.send-event: $ev, |%c
 }
 
 proto method dispatch(::?ROLE:D: Event, |) {*}
-
 multi method dispatch(::?ROLE:D: Event:D $ev, EventPriority $priority?) {
-    $.send-event( self === $ev.dispatcher ?? $ev !! $ev.clone(:dispatcher(self)), $priority );
+    $.trace: "Dispatching definite event packet ", $ev;
+    self.route-event:
+        (self === $ev.dispatcher ?? $ev !! $ev.clone(:dispatcher(self))),
+        |($priority ?? :$priority !! ())
 }
-
 multi method dispatch(::?ROLE:D: Vikna::Event:U \EvType, EventPriority $priority?, *%params) {
+    $.trace: "Dispatching event type ", EvType.^name;
     my %defaults = :origin(self), :dispatcher(self);
     %defaults.append: :$priority if $priority.defined;
     my $ev = $.create: EvType, |%defaults, |%params;
@@ -173,36 +186,24 @@ multi method dispatch(::?ROLE:D: Vikna::Event:U \EvType, EventPriority $priority
     $.dispatch: $ev;
 }
 
-# Preserve event's dispatcher. send-event sugar, for readability.
-method re-dispatch(::?ROLE:D: Vikna::Event:D $ev) {
-    $.send-event: $ev
+# Preserve event's dispatcher. route-event sugar, for readability.
+method re-dispatch(::?ROLE:D: Event:D $ev, |c) {
+    $.route-event: $ev, |c
 }
 
-proto method send-command(|) {
-    {*}
-}
-multi method send-command(Event::Command:U \evType, |args) {
-    CATCH {
-        when X::Event::Stopped {
-            .ev.completed.break($_);
-            return .ev
-        }
-        default {
-            .rethrow;
-        }
-    }
-    self.dispatch: evType, :args(args);
-}
-
+# This method must be used ONLY when we know for sure that event isn't going to be passed to event() method.
 proto method drop-event(::?CLASS:D: Event:D)  {*}
 multi method drop-event(Event::Command:D $ev) {
     $.trace: "DROPPING ", $ev;
-    $ev.complete(X::Event::Dropped.new( :obj(self), :$ev ) but False);
+    $ev.complete(X::Event::Dropped.new( :obj(self), :$ev ) but False)
+        if $ev.completed.status ~~ Planned;
 }
 multi method drop-event(Event:D)              { }
 
-proto method event(::?ROLE:D: Event:D $ev) {*}
-multi method event(::?ROLE:D: Event:D $ev) { #`<Sink method> }
+proto method event(::?ROLE:D: Event:D $) {*}
+# Sink event. Don't drop it because it might have been handled previously and happend to end up here as a result of
+# next/callsame.
+multi method event(::?ROLE:D: Event $) { }
 
 proto method event-filter(::?ROLE:D: Event:D) {*}
 multi method event-filter(::?ROLE:D: Event:D $ev) { [$ev] }
@@ -212,17 +213,25 @@ multi method add-event-source(Vikna::EventEmitter:U \evs-type, |c) {
 }
 
 multi method add-event-source(Vikna::EventEmitter:D $evs) {
+    $.trace: "add-event-source for ", $evs.name;
     push @!event-source, $evs;
     $evs.init;
     my $evs-tap;
     $evs.Supply.tap:
         -> Event:D $ev {
-            $.trace: "EVENT FROM SOURCE: ", $evs.WHICH, ":\n    ", $ev;
+            $.trace: "EVENT FROM SOURCE: ", $evs.name, ", ev object: ", $ev.WHICH, ":\n    ", $ev;
             self.dispatch: $ev unless $!event-shutdown;
         },
         tap => -> $tap { $evs-tap = $tap },
         done => { $evs-tap.close },
         quit => { $evs-tap.close };
+}
+
+# Pause event processing to allow 3rd party safely operate with the widget.
+method queue-protect(&code) {
+    $!ev-lock.protect: {
+        &code()
+    }
 }
 
 submethod DESTROY {

@@ -7,6 +7,7 @@ use Terminal::Print;
 use Vikna::Widget;
 use Vikna::Desktop;
 use Vikna::Screen;
+use Vikna::Events;
 use Vikna::OS;
 use Vikna::Tracer;
 use AttrX::Mooish;
@@ -16,7 +17,7 @@ my ::?CLASS $app;
 #| Named parameters to be passed to a screen driver constructor
 has %.screen-params;
 has Vikna::Screen $.screen is mooish(:lazy);
-has Vikna::Desktop $.desktop is mooish(:lazy, :clearer, :predicate);
+has Vikna::Desktop $.desktop;
 has Vikna::Tracer $.tracer is mooish(:lazy);
 has Bool:D $.debugging = False;
 has Vikna::OS $.os is mooish(:lazy) handles <inputs>;
@@ -51,17 +52,6 @@ method build-tracer {
     Vikna::Tracer.new: :$db-name, :session-name( self.^name ), :!to-err;
 }
 
-method build-desktop {
-    self.create: Vikna::Desktop,
-                    :name<Desktop>,
-                    :geom($.screen.geom.clone),
-                    :bg-pattern<.>,
-                    :!auto-clear,
-                    # :bg<black>,
-                    # :inv-mark-color<00,00,50>,
-                    ;
-}
-
 method trace(*@args, :$obj = self, *%c) {
     return unless $!debugging;
     my $message = @args.join;
@@ -79,7 +69,16 @@ multi method run(::?CLASS:D: |c) {
     $.flow: :sync, :name('MAIN'), {
         PROCESS::<$VIKNA-APP> = self;
         $.trace: "Starting app" ~ self.^name, obj => self, :phase;
-
+        $!desktop = self.create: Vikna::Desktop,
+                                    :name<Desktop>,
+                                    :geom($.screen.geom.clone),
+                                    :pattern<.>,
+                                    :!auto-clear,
+                                    # :bg<black>,
+                                    # :inv-mark-color<00,00,50>,
+                                    ;
+        $!desktop.dispatch: Event::Init;
+        $!desktop.dispatch: Event::Focus::In;
         $!desktop.invalidate;
         $!desktop.redraw;
         $!desktop.sync-events: :transitive;
@@ -126,4 +125,10 @@ method panic($cause, :$object?) {
         $!tracer.shutdown;
         exit 1;
     }
+}
+
+### Utility methods ###
+
+method profile-config(\type, $name?) {
+    %()
 }

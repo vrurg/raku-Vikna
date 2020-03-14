@@ -62,11 +62,15 @@ method color2esc(BasicColor $color) {
 proto method screen-print(::?CLASS:D: Int:D, Int:D, |) {*}
 
 multi method screen-print(Int:D $x, Int:D $y, Vikna::Canvas:D $viewport, *%c ) {
-    $*OUT.print: $.ANSI-str( $x, $y, $viewport, :str, |%c )
+    $*OUT.print: $.ANSI-str( $x, $y, $viewport, |%c )
 }
 
 multi method screen-print(Int:D $x, Int:D $y, Str:D $string, Vikna::Color:D :$fg?, Vikna::Color:D :$bg?) {
     $*OUT.print: &!cursor-sub($x, $y) ~ $.color2esc(self.ansi-color: :$fg, :$bg) ~ $string ~ RESET-COLOR
+}
+
+multi method screen-print(Int:D $x, Int:D $y, Vikna::Canvas:D $viewport, :$str! where *.so, *%c) {
+    $.ANSI-str($x, $y, $viewport, |%c)
 }
 
 multi method ANSI-str( ::?CLASS:D: Int:D $x, Int:D $y, Vikna::Canvas:D $viewport, :$default-fg?, :$default-bg?)

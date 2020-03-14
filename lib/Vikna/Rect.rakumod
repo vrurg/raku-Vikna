@@ -1,13 +1,13 @@
 use v6.e.PREVIEW;
+use Vikna::Coord;
 # Immutable class
 unit class Vikna::Rect;
+also does Vikna::Coord;
 
 use nqp;
 use Vikna::Point;
 use Vikna::Utils;
 
-has Int:D $.x = 0;
-has Int:D $.y = 0;
 has UInt:D $.w is required;
 has UInt:D $.h is required;
 has Int $.right;
@@ -78,8 +78,9 @@ multi method clip(::?CLASS:D: ::?CLASS:D $into) {
     }
 }
 
-multi method dissect(::?CLASS:D: Int:D $x, Int:D $y, UInt:D $w, UInt:D $h) { $.dissect( ::?CLASS.new: :$x, :$y, :$w, :$h ) }
-multi method dissect(::?CLASS:D: ::?CLASS:D $by) {
+proto method dissect(::?CLASS:D: |) {*}
+multi method dissect(Int:D $x, Int:D $y, UInt:D $w, UInt:D $h) { $.dissect( ::?CLASS.new: :$x, :$y, :$w, :$h ) }
+multi method dissect(::?CLASS:D $by) {
     return (self,) unless $.overlap($by);
     my ($rxl, $ryt, $rxr, $ryb) = ($!x, $!y, $!right, $!bottom);
     my ($bxl, $byt, $bxr, $byb) = ($by.x, $by.y, $by.right, $by.bottom);
@@ -114,7 +115,7 @@ multi method dissect(::?CLASS:D: ::?CLASS:D $by) {
     nqp::hllize($dissects)
 }
 
-multi method dissect(::?CLASS:D: @by) {
+multi method dissect(@by) {
     my $dissects := nqp::list(self<>);
     for @by -> $by {
         nqp::stmts(
@@ -133,7 +134,8 @@ multi method dissect(::?CLASS:D: @by) {
     nqp::hllize($dissects);
 }
 
-method contains(::?CLASS:D: Int:D $px, Int:D $py) {
+proto method contains(::?CLASS:D: |) {*}
+multi method contains(Int:D $px, Int:D $py) {
     nqp::if(
         nqp::isge_i($px, $!x),
         nqp::if(
@@ -145,53 +147,80 @@ method contains(::?CLASS:D: Int:D $px, Int:D $py) {
         )
     )
 }
-
-multi method contains-rect(::?CLASS:D: Vikna::Rect:D $r) { $.contains: $r.x, $r.y, $r.w, $r.h }
-multi method contains-rect(::?CLASS:D: Int:D $x, Int:D $y, Int:D $w, Int:D $h) {
-    nqp::if( self.contains($x, $y), self.contains($x + $w - 1, $y + $h - 1) )
+multi method contains(Vikna::Coord:D $point) {
+    self.contains: .x, .y with $point
+}
+multi method contains(Int:D $x, Int:D $y, Int:D $w, Int:D $h) {
+    $.contains($x, $y) and $.contains($x + $w - 1, $y + $h - 1)
+}
+multi method contains(Vikna::Rect:D $rect) {
+    $.contains(.x, .y) and $.contains(.right, .bottom) given $rect
 }
 
 #| Assuming that the argument is defined in the same coordinate system as ours returns a new rectangle which coordinates
 #are relative to the argument. If :clip is defined then the resulting rectange would also be clipped to fit the
 #argument.
-multi method relative-to(::?CLASS:D: ::?CLASS:D $rect, Bool :$clip? --> Vikna::Rect:D) {
+proto method relative-to(::?CLASS:D: |) {*}
+multi method relative-to(::?CLASS:D $rect, Bool :$clip? --> Vikna::Rect:D) {
     self.relative-to: $rect.x, $rect.y, $rect.w, $rect.h, :$clip
 }
-multi method relative-to(::?CLASS:D: Int:D $x, Int:D $y, UInt:D $w, UInt:D $h, Bool :$clip = False) {
+
+multi method relative-to(Int:D $x, Int:D $y, UInt:D $w, UInt:D $h, Bool :$clip = False) {
     if $clip {
-        clip-coords([$!x, $!y, $!right, $!bottom], [$x, $y, $x + $w - 1, $y + $h - 1]);
+        # clip-coords([$!x, $!y, $!right, $!bottom], [$x, $y, $x + $w - 1, $y + $h - 1]);
         self.new: |clip-coords(
                     [$!x - $x, $!y - $y, $!right - $x, $!bottom - $y],
-                    [0, 0, $w - 1, $h - 1]);
+                    [0, 0, $w - 1, $h - 1])
     }
     else {
         self.new: $!x - $x, $!y - $y, $!w, $!h
     }
 }
-
-multi method absolute(::?CLASS:D: ::?CLASS:D $rect --> Vikna::Rect:D) {
-    self.absolute: $rect.x, $rect.y
+multi method relative-to(Int:D $x, Int:D $y) {
+    self.new: $!x - $x, $!y - $y, $!w, $!h
 }
-multi method absolute(::?CLASS:D: Int:D $x, Int:D $y) {
+multi method relative-to(Vikna::Point:D $point) {
+    self.new: $!x - .x, $!y - .y, $!w, $!h with $point
+}
+
+proto method absolute(::?CLASS:D: |) {*}
+multi method absolute(::?CLASS:D $rect, Bool:D :$clip = False --> Vikna::Rect:D) {
+    if $clip {
+        my ($rx, $ry, $rr, $rb) = $rect.x, $rect.y, $rect.right, $rect.bottom;
+        self.new: |clip-coords(
+            [$!x + $rx, $!y + $ry, $!right + $rx, $!bottom + $ry],
+            [$rx, $ry, $rr, $rb])
+    }
+    else {
+        self.absolute: $rect.x, $rect.y
+    }
+}
+multi method absolute(Int:D $x, Int:D $y --> Vikna::Rect:D) {
     self.new: $!x + $x, $!y + $y, $!w, $!h
 }
 
-multi method move(::?CLASS:D: Vikna::Point:D $point) {
+proto method move(::?CLASS:D: |) {*}
+multi method move(Vikna::Point:D $point) {
     self.new: :x(.x), :y(.y), :$!w, :$!h with $point
 }
-multi method move(::?CLASS:D: Int:D $x, Int:D $y) {
+multi method move(Int:D $x, Int:D $y) {
     self.new: :$x, :$y, :$!w, :$!h
 }
 
-multi method move-by(::?CLASS:D: Vikna::Point:D $dp) {
+proto method move-by(::?CLASS:D: |) {*}
+multi method move-by(Vikna::Point:D $dp) {
     self.new: :x($!x + .x), :y($!y + .y), :$!w, :$!h with $dp
 }
-multi method move-by(::?CLASS:D: Int:D $dx, Int:D $dy) {
+multi method move-by(Int:D $dx, Int:D $dy) {
     self.new: :x($!x += $dx), :y($!y += $dy), :$!w, :$!h
 }
 
 method Str {
     "\{x:$!x, y:$!y, w:$!w, h:$!h\}"
+}
+
+method gist {
+    self.Str
 }
 
 method CALL-ME(*@pos) { ::?CLASS.new: |@pos }

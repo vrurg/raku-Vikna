@@ -1,51 +1,113 @@
 use v6.e.PREVIEW;
 unit role Vikna::Parent[::ChldType];
 
-has $!children-lock = Lock.new;
-has @.children;
+use Vikna::Utils;
+use Vikna::X;
 
-method add-child(ChldType:D $child) {
-    $!children-lock.protect: {
-        if @!children.grep: * === $child {
-            Nil
-        }
-        else {
-            @!children.push: $child;
-            $child.set-parent(self);
-            $child
+my class RegisteredChild {
+    has $.child is required;
+    has ChildStrata:D $.stratum is required;
+}
+
+has $!strata-lock = Lock::Async.new;
+has Array:D @.strata;
+has %!registry;
+
+submethod TWEAK(|) {
+    @!strata[$_] = [] for StBack, StMain, StModal;
+}
+
+method is-my-child($child) {
+    %!registry{$child.id} // X::NoChild.new(:obj(self), :$child).throw
+}
+
+method elems(ChildStrata $stratum?) {
+    with $stratum {
+        @!strata[$stratum].elems
+    }
+    else {
+        [+] @!strata.map({.elems});
+    }
+}
+
+proto method children(ChildStrata $?, |) {*}
+multi method children(ChildStrata $stratum?, :$reverse?, :$lazy where {.not} --> Positional:D) {
+    my @st = $stratum // ChildStrata.enums.map({.value}).sort;
+    @st = @st.reverse if $reverse;
+    @st.map({
+        slip ($reverse ?? @!strata[$_].reverse !! @!strata[$_])
+    }).list
+}
+
+multi method children(ChildStrata $stratum?, :$reverse?, :$lazy! where {.so}) {
+    my @st = $stratum // ChildStrata.enums.map({.value}).sort;
+    @st = @st.reverse if $reverse;
+    lazy gather {
+        for @st -> $sti {
+            ($reverse ?? @!strata[$sti].reverse !! @!strata[$sti]).map: { take $_ };
         }
     }
+}
+
+method add-child(ChldType:D $child, ChildStrata:D :$stratum = StMain) {
+    return Nil if %!registry{$child.id};
+    @!strata[$stratum].push: $child;
+    %!registry{$child.id} = RegisteredChild.new: :$child, :$stratum;
+    $child.set-parent(self);
+    $child
 }
 
 method remove-child(ChldType:D $child) {
-    $!children-lock.protect: {
-        @!children .= grep: * !=== $child;
-        $child.set-parent(Nil);
-        $child
-    }
+    (my $regc = %!registry{$child.id}:delete) // X::NoChild.new(:obj(self), :$child).throw;
+    .STORE: .grep( * !=== $child ) given @!strata[$regc.stratum];
+    $child.set-parent(Nil);
+    $child
 }
 
 method to-top(ChldType:D $child --> Nil) {
-    $!children-lock.protect: {
-        @!children = flat @!children.grep( * !=== $child ), $child;
-    }
+    (my $regc = %!registry{$child.id}) // X::NoChild.new(:obj(self), :$child).throw;
+    @!strata[$_] = (flat @!strata[$_].grep( * !=== $child ), $child).Array given $regc.stratum;
 }
 
 method to-bottom(ChldType:D $child --> Nil) {
-    $!children-lock.protect: {
-        @!children = flat $child, @!children.grep:  * !=== $child;
+    (my $regc = %!registry{$child.id}) // X::NoChild.new(:obj(self), :$child).throw;
+    @!strata[$_] = (flat $child, @!strata[$_].grep:  * !=== $child).Array with $regc.stratum;
+}
+
+method is-topmost(ChldType:D $child, :$on-strata? --> Bool:D) {
+    return @!strata.map( { .Slip } ).tail === $child if $on-strata;
+
+    (my $regc = %!registry{$child.id}) // X::NoChild.new(:obj(self), :$child).throw;
+    @!strata[$regc.stratum].tail === $child
+}
+
+method is-bottommost(ChldType:D $child, :$on-strata? --> Bool:D) {
+    return @!strata.map( { .Slip } ).head === $child if $on-strata;
+
+    (my $regc = %!registry{$child.id}) // X::NoChild.new(:obj(self), :$child).throw;
+    @!strata[$regc.stratum].head === $child
+}
+
+method child-stratum(ChldType:D $child --> ChildStrata) {
+    with %!registry{$child.id} {
+        .stratum
+    }
+    else {
+        Nil
     }
 }
 
-method for-children(&code, :&pre?, :&post? --> Nil) {
-    $!children-lock.lock;
-    LEAVE $!children-lock.unlock;
+method for-children(&code, :&pre?, :&post?, :$reverse?, ChildStrata :$stratum? --> Nil) {
+    await $!strata-lock.lock;
+    LEAVE $!strata-lock.unlock;
 
     .() with &pre;
-    &code($_) for @!children;
+    for self.children($stratum, :$reverse, :lazy) {
+        &code($_)
+    }
     .() with &post;
 }
 
 method children-protect(&code) {
-    $!children-lock.protect: &code
+    $!strata-lock.protect: &code
 }

@@ -23,16 +23,6 @@ method !maybe-got-data {
 }
 
 method send(Mu \packet, UInt:D() $prio = 0) {
-    X::PChannel::SendOnClosed.new.throw if $.closed;
-    # $*ERR.print: "(->$prio?{+@!channels})";
-    $!chan-lock.protect: {
-        # $*ERR.print: "(extend)";
-        while +@!channels < ($prio + 1) {
-            @!channels.push: Concurrent::Queue.new;
-        }
-    }
-    @!channels[$prio].enqueue: packet;
-    self!maybe-got-data;
     CATCH {
         when X::Lock::Async::NotLocked {
             .resume
@@ -41,6 +31,14 @@ method send(Mu \packet, UInt:D() $prio = 0) {
             .rethrow
         }
     }
+    X::PChannel::SendOnClosed.new.throw if $.closed;
+    $!chan-lock.protect: {
+        while +@!channels < ($prio + 1) {
+            @!channels.push: Concurrent::Queue.new;
+        }
+    }
+    @!channels[$prio].enqueue: packet;
+    self!maybe-got-data;
 }
 
 method close {
@@ -72,7 +70,6 @@ method fail($cause) {
 method poll(--> Mu) is raw {
     my $packet;
     my $found;
-    # $*ERR.print: "(chans:{+@!channels})";
     for @!channels.eager.reverse -> $queue {
         unless ($packet = $queue.dequeue) ~~ Failure {
             $found = True;

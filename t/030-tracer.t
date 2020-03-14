@@ -3,7 +3,6 @@ use Test;
 use Vikna::Tracer;
 use Vikna::Tracer::Session;
 use Vikna::Tracer::Record;
-use Red:api<2>;
 
 my $test-db = "Test.sqlite";
 if $test-db.IO.e {

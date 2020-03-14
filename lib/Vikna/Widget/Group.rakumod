@@ -5,30 +5,12 @@ also is Vikna::Widget;
 
 use Vikna::Widget::GroupMember;
 use Vikna::Events;
-
-# proto method event(::?CLASS:D: Event:D $ev) {
-#     {*}
-#     unless $ev ~~ Event::Command {
-#         self.event-for-children: $ev
-#     }
-# }
-#
-# # Re-dispatch commands to their originators.
-# multi method event(::?CLASS:D: Event::Command:D $ev) {
-#     # note self.name, " RE-DISPATCH COMMAND {$ev.^shortname} TO origin=", $ev.origin.name, ", dispatcher:", $ev.dispatcher.name;
-#     if $ev.origin === self {
-#         self.Vikna::Widget::event($ev)
-#     } else {
-#         $ev.origin.event($ev);
-#     }
-# }
-#
-# multi method event(|c) { self.Vikna::Widget::event(|c) }
+use Vikna::Utils;
 
 ### Command handlers ###
 
-method cmd-addmember(::?CLASS:D: Vikna::Widget::GroupMember:D $member) {
-    self.Vikna::Widget::cmd-addchild($member, :subscribe)
+method cmd-addmember(::?CLASS:D: Vikna::Widget::GroupMember:D $member, ChildStrata:D $stratum) {
+    self.Vikna::Widget::cmd-addchild($member, $stratum, :subscribe)
 }
 
 method cmd-removemember(::?CLASS:D: Vikna::Widget::GroupMember:D $member) {
@@ -36,6 +18,7 @@ method cmd-removemember(::?CLASS:D: Vikna::Widget::GroupMember:D $member) {
 }
 
 method cmd-redraw {
+    $.trace: "Redraw group members";
     $.for-children: {
         .cmd-redraw;
     }
@@ -44,8 +27,8 @@ method cmd-redraw {
 
 ### Command senders ###
 
-method add-member(::?CLASS:D: Vikna::Widget::GroupMember:D $member) {
-    $.send-command: Event::Cmd::AddMember, $member
+method add-member(::?CLASS:D: Vikna::Widget::GroupMember:D $member, ChildStrata $stratum = StMain) {
+    $.send-command: Event::Cmd::AddMember, $member, $stratum
 }
 
 method remove-member(::?CLASS:D: Vikna::Widget::GroupMember:D $member) {

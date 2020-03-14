@@ -1,19 +1,34 @@
 use v6.e.PREVIEW;
-use Vikna::Widget;
-unit class Vikna::Desktop is Vikna::Widget is export;
 
+unit class Vikna::Desktop;
+
+use Vikna::Widget;
+use Vikna::PointerTarget;
+use Vikna::Focusable;
 use Vikna::Events;
 use Vikna::EventEmitter;
 use Vikna::Rect;
 use Vikna::Utils;
 use Vikna::Dev::Kbd;
 
+also does Vikna::PointerTarget;
+also does Vikna::Focusable;
+also is Vikna::Widget;
+
 has Bool:D $!print-needed = False;
 has Vikna::Canvas $!pcanvas;
 
+submethod profile-default {
+    attr => {
+        :bg<default>,
+        :fg<default>,
+        :pattern<.>,
+    },
+}
+
 ### Event handlers ###
 my @bg-chars = <+ * .>;
-multi method event(Event::Screen::Geom:D $ev) {
+multi method event(::?CLASS:D: Event::Screen::Geom:D $ev) {
     my $chr = @bg-chars.shift;
     $.cmd-setbgpattern: $chr;
     @bg-chars.push: $chr;
@@ -21,7 +36,7 @@ multi method event(Event::Screen::Geom:D $ev) {
     $.cmd-redraw;
 }
 
-multi method event(Event::Screen::Ready:D $ev) {
+multi method event(::?CLASS:D: Event::Screen::Ready:D $ev) {
     $.flatten-unblock;
     if $!print-needed {
         $.trace: "SCREEN READY, trying printing again";
@@ -31,11 +46,12 @@ multi method event(Event::Screen::Ready:D $ev) {
 }
 
 has $.presses = 0;
-multi method event(Event::Kbd::Control:D $ev) {
+multi method dispatch(::?CLASS:D: Event::Kbd::Control:D $ev, |c) {
     if K_Control ∈ $ev.modifiers && $ev.key eq 'C' {
-        $.dispatch: Event::Quit;
-        # Quick reaction expected, thus bypass the normal event handling.
-        $.cmd-quit;
+        $.quit;
+        # $.dispatch: Event::Quit;
+        # # Quick reaction expected, thus bypass the normal event handling.
+        # $.cmd-quit;
         if ++$!presses > 1 {
             $.app.panic( X::AdHoc.new: :payload("oops..."), :object(self) );
             exit 1;
@@ -44,11 +60,6 @@ multi method event(Event::Kbd::Control:D $ev) {
 }
 
 ### Command handlers ###
-# method cmd-childcanvas($child, Vikna::Rect:D $canvas-geom, Vikna::Canvas:D $canvas, @invalidations) {
-#     callsame;
-#     $.canvas.imprint(0,0,$canvas);
-#     0
-# }
 
 method cmd-quit {
     $.cmd-close;
@@ -85,7 +96,9 @@ method flatten-canvas {
 }
 
 method start-event-handling {
+    $.trace: "Let the event queue start";
     callsame;
+    $.trace: "Adding event sources";
     $.add-event-source: $_ for $.app.inputs;
 }
 
