@@ -12,15 +12,16 @@ has Bool:D $.in-focus = False;
 
 has Vikna::CAttr $.focused-attr;
 
-submethod profile-default {
-    focused-attr => {
-            # fg => 'black',
-            # bg => 'cyan',
-            # pattern => ' '
-    }
-}
+# submethod profile-default {
+#     focused-attr => {
+#             # fg => 'black',
+#             # bg => 'cyan',
+#             # pattern => ' '
+#     }
+# }
 
 submethod profile-checkin(%profile, %, %, %) {
+    return unless any %profile<focused-attr focused-fg focused-bg focused-pattern>;
     unless %profile<focused-attr> ~~ Vikna::CAttr {
         my %fa = $_ with %profile<focused-attr>;
         %fa{$_} //= %profile{$_} if $_ for <focused-fg focused-bg focused-pattern>;
@@ -113,23 +114,21 @@ method update-focus(::?ROLE:D:) {
 ### Utility methods ###
 
 method attr {
-    $.trace: "focusable attr";
-    return $!focused-attr if $!in-focus;
-    $.trace: "focusable attr: fallback to default";
+    return $!focused-attr if $!focused-attr && $!in-focus;
     nextsame
 }
 
 method fg {
-    return $!focused-attr.fg if $!in-focus;
+    return $!focused-attr.fg if $!focused-attr && $!in-focus;
     nextsame
 }
 
 method bg {
-    return $!focused-attr.bg if $!in-focus;
+    return $!focused-attr.bg if $!focused-attr && $!in-focus;
     nextsame
 }
 
 method bg-pattern {
-    return $!focused-attr.pattern if $!in-focus;
+    return $!focused-attr.pattern if $!focused-attr && $!in-focus;
     nextsame
 }
