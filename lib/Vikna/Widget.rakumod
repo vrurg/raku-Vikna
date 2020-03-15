@@ -694,11 +694,13 @@ method draw(:$canvas) {
 
 method draw-background(:$canvas) {
     if $.attr.pattern {
-        $.trace: "DRAWING BACKGROUND";
+        $.trace: "DRAWING BACKGROUND, pattern: ‘{$.attr.pattern}’";
         my $bgpat = $.attr.pattern;
         my $back-row = ( $bgpat x ($.w.Num / $bgpat.chars).ceiling );
+        my $fg = $.attr.fg;
+        my $bg = $.attr.bg;
         for ^$.h -> $row {
-            $canvas.imprint(0, $row, $back-row, fg => $.attr.fg, bg => $.attr.bg)
+            $canvas.imprint(0, $row, $back-row, :$fg, :$bg);
         }
     }
 }
