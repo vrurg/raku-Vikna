@@ -59,7 +59,7 @@ submethod profile-default {
         :fg<default>, :bg<default>, :pattern(' ')
     },
     focused-attr => {
-        :fg<default>, :bg<cyan>, :pattern(' ')
+        :fg<black>, :bg<cyan>, :pattern(' ')
     }
 }
 
