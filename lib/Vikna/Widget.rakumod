@@ -369,12 +369,12 @@ method cmd-setgeom(Vikna::Rect:D $geom, :$no-draw?) {
 }
 
 method cmd-setcolor(BasicColor :$fg, BasicColor :$bg) {
-    return if (!$fg || ($.attr.fg eqv $fg)) && (!$bg || ($.attr.bg eqv $bg));
+    return if (!$fg || ($!attr.fg eqv $fg)) && (!$bg || ($!attr.bg eqv $bg));
     my ($old-fg, $old-bg);
-    $old-fg = $.attr.fg;
-    $old-bg = $.attr.bg;
-    $.attr.fg = $fg;
-    $.attr.bg = $bg;
+    $old-fg = $!attr.fg;
+    $old-bg = $!attr.bg;
+    $!attr.fg = $fg;
+    $!attr.bg = $bg;
     self.dispatch: Event::WidgetColor, :$old-fg, :$old-bg, :$fg, :$bg
         if ($old-fg && ($old-fg ne $fg)) || ($old-bg && ($old-bg ne $bg));
 }
