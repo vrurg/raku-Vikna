@@ -21,19 +21,25 @@ multi method new(*%c) {
         %config = .profile-config(self.^name, %c<name>)
     }
     my %default;
-    self.WALK(:name<profile-default>, :!methods, :roles).reverse.().map({ merge-hash %default, %$_, :no-append-array });
-    .trace: "Default profile for ", self.^name, "::new\n", %default.map({ .key ~ " => " ~ (.value ~~ Vikna::Object ?? .value.WHICH !! .value.raku) }).join("\n")
-        with %c<app>;
+    self.WALK(:name<profile-default>, :!methods, :roles).reverse.()
+        .map({ merge-hash %default, %$_, :no-append-array });
+    # .trace: "Default profile for ", self.^name, "::new\n", %default.map({ .key ~ " => " ~ (.value ~~ Vikna::Object ?? .value.WHICH !! .value.raku) }).join("\n")
+    #     with %c<app>;
     my %profile;
     self.WALK(:name<profile-checkin>, :!methods, :roles).reverse.(%profile, %c, %default, %config);
-    .trace: "Profile for ", self.^name, "::new\n", %profile.map({ .key ~ " => " ~ (.value ~~ Vikna::Object ?? .value.WHICH !! .value.raku) }).join("\n")
-        with %c<app>;
+    # .trace: "Profile for ", self.^name, "::new\n", %profile.map({ .key ~ " => " ~ (.value ~~ Vikna::Object ?? .value.WHICH !! .value.raku) }).join("\n")
+    #     with %c<app>;
     nextwith |%profile;
 }
 
 submethod profile-default { %() }
 
 submethod profile-checkin(%profile, %constructor, %default, %config) {
+    # .trace: "Profile checking for ", self.^name, "\n- constructor:\n",
+    #     %constructor.map({ "  . " ~ .key ~ " => " ~ (.value ~~ Vikna::Object ?? .value.WHICH !! .value.raku) ~ "\n" }),
+    #     "- default:\n",
+    #     %default.map({ "  . " ~ .key ~ " => " ~ (.value ~~ Vikna::Object ?? .value.WHICH !! .value.raku) ~ "\n" })
+    #     with %constructor<app>;
     merge-hash(%profile, %default,     :no-append-array);
     merge-hash(%profile, %config,      :no-append-array);
     merge-hash(%profile, %constructor, :no-append-array);
