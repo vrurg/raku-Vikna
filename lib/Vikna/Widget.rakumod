@@ -89,9 +89,11 @@ submethod TWEAK {
     self.update-positions;
 }
 
-submethod profile-checkin(%profile, %, %, %) {
+submethod profile-checkin(%profile, %constructor, %, %) {
     unless %profile<attr> ~~ Vikna::CAttr {
-        %profile<attr>{$_} //= %profile{$_} for <fg bg pattern>;
+        # Constructor-defined keys override those from other sources.
+        %profile<attr>{$_} = %constructor<attr>{$_} // %constructor{$_} // %profile<attr>{$_} // %profile{$_}
+            for <fg bg pattern>;
         %profile<attr> = cattr(|%profile<attr><fg bg pattern>)
     }
     %profile<fg bg pattern>:delete;
