@@ -4,14 +4,18 @@ unit class Vikna::Label;
 also is Vikna::Widget;
 
 use Vikna::Events;
+use AttrX::Mooish;
 
 has Str:D $.text is required;
-has Str:D $.l-pad = ' ';
-has Str:D $.r-pad = ' ';
+has Str $.l-pad is mooish(:lazy<default-pad>);
+has Str $.r-pad is mooish(:lazy<default-pad>);
 
-method new(|c) {
-    nextwith :bg-pattern(' '), |c
+submethod profile-default {
+    pattern => " ",
+    :auto-clear
 }
+
+method default-pad { $.attr.pattern // ' ' }
 
 ### Command handlers ###
 method cmd-settext(Str:D $text) {
