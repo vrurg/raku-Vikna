@@ -7,14 +7,15 @@ use Vikna::Events;
 
 has Supplier:D $!ev-supplier handles <Supply> .= new;
 
-multi method post-event(Event:U \evtype, |c) {
+proto method post-event(Event, |) {*}
+multi method post-event(Event:U \evType, *%p) {
     CATCH {
         default {
-            note "FAILED TO CREATE EVENT ", evtype.^name, "\n", c.perl;
+            note "FAILED TO CREATE EVENT ", evType.^name, "\n", %p.raku;
             .rethrow;
         }
     }
-    $.post-event: evtype.new( :origin(self), :dispatcher(self), |c );
+    $.post-event: evType.new( :origin(self), :dispatcher(self), |%p );
 }
 multi method post-event(Event:D $ev) {
     $!ev-supplier.emit: $ev;

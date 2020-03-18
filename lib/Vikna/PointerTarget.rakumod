@@ -26,15 +26,16 @@ multi method route-event(::?ROLE:D: Event::Pointer:D $ev, *%) {
     unless $new-owner {
         $.trace: "Handle the event myself", :event;
         .?pointer-leave($ev) with $old-owner;
+        $.pointer-owner: $ev, :delete;
         nextsame
     }
 
     # A child claims the event. See if it's not an owner already.
+    $.trace: "Changing owner? from ", ($old-owner // '*nobody*'), " to ", $new-owner, " for ", $ev, :event;
     unless $old-owner eqv $new-owner {
-        # $.trace: "Owner changing from ", ($old-owner // '*nobody*'), " to ", $new-owner, " for ", $ev, :event;
+        $old-owner.?pointer-leave: $ev if $old-owner;
         $.pointer-owner: $ev, $new-owner;
         $new-owner.?pointer-enter: $ev;
-        $old-owner.?pointer-leave: $ev if $old-owner;
         $.dispatch: Event::Pointer::OwnerChange, :$old-owner, :$new-owner, at => $ev.at;
     }
     $.trace: "Dispatching via the new owner ", $new-owner, :event;
@@ -51,7 +52,9 @@ multi method pointer-enter(Event::Mouse:D $ev) {
     $.send-event: Event::Mouse::Enter.new(
                     origin => self,
                     dispatcher => self,
-                    at => $ev.at
+                    at => $ev.at,
+                    buttons => $ev.buttons,
+                    modifiers => $ev.modifiers,
                 );
 }
 
@@ -99,7 +102,11 @@ multi method is-pointer-owner(Str:D $kind, $candidate) {
 method cmd-clearpointerowner(Event:D $ev) {
     my $po = self;
     while $po {
-        $po.dispatch: Event::Mouse::Leave, at => $ev.at;
+        $po.dispatch: Event::Mouse::Leave,
+                        at => $ev.at,
+                        buttons => $ev.buttons,
+                        modifiers => $ev.modifiers,
+                        ;
         $po = $po.pointer-owner: $ev, :delete;
     }
 }

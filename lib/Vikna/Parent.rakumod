@@ -64,6 +64,33 @@ method remove-child(ChldType:D $child) {
     $child
 }
 
+method next-to(ChldType:D $child, :$reverse?, :$on-strata?, :$loop?) {
+    $.is-my-child: $child;
+    my @children;
+    if $on-strata {
+        @children = self.children: :$reverse
+    }
+    else {
+        @children = self.children: %!registry{$child.id}.stratum, :$reverse
+    }
+
+    # When looping it's enough to have the one copy of the first child after the actually last one.
+    if $loop {
+        .push: .head with @children;
+    }
+
+    my $found-child = False;
+    for @children -> $sib {
+        if $found-child {
+            return $sib
+        }
+        else {
+            $found-child = $child === $sib;
+        }
+    }
+    die "INTERNAL: Child " ~ $child.name ~ " is registered on parent " ~ $.name ~ " but not in the list of children!"
+}
+
 method to-top(ChldType:D $child --> Nil) {
     (my $regc = %!registry{$child.id}) // X::NoChild.new(:obj(self), :$child).throw;
     @!strata[$_] = (flat @!strata[$_].grep( * !=== $child ), $child).Array given $regc.stratum;

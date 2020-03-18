@@ -9,12 +9,12 @@ use Vikna::Utils;
 
 ### Command handlers ###
 
-method cmd-addmember(::?CLASS:D: Vikna::Widget::GroupMember:D $member, ChildStrata:D $stratum) {
-    self.Vikna::Widget::cmd-addchild($member, $stratum, :subscribe)
+method cmd-addmember(::?CLASS:D: Vikna::Widget::GroupMember:D $member, ChildStrata:D $stratum, *%c) {
+    self.Vikna::Widget::cmd-addchild($member, $stratum, :subscribe, |%c)
 }
 
-method cmd-removemember(::?CLASS:D: Vikna::Widget::GroupMember:D $member) {
-    self.Vikna::Widget::cmd-removechild($member, :!unsubscribe)
+method cmd-removemember(::?CLASS:D: Vikna::Widget::GroupMember:D $member, *%c) {
+    self.Vikna::Widget::cmd-removechild($member, :!unsubscribe, |%c)
 }
 
 method cmd-redraw {
@@ -45,10 +45,9 @@ method event-for-children(Event:D $ev) {
     }
 }
 
-method create-member(::?CLASS:D: Vikna::Widget::GroupMember:U \wtype, |c) {
+method create-member(::?CLASS:D: Vikna::Widget::GroupMember:U \wtype, ChildStrata:D $stratum = StMain, *%c) {
     $.trace: "CREATING A GROUP MEMBER OF ", wtype.^name;
-    # my $member = $.create: wtype, :parent(self), :group(self), |c;
-    my $member = $.create: wtype, :group(self), |c;
-    $.add-member: $member;
+    my $member = $.create: wtype, :group(self), |%c;
+    $.add-member: $member, $stratum;
     $member
 }

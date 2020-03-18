@@ -8,7 +8,7 @@ use Vikna::Events;
 also is Vikna::Widget::GroupMember;
 
 my %borders =
-        ansi => %(
+        ascii => %(
             passive => %(
                 :ul<+>, :t<->, :ur<+>,
                  :l<|>,         :r<|>,
@@ -25,7 +25,7 @@ my %borders =
             ),
         ),
         ;
-has $.type = 'ansi';
+has $.type = 'ascii';
 
 ### Event handlers
 
@@ -69,6 +69,7 @@ method draw( :$canvas ) {
     my $top;
     if $.parent.?title && $.w > 6 {
         my $title = " " ~ $.parent.title.substr(0, $.w - 6) ~ " ";
+        $.trace: "Using title ‘$title’";
         my $tlen = $.w - 2 - $title.chars;
         my $l-len = $tlen div 2;
         my $r-len = $tlen - $l-len;

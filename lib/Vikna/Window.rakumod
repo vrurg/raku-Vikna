@@ -37,10 +37,11 @@ submethod TWEAK(Bool:D :$border = True) {
     if $border {
         self.trace: "ADDING BORDER";
         $!border = self.create-member:
-                        Vikna::Border,
+                        Vikna::Border, StBack,
                         :name(self.name ~ ":Border"),
                         :w( self.w ), :h( self.h ), :x(0), :y(0),
-                        :auto-clear;
+                        # :!auto-clear,
+                        ;
     }
     self.trace: "ADDING CLIENT";
     $!client = self.create-member:
@@ -49,7 +50,7 @@ submethod TWEAK(Bool:D :$border = True) {
                     geom => self.client-rect(self.geom),
                     :attr(self.attr),
                     :focused-attr(self.focused-attr),
-                    # :inv-mark-color<00,50,00>,
+                    # :inv-mark-color<00,30,00>,
                     :auto-clear( self.auto-clear );
     # self.inv-mark-color = '0,50,0';
 }
@@ -59,7 +60,7 @@ submethod profile-default {
         :fg<default>, :bg<default>, :pattern(' ')
     },
     focused-attr => {
-        :fg<black>, :bg<cyan>, :pattern(' ')
+        :fg<white>, :bg<blue>, :pattern(' ')
     }
 }
 
@@ -71,7 +72,7 @@ method cmd-settitle(Str:D $title) {
     my $old-title = $!title;
     $!title = $title;
     with $!border {
-        .invalidate: 0, 0, $.w, 1;
+        .invalidate: 0, 0, .w, 1;
         .cmd-redraw;
     }
     self.dispatch: Event::Changed::Title, :$old-title, :$!title;
@@ -100,13 +101,20 @@ method cmd-redraw {
 }
 
 method cmd-window-completeredraw {
+    self.Vikna::Widget::Group::cmd-redraw;
     $.flatten-unblock;
-    self.Vikna::Widget::cmd-redraw
 }
 
 method cmd-setcolor(|c) {
     $!client.cmd-setcolor(|c);
     nextsame;
+}
+
+method cmd-addmember(::?CLASS:D: Vikna::Widget::GroupMember:D $member, |) {
+    callsame;
+    if $member === $!client {
+        $.cmd-focus-request($member)
+    }
 }
 
 ### Event handlers ###

@@ -205,7 +205,7 @@ class MovingApp is Vikna::App {
                                                 # :inv-mark-color<00,50,00>,
                                                 ;
         my $lbl = $mw.create-child: Vikna::Label,
-                                    :3x, :10y, :1h, :15w,
+                                    :3x, :10y, :1h, :30w,
                                     :name<info-lbl>, :text('Info Label'),
                                     :bg('0,80,150 underline');
         $.desktop.create-child: EventReporter, StBack, x => $.desktop.w - 50, y => $.desktop.h - 20, :50w, :20h,

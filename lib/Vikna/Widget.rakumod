@@ -47,6 +47,8 @@ has Bool:D $.hidden = False;
 # Is widget visible within its parent?
 has Bool:D $.invisible = False;
 has Vikna::Canvas $.canvas is mooish(:lazy, :clearer, :predicate);
+# Printed canvas for parent
+has Vikna::Canvas $!pcanvas;
 # Widget's geom at the moment when canvas has been drawn.
 has Vikna::Rect $!canvas-geom;
 
@@ -73,30 +75,37 @@ has %!child-by-name; # Maps name into id
 
 has $.inv-mark-color is rw; # For test purposes only.
 
-multi method new(Int:D $x, Int:D $y, Dimension $w, Dimension $h, *%c) {
-    self.new: geom => Vikna::Rect.new(:$x, :$y, :$w, :$h), |%c
-}
-
-multi method new(Int:D :$x, Int:D :$y, Dimension :$w, Dimension :$h, *%c) {
-    self.new: geom => Vikna::Rect.new(:$x, :$y, :$w, :$h), |%c
-}
-
-multi method new(*%c where { $_<geom>:!exists }) {
-    self.new: geom => Vikna::Rect.new(:0x, :0y, :20w, :10h), |%c
-}
+# multi method new(Int:D $x, Int:D $y, Dimension $w, Dimension $h, *%c) {
+#     self.new: geom => Vikna::Rect.new(:$x, :$y, :$w, :$h), |%c
+# }
+#
+# multi method new(Int:D :$x, Int:D :$y, Dimension :$w, Dimension :$h, *%c) {
+#     self.new: geom => Vikna::Rect.new(:$x, :$y, :$w, :$h), |%c
+# }
+#
+# multi method new(*%c where { $_<geom>:!exists }) {
+#     self.new: geom => Vikna::Rect.new(:0x, :0y, :20w, :10h), |%c
+# }
 
 submethod TWEAK {
     self.update-positions;
 }
 
+submethod profile-default {
+    :0x, :0y, :20w, :10h
+}
+
 submethod profile-checkin(%profile, %constructor, %, %) {
+    unless %profile<geom> {
+        %profile<geom> = Vikna::Rect.new(%profile<x y w h>)
+    }
     unless %profile<attr> ~~ Vikna::CAttr {
         # Constructor-defined keys override those from other sources.
         %profile<attr>{$_} = %constructor<attr>{$_} // %constructor{$_} // %profile<attr>{$_} // %profile{$_}
             for <fg bg pattern>;
         %profile<attr> = cattr(|%profile<attr><fg bg pattern>)
     }
-    %profile<fg bg pattern>:delete;
+    %profile<fg bg pattern x y w h>:delete;
 }
 
 method build-canvas {
@@ -146,6 +155,7 @@ multi method event(::?CLASS:D: Event::Detached:D $ev) {
 multi method event(::?CLASS:D: Event::Attached:D $ev) {
     if $ev.child === self {
         $.update-positions: :transitive;
+        $.dispatch: Event::Ready;
     }
 }
 
@@ -182,14 +192,14 @@ method cmd-addchild(::?CLASS:D: Vikna::Widget:D $child, ChildStrata:D $stratum, 
         } = %( :$child );
         # note self.name, " ADDED CHILD ", $child.name, " with parent: ", $child.parent.name;
         self.subscribe-to-child($child) if $subscribe;
-        $child.invalidate;
-        $child.redraw;
         $child.dispatch: Event::Attached, :$child, :parent(self);
         self.dispatch:   Event::Attached, :$child, :parent(self);
         if $.is-topmost($child, :on-strata) {
             $child.dispatch: Event::ZOrder::Top;
             self.dispatch:   Event::ZOrder::Child, :$child;
         }
+        $child.invalidate;
+        $child.redraw;
     }
 }
 
@@ -203,17 +213,21 @@ method cmd-removechild(::?CLASS:D: Vikna::Widget:D $child, :$unsubscribe = True)
     my $is-topmost = $.is-topmost($child);
     my $is-bottommost = $.is-bottommost($child);
     my $stratum = $.child-stratum($child);
+    my sub remove-finally {
+        self.Vikna::Parent::remove-child: $child;
+        self.dispatch: Event::Detached, :$child, :parent(self);
+        self.invalidate: $child.geom;
+        self.redraw;
+    }
     if $child.closed {
         $.trace: "CHILD ", $child.name, " CLOSED, awaiting dismissal; current dismiss status is ", $child.dismissed.status;
         $child.dismissed.then: {
             $.trace: "CHILD ", $child.name, " DISMISSED, removing from list";
-            self.Vikna::Parent::remove-child: $child;
-            self.dispatch: Event::Detached, :$child, :parent(self);
+            remove-finally;
         }
     }
     else {
-        self.Vikna::Parent::remove-child: $child;
-        self.dispatch: Event::Detached, :$child, :parent(self);
+        remove-finally;
     }
     $child.dispatch: Event::Detached, :$child, :parent(self);
     if $.elems($stratum) {
@@ -278,41 +292,58 @@ method cmd-close {
 }
 
 method flatten-canvas {
-    $.trace: "Entering flatten-canvas, blocks count: ", $!flatten-blocks;
+    $.trace: "Entering flatten-canvas, blocks count: ", $!flatten-blocks,
+             "\ncanvas geom: ", ($!canvas-geom // '*no yet*'),
+             "\npcanvas geom: ", ($!pcanvas ?? $!pcanvas.geom !! "*not yet*");
     if $!flatten-blocks > 0 {
         ++$!flatten-misses;
         return;
     }
     return unless $!canvas-geom; # No paints were done yet.
-    my $pcanvas = $!canvas.clone;
-    $pcanvas.clear-inv-rects;
-    $pcanvas.invalidate: $_ for @!invalidations;
+    unless $!pcanvas
+            && $!pcanvas.w == $!canvas-geom.w
+            && $!pcanvas.h == $!canvas-geom.h
+    {
+        $.trace: "(Re)create pcanvas using ", $!canvas-geom;
+        $!pcanvas = $.create:
+                        Vikna::Canvas,
+                        w => $!canvas-geom.w,
+                        h => $!canvas-geom.h,
+                        :from($!pcanvas // $!canvas);
+    }
+    $!pcanvas.invalidate: $_ for @!invalidations;
+    $.trace: "self invalidations:\n", $!pcanvas.invalidations.map("  " ~ *).join("\n");
+    $!pcanvas.imprint: 0, 0, $!canvas, :!skip-empty;
     $.for-children: -> $child {
         # Newly added children might not have drawn yet. It's ok to skip 'em.
         next unless $child.visible;
         with %!child-by-id{$child.id}<canvas> {
-            $pcanvas.invalidate: $_ for .invalidations;
-            $pcanvas.imprint: .geom.x, .geom.y, .canvas;
-            $pcanvas.clear-inv-rects;
+            $!pcanvas.imprint: .geom.x, .geom.y, .canvas;
             $child.dispatch: Event::Updated,
                                 origin => self,
                                 geom => .geom;
         }
     }
-    # note self.name, " pick: ", $pcanvas.pick(0,0) if self.name ~~ /Moveable/;
+    $!inv4parent-lock.protect: {
+        $!inv-for-parent = @$!stash-parent-invs;
+        $!stash-parent-invs = [];
+    }
+    # note self.name, " pick: ", $!pcanvas.pick(0,0) if self.name ~~ /Moveable/;
     with $.parent {
         $.trace: "Sending self canvas to ", .name;
-        .child-canvas(self, $!canvas-geom.clone, $pcanvas, $!inv-for-parent) if $!inv-for-parent.elems > 0;
+        .child-canvas(self, $!canvas-geom.clone, $!pcanvas.clone, $!inv-for-parent) if $!inv-for-parent.elems > 0;
     }
     else {
         # If no parent then try sending to console.
-        self.?print($pcanvas);
+        self.?print($!pcanvas);
         $.dispatch: Event::Updated, geom => $!canvas-geom;
     }
+    $!pcanvas.clear-inv-rects;
+    $.clear-invalidations;
     $!flatten-misses = 0;
 }
 
-method cmd-redraw {
+method cmd-redraw(:$force?) {
     return unless $.visible;
     if $.redraw-blocked {
         $.trace: "SKIP REDRAW UNTIL UNBLOCKED";
@@ -321,7 +352,7 @@ method cmd-redraw {
     else {
         my Vikna::Canvas:D $canvas = $!canvas;
         $.trace: "CMD REDRAW: invalidations: ", @!invalidations.elems, "\n", @!invalidations.map( "  . " ~ *.Str ).join("\n");
-        if @!invalidations {
+        if @!invalidations || $force {
             $canvas = self.begin-draw;
             self.draw( :$canvas );
             self.end-draw( :$canvas );
@@ -341,6 +372,7 @@ method cmd-childcanvas(::?CLASS:D $child, Vikna::Rect:D $canvas-geom, Vikna::Can
                 @invalidations.map({ "  " ~ $_ }).join("\n"),
                 "\nMY GEOM: " ~ $.geom;
     %!child-by-id{$child.id}<canvas> = CanvasRecord.new: :$canvas, geom => $canvas-geom, :@invalidations;
+    $.invalidate: $_ for @invalidations;
     $.flatten-canvas;
 }
 
@@ -534,6 +566,7 @@ method update-positions(:$transitive?) {
         my $parent-geom = $.parent.geom;
         my $parent-viewport = $.parent.viewport;
         my $parent-abs = $.parent.abs-geom;
+        my $gr = $!geom;
         $!viewport = $!geom.clip($parent-viewport).relative-to($!geom);
         $!abs-geom = $!geom.absolute($parent-abs);
         $!abs-viewport = $!viewport.absolute($!abs-geom);
@@ -574,6 +607,7 @@ method add-inv-rect(Vikna::Rect:D $rect) {
         @!invalidations.push: $vrect;
     }
     $.add-inv-parent-rect: $vrect.absolute($!geom);
+    $vrect
 }
 
 method clear-invalidations {
@@ -624,11 +658,7 @@ method begin-draw(Vikna::Canvas $canvas? is copy --> Vikna::Canvas) {
 
 method end-draw( :$canvas! ) {
     $.trace: "END DRAW";
-    $!inv4parent-lock.protect: {
-        $!inv-for-parent = @$!stash-parent-invs;
-        $!stash-parent-invs = [];
-    }
-    self.clear-invalidations;
+    # self.clear-invalidations;
 }
 
 method redraw-block {
@@ -697,8 +727,8 @@ method draw-background(:$canvas) {
         $.trace: "DRAWING BACKGROUND, pattern: ‘{$.attr.pattern}’";
         my $bgpat = $.attr.pattern;
         my $back-row = ( $bgpat x ($.w.Num / $bgpat.chars).ceiling );
-        my $fg = $.attr.fg;
-        my $bg = $.attr.bg;
+        my $fg := $.attr.fg;
+        my $bg := $.attr.bg;
         for ^$.h -> $row {
             $canvas.imprint(0, $row, $back-row, :$fg, :$bg);
         }
@@ -761,6 +791,16 @@ multi method event-filter(Event::Cmd::Redraw:D $ev) {
         # This event won't go any further...
         []
     }
+}
+
+method next-sibling(:$loop = False, :$on-strata = False) {
+    return Nil unless $!parent;
+    .children-protect: { .next-to: self, :$loop, :$on-strata } with $!parent
+}
+
+method prev-sibling(:$loop = False, :$on-strata = False) {
+    return Nil unless $!parent;
+    .children-protect: { .next-to: self, :reverse, :$loop, :$on-strata } with $!parent
 }
 
 method detach {

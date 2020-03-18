@@ -16,7 +16,7 @@ also does Vikna::Focusable;
 also is Vikna::Widget;
 
 has Bool:D $!print-needed = False;
-has Vikna::Canvas $!pcanvas;
+has Vikna::Canvas $!on-screen-canvas;
 
 submethod profile-default {
     attr => {
@@ -24,6 +24,7 @@ submethod profile-default {
         :fg<default>,
         :pattern<.>,
     },
+    focus-topmost => True,
 }
 
 ### Event handlers ###
@@ -81,8 +82,8 @@ method resize(|) { }
 
 method print(::?CLASS:D: Vikna::Canvas:D $canvas?) {
     $.trace: "DESKTOP REDRAW -> screen";
-    $!pcanvas = $_ with $canvas;
-    if $.app.screen.print(0, 0, $!pcanvas) {
+    $!on-screen-canvas = $_ with $canvas;
+    if $.app.screen.print(0, 0, $!on-screen-canvas) {
         $!print-needed = False;
         $.flatten-block;
     }

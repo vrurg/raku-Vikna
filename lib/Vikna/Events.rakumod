@@ -31,8 +31,8 @@ class Event is export {
         $!seq = ++⚛$sequence;
     }
 
-    method dup {
-        my $dup = $.clone;
+    method dup(*%p) {
+        my $dup = $.clone: |%p;
         $dup!set-seq;
         $dup
     }
@@ -163,19 +163,15 @@ class Event::Pointer is Event::Input does Event::Positionish {
 
 class Event::Mouse is Event::Pointer {
     has Int $.button;
-    has Set $.buttons;
+    has @.buttons;
     has Set $.modifiers = set();
     has Vikna::Point $.prev; # Previous mouse position. Undef for the first mouse event.
 
-    method new-from(Event::Mouse:D $ev, |c) {
-        self.new:
-                at => .at.clone,
-                buttons => .buttons.clone,
-                modifiers => .modifiers.clone,
-                dispatcher => .dispatcher,
-                origin => .origin,
-                |c
-            with $ev;
+    method dup(*%p) {
+        nextwith at => $.at.clone,
+                 buttons => [ |@!buttons ],
+                 modifiers => $!modifiers.clone,
+                 |%p
     }
 
     method kind( --> Str:D ) { 'mouse' }
@@ -189,6 +185,7 @@ class Event::Cmd::ChildCanvas         is Event::Command { }
 class Event::Cmd::Clear               is Event::Command { }
 class Event::Cmd::Close               is Event::Command { }
 class Event::Cmd::Focus::Update       is Event::Command { }
+class Event::Cmd::Focus::Request      is Event::Command { }
 class Event::Cmd::Quit                is Event::Command { }
 class Event::Cmd::Nop                 is Event::Command { }
 class Event::Cmd::Redraw              is Event::Command { }
@@ -221,7 +218,8 @@ class Event::Cmd::Contains is Event::Cmd::Inquiry { }
 #### Informative ####
 
 # Normally sent once only. Has to be delivered ASAP to be the first event ever.
-class Event::Init is Event::Informative { method default-priority { PrioImmediate } }
+class Event::Init  is Event::Informative { method default-priority { PrioImmediate } }
+class Event::Ready is Event::Informative { method default-priority { PrioImmediate } }
 
 class Event::Quit is Event::Informative is Event::Spreadable { method default-priority { PrioImmediate } }
 
@@ -294,13 +292,25 @@ class Event::Mouse::Release     is Event::Mouse::Button { }
 class Event::Mouse::Click       is Event::Mouse::Button is Event::Pointer::Elevatish { }
 class Event::Mouse::DoubleClick is Event::Mouse::Button { }
 class Event::Mouse::Drag        is Event::Mouse::Move { }
-class Event::Mouse::Enter       does Event::Positionish is Event::Input { }
-class Event::Mouse::Leave       does Event::Positionish is Event::Input { }
+
+role Event::Mouse::Transition does Event::Positionish {
+    has @.buttons is required;
+    has Set:D $.modifiers is required;
+}
+class Event::Mouse::Enter       does Event::Mouse::Transition is Event::Input { }
+class Event::Mouse::Leave       does Event::Mouse::Transition is Event::Input { }
 
 class Event::Pointer::OwnerChange does Event::Positionish is Event::Input {
     has $.old-owner;
     has $.new-owner is required;
 }
+
+class Event::Button             is Event::Informative   { }
+class Event::Button::Down       is Event::Button        { }
+class Event::Button::Up         is Event::Button        { }
+class Event::Button::Press      is Event::Button        { }
+class Event::Button::Ok         is Event::Button::Press { }
+class Event::Button::Cancel     is Event::Button::Press { }
 
 class Event::Screen::FocusIn    is Event::Input { }
 class Event::Screen::FocusOut   is Event::Input { }

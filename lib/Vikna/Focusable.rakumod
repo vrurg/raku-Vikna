@@ -10,15 +10,10 @@ use Hash::Merge;
 has ::?ROLE $.focus;
 has Bool:D $.in-focus = False;
 
-has Vikna::CAttr $.focused-attr;
+# Shall we auto-focus the topmost child?
+has Bool:D $.focus-topmost = False;
 
-# submethod profile-default {
-#     focused-attr => {
-#             # fg => 'black',
-#             # bg => 'cyan',
-#             # pattern => ' '
-#     }
-# }
+has Vikna::CAttr $.focused-attr;
 
 submethod profile-checkin(%profile, %, %, %) {
     return unless any %profile<focused-attr focused-fg focused-bg focused-pattern>;
@@ -39,18 +34,18 @@ multi method route-event(::?ROLE:D: Event::Focusish:D $ev) is default {
     }
 }
 
-multi method handle-event(::?ROLE:D: Event::ZOrder::Child:D $ev) is default {
+multi method handle-event(::?ROLE:D: Event::ZOrder::Child:D $ev) {
     my $child = $ev.child;
     $.trace: "Focusable Child ZOrder on ", $child, :event;
-    if $child ~~ ::?ROLE {
+    if $!focus-topmost && $child ~~ ::?ROLE {
         $.trace: "Updating focus";
         $.update-focus;
     }
     nextsame
 }
 
-multi method handle-event(::?ROLE:D: Event::Focus::In:D $ev) is default {
-    $.trace: "set myself into focus";
+multi method handle-event(::?ROLE:D: Event::Focus::In:D $ev) {
+    $.trace: "set myself into focus by ", $ev;
     $!in-focus = True;
     .dispatch: Event::Focus::In with $!focus;
     $.invalidate;
@@ -58,8 +53,9 @@ multi method handle-event(::?ROLE:D: Event::Focus::In:D $ev) is default {
     nextsame
 }
 
-multi method handle-event(::?ROLE:D: Event::Focus::Out:D $ev) is default {
+multi method handle-event(::?ROLE:D: Event::Focus::Out:D $ev) {
     # Desktop doesn't lose focu s
+    $.trace: "Focus out event: ", $ev;
     with $.parent {
         $.trace: "remove focus from myself";
         $!in-focus = False;
@@ -74,12 +70,43 @@ multi method handle-event(::?ROLE:D: Event::Focus::Out:D $ev) is default {
 
 ### Command handlers ###
 
-# method cmd-addchild(::?ROLE:D: $child, |) {
-#     callsame;
-#     $.cmd-focus-update;
-# }
+method cmd-addchild(::?ROLE:D: $child, |) {
+    callsame;
+    $.trace: "Focusable handles attach of ", $child;
+    if $child ~~ ::?ROLE {
+        # By default a child is added unfocused. $.focus-topmost control if it will gain focus later.
+        $.trace: "Unfocusing child ", $child.name;
+        $child.dispatch: Event::Focus::Out;
+    }
+}
+
+method cmd-removechild(::?ROLE:D: $child, |) {
+    callsame;
+    if $child === $!focus {
+        $!focus = Nil;
+        if $!focus-topmost {
+            $.update-focus;
+        }
+    }
+}
+
+method !focus-to($child) {
+    return if $!focus eqv $child;
+    with $!focus {
+        $.trace: "Report focus lose";
+        .dispatch: Event::Focus::Lost;
+        .dispatch: Event::Focus::Out if .in-focus;
+    }
+    $!focus = $child;
+    with $child {
+        $.trace: "Report focus take";
+        .dispatch: Event::Focus::Take;
+        .dispatch: Event::Focus::In if $!in-focus;
+    }
+}
 
 method cmd-focus-update(::?ROLE:D:) {
+    return if $.closed;
     my $topmost;
     $.for-children: :reverse, -> $child {
         if $child ~~ ::?ROLE {
@@ -89,19 +116,13 @@ method cmd-focus-update(::?ROLE:D:) {
     }
     $.trace: "Current topmost child is: ", $topmost // '*none*', " vs. focused ", $!focus // '*none*';
     # Only if focus changed
-    unless $!focus eqv $topmost {
-        with $!focus {
-            $.trace: "Report focus lose";
-            .dispatch: Event::Focus::Lost;
-            .dispatch: Event::Focus::Out if .in-focus;
-        }
-        $!focus = $topmost;
-        with $topmost {
-            $.trace: "Report focus take";
-            .dispatch: Event::Focus::Take;
-            .dispatch: Event::Focus::In if $!in-focus;
-        }
-    }
+    self!focus-to($topmost);
+}
+
+method cmd-focus-request(::?ROLE:D $child) {
+    $.trace: "Requested focus for ", $child;
+    $.is-my-child: $child;
+    self!focus-to($child);
 }
 
 ### Command senders ###
@@ -109,6 +130,10 @@ method cmd-focus-update(::?ROLE:D:) {
 # Set $child as focused on parent.
 method update-focus(::?ROLE:D:) {
     $.send-command: Event::Cmd::Focus::Update
+}
+
+method focus {
+    .send-command: Event::Cmd::Focus::Request, self with $.parent;
 }
 
 ### Utility methods ###
