@@ -127,22 +127,21 @@ my class Input {
                                             modifiers   => self!make-modifiers($_)
                         }
                         when Terminal::Print::DecodedInput::MouseEvent {
-                            my $evtype := .button && .motion
+                            my \evType := .button && .motion
                                             ?? Event::Mouse::Drag
                                             !! .button
                                                 ?? (.pressed ?? Event::Mouse::Press !! Event::Mouse::Release)
                                                 !! Event::Mouse::Move;
-                            my %p = .button && .pressed ?? :button(.button) !! ();
-                            my $ev = $.post-event: $evtype,
-                                                    at => Vikna::Point.new(.x, .y),
-                                                    buttons => set(.button),
-                                                    modifiers => self!make-modifiers($_),
-                                                    prev => $!last-mouse-pos,
-                                                    |%p;
-                            # Don't share this Point object with the event packet because reckless user objects could
-                            # mangle with it.
                             $!last-mouse-pos = Vikna::Point.new: .x, .y;
-                            $.post-event: $_ for self.translate-mouse-event($ev);
+                            for self.translate-mouse-event(
+                                    evType,
+                                    at => Vikna::Point.new(.x, .y),
+                                    modifiers => self!make-modifiers($_),
+                                    prev => $!last-mouse-pos,
+                                    button => .button,
+                                ) -> \c {
+                                $.post-event: |c;
+                            }
                         }
                         when .ord == 13 {
                             $.post-event: Event::Kbd::Control, key => K_Enter, char => $_;
