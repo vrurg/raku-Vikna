@@ -1,3 +1,4 @@
 *.sqlite
 trace.html
 lib/.precomp
+.precomp
