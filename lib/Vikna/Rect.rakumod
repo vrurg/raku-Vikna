@@ -31,6 +31,10 @@ submethod TWEAK {
     $!bottom = $!y + $!h - 1;
 }
 
+method dup(*%c) {
+    self.new: :$!x, :$!y, :$!w, :$!h, |%c;
+}
+
 method Array(::?CLASS:D:) {
     [$!x, $!y, $!w, $!h]
 }
