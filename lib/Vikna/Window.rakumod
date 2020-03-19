@@ -22,8 +22,11 @@ class Client {
     also does Vikna::PointerTarget;
     also does Vikna::Focusable;
     also is Vikna::Widget::GroupMember;
+    
     # Don't allow voluntary client geom change.
     method set-geom(|) { }
+
+    method set-title(|c) { $.group.set-title(|c) }
 }
 
 has Str:D $.title = "";
