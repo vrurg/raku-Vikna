@@ -12,6 +12,7 @@ has Str $.r-pad is mooish(:lazy<default-pad>);
 
 submethod profile-default {
     pattern => " ",
+    h       => 1,
     :auto-clear
 }
 

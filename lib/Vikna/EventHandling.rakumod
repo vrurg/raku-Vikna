@@ -219,7 +219,7 @@ multi method add-event-source(Vikna::EventEmitter:D $evs) {
     my $evs-tap;
     $evs.Supply.tap:
         -> Event:D $ev {
-            $.trace: "EVENT FROM SOURCE: ", $evs.name, ", ev object: ", $ev.WHICH, ":\n    ", $ev;
+            $.trace: "EVENT FROM SOURCE: ", $evs.name, ", ev object: ", $ev.WHICH, ", shutting down? ", $!event-shutdown, ":\n    ", $ev;
             self.dispatch: $ev unless $!event-shutdown;
         },
         tap => -> $tap { $evs-tap = $tap },

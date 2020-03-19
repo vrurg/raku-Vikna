@@ -74,9 +74,12 @@ method cmd-addchild(::?ROLE:D: $child, |) {
     callsame;
     $.trace: "Focusable handles attach of ", $child;
     if $child ~~ ::?ROLE {
-        # By default a child is added unfocused. $.focus-topmost control if it will gain focus later.
-        $.trace: "Unfocusing child ", $child.name;
-        $child.dispatch: Event::Focus::Out;
+        # If child has reparented it might still preserve its focused status. Reset it.
+        if $child.in-focus {
+            # By default a child is added unfocused. $.focus-topmost controls if it will gain the focus later.
+            $.trace: "Unfocusing child ", $child.name;
+            $child.dispatch: Event::Focus::Out;
+        }
     }
 }
 
