@@ -155,7 +155,21 @@ class Event::Kbd is Event::Input does Event::Focusish {
     has $.raw;  # Raw char code if known
     has $.char;
     has Set:D $.modifiers = set();
+
+    method Str {
+        my $str = callsame;
+        if $!char.defined {
+            my $cord = $!char.ord;
+            $str ~= " char: «" ~ ($cord ~~ /<print>/ ?? $!char !! '\x' ~ $cord.base(16)) ~ "»";
+        }
+        $str
+    }
 }
+
+# Partial key event, i.e. one which is not considered as key is pressed.
+role Event::Kbd::Partial { }
+# Complete key press.
+role Event::Kbd::Complete { }
 
 class Event::Pointer is Event::Input does Event::Positionish {
     method kind(--> Str:D) {...}
@@ -278,11 +292,15 @@ class Event::TextScroll::BufChange is Event::Informative {
     has Int:D $.size is required;
 }
 
-class Event::Kbd::Down    is Event::Kbd { }
-class Event::Kbd::Up      is Event::Kbd { }
-class Event::Kbd::Press   is Event::Kbd { }
-class Event::Kbd::Control is Event::Kbd::Press {
+class Event::Kbd::Down    is Event::Kbd does Event::Kbd::Partial { }
+class Event::Kbd::Up      is Event::Kbd does Event::Kbd::Partial { }
+class Event::Kbd::Press   is Event::Kbd does Event::Kbd::Complete { }
+class Event::Kbd::Control is Event::Kbd does Event::Kbd::Complete {
     has $.key is required where ControlKeys:D | Str:D;
+
+    method Str {
+        callsame() ~ " key(" ~ $!key.^name ~ "): «" ~ $!key ~ "»";
+    }
 }
 
 class Event::Mouse::Move        is Event::Mouse { }
