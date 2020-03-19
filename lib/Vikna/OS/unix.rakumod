@@ -87,7 +87,7 @@ my class Input {
     has %modifier-map = shift => K_Shift, alt => K_Alt, control => K_Control, meta => K_Meta;
 
     method !translate-special-key(SpecialKey $key) {
-        return $_ with %special-map{$key}:exists;
+        return $_ with %special-map{$key};
         $.throw: X::Input::BadSpecialKey, :$key;
     }
 
@@ -105,6 +105,7 @@ my class Input {
             react {
                 whenever $!in-supply -> $term-ev {
                     my $*VIKNA-FLOW = $vf;
+                    # $.trace: "TERMINAL EVENT: ", $term-ev.^name;
                     given $term-ev {
                         when PasteStart {
                             $.post-event: Event::Screen::PasteStart;
@@ -119,6 +120,7 @@ my class Input {
                             $.post-event: Event::Screen::FocusOut;
                         }
                         when SpecialKey {
+                            # $.trace: "Special key into Event::Kbd::Control";
                             $.post-event: Event::Kbd::Control, key => self!translate-special-key($_)
                         }
                         when Terminal::Print::DecodedInput::ModifiedSpecialKey {
