@@ -718,11 +718,11 @@ method flatten-hold(&code, |c) {
     &code(|c)
 }
 
-method draw(:$canvas) {
+method draw(Vikna::Canvas:D :$canvas) {
     self.draw-background(:$canvas);
 }
 
-method draw-background(:$canvas) {
+method draw-background(Vikna::Canvas:D :$canvas) {
     if $.attr.pattern {
         $.trace: "DRAWING BACKGROUND, pattern: ‘{$.attr.pattern}’";
         my $bgpat = $.attr.pattern;
@@ -733,6 +733,22 @@ method draw-background(:$canvas) {
             $canvas.imprint(0, $row, $back-row, :$fg, :$bg);
         }
     }
+}
+
+proto method cursor(|) {*}
+multi method cursor(Vikna::Point:D $pos) {
+    $.app.screen.move-cursor: $pos.absolute($!abs-geom);
+}
+multi method cursor(Int:D $x, Int:D $y) {
+    $.cursor: Vikna::Point.new($x, $y);
+}
+
+method hide-cursor {
+    $.app.desktop.hide-cursor;
+}
+
+method show-cursor {
+    $.app.desktop.show-cursor;
 }
 
 method !release-redraw-event {
