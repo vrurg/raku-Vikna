@@ -18,6 +18,8 @@ also is Vikna::Widget;
 has Bool:D $!print-needed = False;
 has Vikna::Canvas $!on-screen-canvas;
 
+has $!cursor-show-requests = 0;
+
 submethod profile-default {
     attr => {
         :bg<default>,
@@ -25,6 +27,10 @@ submethod profile-default {
         :pattern<.>,
     },
     focus-topmost => True,
+}
+
+submethod TWEAK {
+    self.app.screen.hide-cursor;
 }
 
 ### Event handlers ###
@@ -58,6 +64,9 @@ multi method dispatch(::?CLASS:D: Event::Kbd::Control:D $ev, |c) {
             exit 1;
         }
     }
+    else {
+        nextsame
+    }
 }
 
 ### Command handlers ###
@@ -89,6 +98,23 @@ method print(::?CLASS:D: Vikna::Canvas:D $canvas?) {
     }
 }
 
+method show-cursor {
+    if ++$!cursor-show-requests == 1 {
+        $.app.screen.show-cursor;
+    }
+}
+
+method hide-cursor {
+    given --$!cursor-show-requests {
+        when 0 {
+            $.app.screen.hide-cursor;
+        }
+        when * < 0 {
+            $.throw: X::OverUnblock, what => 'cursor hide', count => $_
+        }
+    }
+}
+
 method flatten-canvas {
     # The print-needed flag will be reset if flattening is unblocked and screen print started successfully. Otherwise it
     # will signal that when screen is ready again we must print again immediately.
@@ -106,7 +132,8 @@ method start-event-handling {
 method panic-shutdown($cause) {
     $.trace: "DESKTOP PANIC SHUTDOWN: " ~ $cause;
     $.stop-event-handling;
-    $.app.screen.shutdown;
+    $.app.screen.show-cursor;
+    try $.app.screen.shutdown;
     $.dismissed.keep(False) if $.dismissed.status ~~ Planned;
     CATCH {
         default {
@@ -118,5 +145,6 @@ method panic-shutdown($cause) {
 
 method shutdown {
     callsame;
+    $.app.screen.show-cursor;
     $.app.screen.shutdown;
 }
