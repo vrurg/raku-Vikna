@@ -28,9 +28,15 @@ has Lock:D $.print-lock .= new;
 method build-is-unicode { ... }
 method build-geom       { ... }
 
-method init { ... }
 method screen-print(Int:D, Int:D, |) { ... }
+method hide-cursor {...}
+method show-cursor {...}
 
+proto method move-cursor(|) {*}
+multi method move-cursor(Vikna::Point:D $pos) { self.move-cursor($pos.x, $pos.y) }
+multi method move-cursor(UInt:D $x, UInt:D $y) {...}
+
+method init { ... }
 method shutdown {
     $!shutting-down.keep(True);
 }

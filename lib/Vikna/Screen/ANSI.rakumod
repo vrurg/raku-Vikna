@@ -20,6 +20,9 @@ constant RESET-COLOR = color('reset');
 
 has Str $.terminal-profile = 'ansi'; # or universal
 has &.cursor-sub is mooish(:lazy);
+has $!cursor-hidden;
+has UInt:D $!cursor-x = 0;
+has UInt:D $!cursor-y = 0;
 
 submethod TWEAK {
     self.throw: X::Terminal::NoTERM unless %*ENV<TERM>:exists;
@@ -59,14 +62,21 @@ method color2esc(BasicColor $color) {
     $color ?? color($color) !! ''
 }
 
+method !OUT-PRINT(Str:D $line) {
+    print-command 'hide-cursor', $!terminal-profile;
+    $*OUT.print: $line;
+    $*OUT.print: &!cursor-sub($!cursor-x, $!cursor-y);
+    print-command 'show-cursor', $!terminal-profile unless $!cursor-hidden;
+}
+
 proto method screen-print(::?CLASS:D: Int:D, Int:D, |) {*}
 
 multi method screen-print(Int:D $x, Int:D $y, Vikna::Canvas:D $viewport, *%c ) {
-    $*OUT.print: $.ANSI-str( $x, $y, $viewport, |%c )
+    self!OUT-PRINT: $.ANSI-str( $x, $y, $viewport, |%c )
 }
 
 multi method screen-print(Int:D $x, Int:D $y, Str:D $string, Vikna::Color:D :$fg?, Vikna::Color:D :$bg?) {
-    $*OUT.print: &!cursor-sub($x, $y) ~ $.color2esc(self.ansi-color: :$fg, :$bg) ~ $string ~ RESET-COLOR
+    self!OUT-PRINT: &!cursor-sub($x, $y) ~ $.color2esc(self.ansi-color: :$fg, :$bg) ~ $string ~ RESET-COLOR
 }
 
 multi method screen-print(Int:D $x, Int:D $y, Vikna::Canvas:D $viewport, :$str! where *.so, *%c) {
@@ -170,6 +180,28 @@ multi method color(Vikna::Color:D $c) {
     $c.clone
 }
 
-method init { }
+method hide-cursor {
+    print-command 'hide-cursor', $!terminal-profile;
+    $!cursor-hidden = True;
+}
 
-method shutdown { }
+method show-cursor {
+    print-command 'show-cursor', $!terminal-profile;
+    $!cursor-hidden = False;
+}
+
+multi method move-cursor(UInt:D $x, UInt:D $y) {
+    ($!cursor-x, $!cursor-y) = ($x, $y);
+    $*OUT.print: &!cursor-sub($!cursor-x, $!cursor-y);
+}
+
+method init {
+    # print-command 'save-screen', $!terminal-profile;
+    # print-command 'clear', $!terminal-profile;
+}
+
+method shutdown {
+    # print-command 'clear', $!terminal-profile;
+    # print-command 'restore-screen', $!terminal-profile;
+    self.Vikna::Screen::shutdown;
+}
