@@ -6,44 +6,8 @@ unit class Vikna::PChannel;
 use nqp;
 use Vikna::X;
 use Vikna::PChannel::NoData;
-use Concurrent::Queue;
 
-# A node in the list of priority queues.
-my class PQNode {
-    has Channel:D $!queue .= new;
-    has Int:D $.prio is required;
-    has atomicint $.elems = 0;
-
-    method enqueue(Mu \packet) {
-        # The order is important here: first we send, then record the sent packet. Otherwise there is risk of claiming
-        # non-sent packet.
-        $!queue.send: packet;
-        ++⚛$!elems;
-    }
-    method poll is raw {
-        return Nil but NoData unless $!elems;
-        my $packet := Nil but NoData;
-        my $claim-packet := 0;
-        my $old-elems;
-        # Wait when we can claim a packet or until no packets left in the queue. A claim is successfull if we're allowed
-        # to reduce $!elems and it it's not 0. But if we succeed in reducing then at least one packe will await for
-        # $!queue.poll.
-        nqp::while(
-            nqp::if(($old-elems = $!elems), nqp::not_i($claim-packet)),
-            nqp::if(
-                nqp::iseq_i(cas($!elems, $old-elems, $old-elems - 1), $old-elems),
-                ($claim-packet := 1)
-            )
-        );
-        if $claim-packet {
-            $packet := $!queue.poll;
-            if $packet ~~ Nil {
-                die "INTERNAL: a packet expected but not found (got: {$packet.WHICH}) (elems:{$old-elems} was, {$!elems} now)";
-            }
-        }
-        $packet
-    }
-}
+my class PQueue is repr('ConcBlockingQueue') { }
 
 # Atom of 'data available' semaphore. This works the following way: if a receive operation encounters 'no packets'
 # situation, it raises the awaited flag and starts awaiting for the promise. If send sees the flag to be raised it
@@ -94,7 +58,7 @@ method !pqueue(Int:D $prio) is raw {
             nqp::while(
                 nqp::isle_i($!prio-count, $new-count),
                 nqp::stmts(
-                    nqp::push($!pq-list, PQNode.new(:prio($!prio-count))),
+                    nqp::push($!pq-list, PQueue.new),
                     nqp::atomicinc_i($!prio-count)
                 )
             );
@@ -108,10 +72,12 @@ method send(Mu \packet, UInt:D $prio = 0) {
         X::PChannel::OpOnClosed.new(:op<send>).throw
     }
     my $pq := nqp::atpos($!pq-list, $prio);
-    if $prio >= $!prio-count || !$pq {
-        $pq := self!pqueue($prio);
-    }
-    $pq.enqueue: packet;
+    nqp::if(
+        nqp::unless(nqp::isge_i($prio, $!prio-count), nqp::isnull($pq)),
+        ($pq := self!pqueue($prio))
+    );
+    nqp::push($pq, packet);
+    # $pq.enqueue: packet;
     # Sumulate a lock. I.e. we'll try updating $!max-prio-updated only when allowed to update the associated $!MPU-ID.
     cas $!MPU-ID, {
         nqp::if(
@@ -181,17 +147,11 @@ method poll is raw {
         # call .poll on it but this way we surely not wasting time on empty ones.
         nqp::while(
             nqp::if(nqp::not_i($found), (--$prio >= 0)),
-            nqp::stmts(
-                (my $pq := nqp::atpos($!pq-list, $prio)),
-                nqp::if(
-                    nqp::getattr(nqp::decont($pq), PQNode, '$!elems'),
-                    nqp::unless(
-                        nqp::istype(($packet := $pq.poll), NoData),
-                        nqp::stmts(
-                            ($found := True),
-                            ($fprio = $prio)
-                        )
-                    )
+            nqp::unless(
+                nqp::isnull($packet := nqp::queuepoll(nqp::atpos($!pq-list, $prio))),
+                nqp::stmts(
+                    ($found := True),
+                    ($fprio = $prio)
                 )
             )
         );
