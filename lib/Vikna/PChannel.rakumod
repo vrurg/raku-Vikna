@@ -43,6 +43,8 @@ has $!MPU-ID = 0;
 has $!pq-list;
 has Lock:D $!prio-lock .= new;
 
+has $.debug is rw = False;
+
 submethod TWEAK(:$priorities = 1, |) {
     die "Bad number of priorities in {self.^name} constructor: must be 1 or more but got {$priorities}" unless $priorities > 0;
     $!pq-list := nqp::list();
@@ -67,21 +69,26 @@ method !pqueue(Int:D $prio) is raw {
     nqp::atpos($!pq-list, $prio)
 }
 
-method send(Mu \packet, UInt:D $prio = 0) {
-    if $!closed {
+method send(Mu \packet, Int:D $prio) {
+    nqp::if(
+        nqp::islt_i($prio, 0),
+        X::PChannel::NegativePriority.new(:$prio).throw
+    );
+    nqp::if(
+        $!closed,
         X::PChannel::OpOnClosed.new(:op<send>).throw
-    }
+    );
     my $pq := nqp::atpos($!pq-list, $prio);
     nqp::if(
         nqp::unless(nqp::isge_i($prio, $!prio-count), nqp::isnull($pq)),
         ($pq := self!pqueue($prio))
     );
-    nqp::push($pq, packet);
     # $pq.enqueue: packet;
     # Sumulate a lock. I.e. we'll try updating $!max-prio-updated only when allowed to update the associated $!MPU-ID.
+    nqp::push($pq, packet);
     cas $!MPU-ID, {
         nqp::if(
-            nqp::isge_i($prio, $!max-prio-updated),
+            nqp::isgt_i($prio, $!max-prio-updated),
             ($!max-prio-updated = $prio)
         );
         # nqp::add_i allows $!MPU_ID not to turn into a bigint. Instead it would rotate over if ever reaches 2^64-1.
@@ -165,22 +172,23 @@ method poll is raw {
     }
     if $found {
         nqp::atomicdec_i($!elems);
+        self!drain if $!closed && !$!elems;
         $packet
     }
     else {
         # If no data found and the channel has been closed then it's time to report draining. No more packets will
         # appear here.
-        self!drain if $!closed;
+        # self!drain if $!closed;
         Nil but NoData
     }
 }
 
 method receive is raw {
     loop {
-        my $packet := $.poll;
         if $!drained {
             return Failure.new( X::PChannel::OpOnClosed.new(:op<receive>) );
         }
+        my $packet := $.poll;
         if $packet ~~ NoData {
             # Given ensures that we operate on the same atom even if it gets updated by a send in a concurrent thread.
             given $!on-data {
@@ -208,3 +216,16 @@ method Supply {
         }
     }
 }
+
+# method DUMP {
+#     for ^$!prio-count {
+#         my $pq := nqp::atpos($!pq-list, $_);
+#         my $pelems = nqp::elems($pq);
+#         if $pelems {
+#             $*ERR.print: "Queue $_ has $pelems:";
+#             while !nqp::isnull(nqp::queuepoll($pq)) -> $elem {
+#                 $*ERR.print: " ", $elem;
+#             }
+#         }
+#     }
+# }
