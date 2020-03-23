@@ -36,9 +36,6 @@ has atomicint $.prio-count = 0;
 # Number of the highest priority queue where it's very likely to find some data. This attribute is always updated when
 # send receives a packet. A poll might set it to lower value if it finds an empty priority queue.
 has $!max-prio-updated = -1;
-# ID of the last update of $!max-prio-updated. Allows receive operations not to overwrite what's been set by send unless
-# ok to do so.
-has $!MPU-ID = 0;
 # List of priority queues. For performance matters, it must be a nqp::list()
 has $!pq-list;
 has Lock:D $!prio-lock .= new;
@@ -83,17 +80,15 @@ method send(Mu \packet, Int:D $prio) {
         nqp::unless(nqp::isge_i($prio, $!prio-count), nqp::isnull($pq)),
         ($pq := self!pqueue($prio))
     );
-    # $pq.enqueue: packet;
-    # Sumulate a lock. I.e. we'll try updating $!max-prio-updated only when allowed to update the associated $!MPU-ID.
     nqp::push($pq, packet);
-    cas $!MPU-ID, {
+    # Set maximum priority value for the next poll operation to start with.
+    cas $!max-prio-updated, {
         nqp::if(
             nqp::isgt_i($prio, $!max-prio-updated),
-            ($!max-prio-updated = $prio)
+            Int.new($prio),
+            $_
         );
-        # nqp::add_i allows $!MPU_ID not to turn into a bigint. Instead it would rotate over if ever reaches 2^64-1.
-        nqp::add_i($_, 1)
-    };
+    }
     nqp::atomicinc_i($!elems);
     if (my $old = $!on-data).awaited && !$!closed {
         # Signal of new data if can. If $!on-data cannot be updated it means a cocurrent send has done the job already
@@ -144,10 +139,12 @@ method poll is raw {
     if $!elems {
         my $prio;
         my $my-id;
-        # A lock-like operation to ensure the $!max-prio-updated and the $!MPU-ID are associated.
-        cas $!MPU-ID, {
-            $prio = $!max-prio-updated + 1;
-            $my-id = $_
+        my $mprio;
+        # Record the current max-prio-updated object to check later if it hasn't been updated while we're scanning the
+        # queues.
+        cas $!max-prio-updated, {
+            $prio = $_ + 1;
+            $mprio := $_
         };
         # We iterate starting with the latest $!max-prio-updated available to us. Then we try polling the first queue
         # which has non-empty $!elems. This is not guaranteed that it will still have any data for us when we eventually
@@ -162,13 +159,12 @@ method poll is raw {
                 )
             )
         );
-        # Now we can update the $!max-prio-update if a packet was found in a queue with lower priority and the attribute
-        # hasn't been updated by a send since we got it. This ensures that poll has less rights on updating the
-        # attribute and this we won't miss a packet with higher prio when it arrives.
-        cas $!MPU-ID, {
-            $!max-prio-updated = $prio if $_ == $my-id && $prio < $!max-prio-updated;
-            $_
-        }
+        # Update $!max-prio-updated if need and can. We're ok to change it only if the original object we used to start
+        # the scan with hasn't been changed by a concurrent send operation.
+        nqp::if(
+            nqp::islt_i($prio, $mprio),
+            cas($!max-prio-updated, $mprio, $prio)
+        );
     }
     if $found {
         nqp::atomicdec_i($!elems);
