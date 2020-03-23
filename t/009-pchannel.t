@@ -48,14 +48,15 @@ subtest "Count messages" => {
 subtest "Ordering" => {
     plan 3;
 
+    my $count = 1000;
     my $pc = Vikna::PChannel.new;
     my @prio-ready = Promise.new xx 3;
 
     my @p;
     for ^3 -> $prio {
         @p.push: start {
-            for ^100 -> $val {
-                $pc.send: $prio × 100 + $val, $prio;
+            for ^$count -> $val {
+                $pc.send: $prio × $count + $val, $prio;
             }
             @prio-ready[$prio].keep(True);
         }
@@ -65,10 +66,10 @@ subtest "Ordering" => {
         for 2...0 -> $prio {
             await @prio-ready[$prio];
             my @list;
-            for ^100 {
+            for ^$count {
                 @list.push: $pc.receive;
             }
-            is-deeply @list, (^100).map( * + $prio × 100 ).Array, "prio $prio came in the order";
+            is-deeply @list, (^$count).map( * + $prio × $count ).Array, "prio $prio came in the order";
         }
     }
 
