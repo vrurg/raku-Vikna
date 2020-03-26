@@ -127,24 +127,6 @@ class X::Widget::DuplicateName does X::Widget {
     }
 }
 
-class X::PChannel::NoData is Exception {
-    method message {
-        "receive called on empty PChannel"
-    }
-}
-
-class X::PChannel::ReceiveOnClosed is Exception {
-    method message {
-        "receive called on closed PChannel"
-    }
-}
-
-class X::PChannel::SendOnClosed is Exception {
-    method message {
-        "send called on closed PChannel"
-    }
-}
-
 class X::PosOwner::Exists does X::Eventish {
     method message {
         "Cannot set owner for pointer event of type '"
