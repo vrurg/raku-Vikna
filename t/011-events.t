@@ -4,7 +4,7 @@ use Vikna::EventHandling;
 use Vikna::Events;
 use Vikna::Object;
 
-plan 3;
+plan 2;
 
 class EvTest is Vikna::Event {
     has $.num;
@@ -22,9 +22,6 @@ class EvDone is Vikna::Event { }
 class EvObj is Vikna::Object does Vikna::EventHandling {
     has Promise:D $.dn .= new;
     has @.counts is rw;
-
-    submethod TWEAK {
-    }
 
     multi method event(EvTest $ev) {
         @.counts.push: $ev.num
@@ -59,8 +56,8 @@ subtest "Subscriptions" => {
     }
 
     my class EvObjU is EvObj {
-        multi method event(EvTest $ev) {
-            callsame;
+        multi method subscription-event(EvTest $ev) {
+            self.event: $ev;
             if $ev.num == 4 {
                 self.unsubscribe(@inst[0]);
             }
@@ -69,7 +66,9 @@ subtest "Subscriptions" => {
 
     @inst[2] = EvObjU.new;
 
-    @inst[1].subscribe(@inst[0]);
+    # Test subscribe with code object
+    @inst[1].subscribe(@inst[0], { @inst[1].event: $_ } );
+    # Default will dispatch to subscriptio-event
     @inst[2].subscribe(@inst[0]);
 
     for ^10 {
@@ -81,49 +80,6 @@ subtest "Subscriptions" => {
     is-deeply @inst[0].counts, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], "all events received and are in order for the initial object";
     is-deeply @inst[1].counts, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], "all events received and are in order for the first subscriber";
     is-deeply @inst[2].counts, [0, 1, 2, 3, 4], "unsubscribing cut off last event for the second subscriber";
-}
-
-subtest "Hold/Release" => {
-    my $inst = EvObj.new;
-
-    EvTest.reset;
-    $inst.dispatch: EvTest, num => -1;
-    $inst.dispatch: EvDone;
-    await-tout $inst.dn;
-    is $inst.counts, [-1], "events are passing by default";
-
-    for HoldCollect, HoldFirst, HoldLast -> $kind {
-        subtest ~$kind => {
-            $inst = EvObj.new;
-            EvTest.reset;
-            $inst.hold-events: EvTest, :$kind, {
-                for ^10 -> $num {
-                    $inst.dispatch: EvTest, :$num
-                }
-                await-tout $inst.sync-events;
-                is-deeply $inst.counts, [], "no events passed while on hold";
-            }
-
-            await-tout $inst.sync-events;
-
-            my @expect;
-            given $kind {
-                when HoldCollect { @expect = ^10 }
-                when HoldFirst   { @expect = 0 }
-                when HoldLast    { @expect = 9 }
-            }
-
-            $inst.dispatch: EvDone;
-
-            await-tout $inst.dn;
-
-            is-deeply $inst.counts, @expect, +@expect ~ " events released";
-        }
-    }
-
-    $inst = EvObj.new;
-
-    throws-like { $inst.hold-events(Event::HoldAcquire) }, X::Event::Unholdable, "some events are unholdable";
 }
 
 done-testing;

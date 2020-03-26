@@ -1,33 +1,66 @@
 use v6;
 use Test;
 use Vikna::Tracer;
-use Vikna::Tracer::Session;
-use Vikna::Tracer::Record;
+use Vikna::Object;
 
-my $test-db = "Test.sqlite";
-if $test-db.IO.e {
-    $test-db.IO.unlink;
+plan 8;
+
+my $obj = Vikna::Object.new;
+
+# Tracer can only run inside a flow.
+$obj.flow: :sync, :name('TEST TRACER'), {
+    my $test-db = $*SPEC.catfile($*SPEC.tmpdir, "Test.sqlite");
+    sub wipe-db {
+        if $test-db.IO.e {
+            $test-db.IO.unlink;
+        }
+    }
+    diag $test-db;
+    wipe-db;
+
+    my $tr;
+    lives-ok {
+        $tr = $obj.create: Vikna::Tracer, :db-name($test-db), :session-name('Test 1');
+    }, "tracer created";
+
+    for ^10 {
+        $tr.record($tr, "test 1 line " ~ $_);
+    }
+
+    is $tr.session-id, 1, "first session id";
+
+    $tr.session-name = "Test 2";
+
+    for ^10 {
+        $tr.record($tr, "test 2 line " ~ $_);
+    }
+
+    is $tr.session-id, 2, "second session id";
+
+    is $tr.sessions.elems, 2, "have two sessions";
+    is $tr.sessions[0].name, "Test 1", "first session name";
+    is $tr.sessions[1].name, "Test 2", "second session name";
+
+    for $tr.sessions -> $sess {
+        subtest "Session " ~ $sess.id => {
+            plan 10;
+            my $prev-time = DateTime.new: 0;
+            my $id = 0;
+            for $sess.records -> $rec {
+                subtest "Record " ~ $id => {
+                    plan 3;
+                    # note ~$rec.time, " ", $rec.object-id, " ", $rec.message;
+                    is $rec.message, "test " ~ $sess.id ~ " line " ~ $id, "$id. record message";
+                    is $rec.id, ++$id, "record id";
+                    ok $rec.time > $prev-time, "record time is sequential";
+                    $prev-time = $rec.time;
+                }
+            }
+
+        }
+    }
+
+    wipe-db;
 }
 
-note "Start 1";
-my $tr = Vikna::Tracer.new: :db-name<Test.sqlite>, :session-name('Test 1');
-
-note "Records 1";
-for ^10 {
-    $tr.record($tr, "test 1 line " ~ $_);
-}
-
-note "Start 2";
-$tr.session-name = "Test 2";
-
-note "Records 2";
-for ^10 {
-    $tr.record($tr, "test 2 line " ~ $_);
-}
-
-say $tr.sessions.map({.name ~ "#" ~ .id});
-for $tr.sessions[0].records -> $rec {
-    note ~DateTime.new($rec.time), " ", $rec.message;
-}
-
-$test-db.IO.unlink;
+done-testing;
