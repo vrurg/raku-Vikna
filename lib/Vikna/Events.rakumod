@@ -195,7 +195,7 @@ class Event::Mouse is Event::Pointer {
 
 class Event::Cmd::AddChild            is Event::Command { }
 class Event::Cmd::AddMember           is Event::Command { }
-class Event::Cmd::ChildCanvas         is Event::Command { }
+class Event::Cmd::ChildCanvas         is Event::Command { method default-priority { PrioOut } }
 class Event::Cmd::Clear               is Event::Command { }
 class Event::Cmd::Close               is Event::Command { }
 class Event::Cmd::Focus::Update       is Event::Command { }
