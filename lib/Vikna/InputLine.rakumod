@@ -47,14 +47,14 @@ multi method event(Event::Focus::In:D $ev) {
     self!set-cursor-position;
     $.show-cursor;
     $.invalidate;
-    $.redraw;
+    $.cmd-redraw;
     nextsame
 }
 
 multi method event(Event::Focus::Out:D $ev) {
     $.hide-cursor;
     $.invalidate;
-    $.redraw;
+    $.cmd-redraw;
     nextsame
 }
 
@@ -69,7 +69,6 @@ multi method event(Event::Kbd::Control:D $ev) {
             $.move-right;
         }
         when K_Left {
-            $.parent.group.set-title: "CurLeft";
             $.move-left;
         }
         when K_Backspace {
@@ -87,7 +86,7 @@ multi method event(Event::Kbd::Control:D $ev) {
                 if $.text-valid($text) {
                     $!text = $text;
                     $.invalidate;
-                    $.redraw;
+                    $.cmd-redraw;
                 }
             }
         }
@@ -99,7 +98,6 @@ multi method event(Event::Kbd::Press:D $ev) {
         my $text = $!text.substr(0, $!cur-pos) ~ $ev.char ~ $!text.substr($!cur-pos);
         if $.text-valid($text) {
             $!text = $text;
-            $.parent.group.set-title: "«$!text»";
             $.move-right;
         }
     }
@@ -134,7 +132,12 @@ method !update-cursor {
     }
     $.cursor: ($!cursor-column = $!cur-pos - $!shift), 0;
     $.invalidate;
-    $.redraw;
+    if $*VIKNA-EVQ-OWNER eq self {
+        $.cmd-redraw;
+    }
+    else {
+        $.redraw;
+    }
 }
 
 method move-right {
