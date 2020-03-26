@@ -68,7 +68,7 @@ class Records {
 }
 
 has Str:D $.db-name = "Vikna.sqlite";
-has Str $.session-name is rw is mooish(:lazy, :predicate, :filter);
+has Str $.session-name is rw is mooish(:lazy, :predicate, :trigger);
 has $.session-id is mooish(:lazy, :predicate, :clearer);
 has Channel $!msg-queue is mooish(:lazy, :clearer);
 has Bool $.to-err = False;
@@ -157,11 +157,10 @@ method build-session-name {
     $*VIKNA-APP.^name
 }
 
-method filter-session-name( $name, *%p ) {
-    if %p<old-value>:exists && ($name ne %p<old-value>) {
-        $.clear-session;
+method trigger-session-name( $name, :$builder?, :$old-value?, *%p ) {
+    if !$builder && $old-value.defined && ($name ne $old-value) {
+        $.clear-session-id if $.has-session-id;
     }
-    $name;
 }
 
 method build-session-id {
@@ -212,6 +211,8 @@ multi method record(
 {
     note $message if $!to-err;
     ++⚛$!submitted;
+    # Pre-store session id to prevent the record be written to another session if id changes dynamically.
+    my $session-id = $!session-id;
     $.cue: {
         CATCH {
             note $_, ~.backtrace;
@@ -226,7 +227,7 @@ multi method record(
             $object-id,
             $message,
             $class,
-            $!session-id
+            $session-id
         )
     }
 }
