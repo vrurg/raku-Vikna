@@ -5,16 +5,17 @@ unit role Vikna::EventHandling;
 use Vikna::Events;
 use Vikna::Utils;
 use Vikna::EventEmitter;
-use Vikna::PChannel;
-use AttrX::Mooish;
 use Vikna::X;
+
+use Concurrent::PChannel;
+use AttrX::Mooish;
 
 has Supplier:D $.events .= new;
 
 has Lock::Async:D $!ev-lock .= new;
 has Lock::Async:D $!send-lock .= new;
 
-has Vikna::PChannel $!ev-queue;
+has Concurrent::PChannel $!ev-queue;
 has %!subscriptions;
 
 has @!event-source;
@@ -46,7 +47,7 @@ method !run-ev-loop {
         }
         my $ev = $!ev-queue.receive;
         if $ev ~~ Failure {
-            if $ev.exception ~~ X::PChannel::ReceiveOnClosed {
+            if $ev.exception ~~ X::PChannel::OpOnClosed {
                 $ev.so;
                 last;
             }
@@ -68,7 +69,7 @@ method !run-ev-loop {
 method start-event-handling(::?ROLE:D:) {
     $!ev-lock.protect: {
         unless $!ev-queue {
-            $!ev-queue = Vikna::PChannel.new;
+            $!ev-queue = Concurrent::PChannel.new( :priorities(EventPriority.^elems) );
             $.flow: { self!run-ev-loop }, :name('EVENT LOOP ' ~ (self.?name // self.WHICH));
         }
     }
@@ -82,7 +83,7 @@ method stop-event-handling(::?ROLE:D:) {
     # Ignore closed channel on shutdown as it might be caused by a panic exit and we don't want to add to the bail-out
     # noise.
     CATCH {
-        when X::Channel::SendOnClosed { }
+        when X::PChannel::OpOnClosed { }
         default {
             .rethrow
         }
@@ -149,7 +150,7 @@ method send-event(Vikna::Event:D $ev, EventPriority :$priority?) {
         if $!ev-queue {
             $.trace: "QUEUEING(prio:{($priority // $filtered.priority).Int}) ", $filtered, :event;
             CATCH {
-                when X::Channel::SendOnClosed {
+                when X::PChannel::OpOnClosed {
                     self.throw: X::Event::Stopped, ev => $filtered;
                 }
                 default { .rethrow }
