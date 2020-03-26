@@ -9,7 +9,13 @@ my $m = META6.new(
     description    => 'Console UI toolkit',
     version        => Vikna.^ver,
     perl-version   => Version.new('6.e'),
-    depends        => <Template::Mustache DB::SQLite Terminal::Print AttrX::Mooish Color Color::Names Concurrent::Queue>,
+    depends        => qw“Template::Mustache
+                         DB::SQLite
+                         Terminal::Print
+                         AttrX::Mooish:ver<0.7.3+>
+                         Color
+                         Color::Names
+                         Concurrent::Queue”,
     test-depends   => <Test Test::META Test::When>,
     build-depends  => <Pod::To::Markdown>,
     tags           => <Vikna UI console>,
