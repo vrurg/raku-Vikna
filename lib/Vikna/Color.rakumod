@@ -199,6 +199,8 @@ multi method new(*%c where { .<role>:exists }) {
     (Vikna::Color but (%c<role>:delete)).new(|%c)
 }
 
-multi method new(*%c) {
-    nextwith |%c, app => "me"
+# Operators
+
+multi infix:<==>(Vikna::Color:D $a, Vikna::Color:D $b) is export {
+    $a.r == $b.r && $a.g == $b.g && $a.b == $b.g && $a.alpha == $b.alpha
 }
