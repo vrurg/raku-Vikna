@@ -1,5 +1,204 @@
 use v6.e.PREVIEW;
-use Color;
-use Vikna::Object;
+unit class Vikna::Color;
 
-unit role Vikna::Color is Vikna::Object is Color;
+use Color;
+use Color::Names;
+use Cache::Async;
+
+use Vikna::Object;
+use Vikna::Color::Named;
+use Vikna::Color::Index;
+use Vikna::Color::RGB;
+use Vikna::Color::RGBA;
+use Vikna::X;
+
+also is Color;
+
+my %cpfx =
+    # Where ch-type is empty it could be autodetected
+    rgb   => { :ch-type(''),  :ch-count(3), :role(Vikna::Color::RGB),  },
+    rgbd  => { :ch-type<Rat>, :ch-count(3), :role(Vikna::Color::RGB),  },
+    rgba  => { :ch-type(''),  :ch-count(4), :role(Vikna::Color::RGBA), },
+    rgbad => { :ch-type<Rat>, :ch-count(3), :role(Vikna::Color::RGBA), },
+    cmyk  => { :ch-type<Rat>, :ch-count(3), :role(Vikna::Color::RGB),  },
+    hsl   => { :ch-type<Int>, :ch-count(3), :role(Vikna::Color::RGB),  },
+    hsla  => { :ch-type<Int>, :ch-count(4), :role(Vikna::Color::RGBA), },
+    hsv   => { :ch-type<Int>, :ch-count(3), :role(Vikna::Color::RGB),  },
+    hsva  => { :ch-type<Int>, :ch-count(4), :role(Vikna::Color::RGBA), },
+    ;
+
+# Caching is used not only to speedup object creation but also to re-utilize same color object for the same color string.
+my $cache;
+
+my sub cache-color-producer($key, Capture:D \c) {
+    return Vikna::Color.new: |c
+}
+
+INIT $cache = Cache::Async.new(:producer(&cache-color-producer), :max-size(10000));
+
+my grammar ColorStr {
+    token TOP {
+        <color>
+    }
+
+    token hs { \h* }
+
+    proto token color {*}
+    multi token color:sym<web> {
+        <.hs> '#' [ $<hex> = [ <.xdigit> ** 3..8 ] <?{ $<hex>.chars == 3 | 4 | 6 | 8 }> ] <.hs> $
+    }
+    multi token color:sym<pfx> {
+        :my $*CH-TYPE = '';
+        :my $*CH-COUNT = 0;
+        <.hs> <kind> ':' <.hs> <cchannel> ** {$*CH-COUNT} % <list-sep>
+    }
+    multi token color:sym<triplet> {
+        :my $*CH-TYPE = '';
+        :my $*CH-COUNT = 3;
+        <.hs> <cchannel> ** 3 % <list-sep>
+    }
+    multi token color:sym<index> {
+        \d ** 1..3 <?{ $/.Int < 256 }>
+    }
+    multi token color:sym<name> {
+        <alpha> \w* <?{ Vikna::Color::Named.known-color-name(~$/) }>
+    }
+
+    token list-sep {
+        <.hs> ',' <.hs>
+    }
+
+    token kind {
+        \w+ <?{
+            with %cpfx{~$/} {
+                $*CH-TYPE = .<ch-type>;
+                $*CH-COUNT = .<ch-count>;
+                True
+            }
+            else {
+                False
+            }
+        }>
+    }
+
+    proto token cchannel {*}
+    multi token cchannel:sym<int> {
+        \d ** 1..3 <!before '.'>
+        <.chan-is(<Int>)>
+        <?{ $/.Int < 256 }>
+    }
+    multi token cchannel:sym<rat> {
+        $<int-part> = \d* '.' $<fraction> = \d*
+        <?{ $<int-part>.chars || $<fraction>.chars }>
+        <.chan-is(<Rat>)>
+    }
+
+    method chan-is($ch-type) {
+        $*CH-TYPE = $ch-type unless $*CH-TYPE;
+        $*CH-TYPE ne $ch-type ?? self.new !! self
+    }
+}
+
+class CSTR-Actions {
+    has $.no-cache;
+
+    method TOP($/) {
+        make $/<color>.made
+    }
+
+    method !new-color($cache-key, |c) {
+        $!no-cache ?? Vikna::Color.new(|c) !! await $cache.get($cache-key, c)
+    }
+
+    method color:sym<web>($/) {
+        # 4 colors mean alpha channel
+        my $has-alpha = ($/<hex>.chars gcd 4) == 4;
+        my $web = ~$/;
+        my $named-key = ($has-alpha ?? 'weba' !! 'web');
+        make self!new-color( $web, |($named-key => $web) );
+    }
+
+    method color:sym<name>($/) {
+        make self!new-color($_, :name(~$/)) given ~$/;
+    }
+
+    method color:sym<pfx>($/) {
+        my $kind = $/<kind>;
+        my @ch = $/<cchannel>.map: *.made;
+        my $role = %cpfx{$kind}<role>;
+        my $cache-key = $kind ~ ":" ~ @ch.join(",");
+        make self!new-color($cache-key, :$role, |($kind => @ch));
+    }
+
+    method color:sym<triplet>($/) {
+        my @ch = $/<cchannel>.map: *.made;
+        my $kind = 'rgb' ~ ( @ch[0] ~~ Int ?? '' !! 'd' );
+        my $cache-key = $kind ~ ":" ~ @ch.join(",");
+        make self!new-color($cache-key, :role(Vikna::Color::RGB), |($kind => @ch))
+    }
+
+    method color:sym<index>($/) {
+        my $index = $/.Int;
+        make self!new-color(~$index, :$index);
+    }
+
+    method cchannel:sym<int>($/) {
+        make $/.Int
+    }
+
+    method cchannel:sym<rat>($/) {
+        # Append 0 because .Num coercion doesn't support 10. form of a fractional number.
+        my $fraction = (.Str with $/<fraction>) || '0';
+        my $int-part = (.Str with $/<intpart>) || '0';
+        make ($int-part ~ "." ~ $fraction).Num;
+    }
+}
+
+method parse(Str:D $scolor, :$no-cache) {
+    my $res = ColorStr.parse($scolor, :actions(CSTR-Actions.new(:$no-cache)));
+    return Nil unless $res && $res.made;
+    $res.made
+}
+
+method is-valid(Str:D $scolor, :$parse-only) {
+    if $parse-only {
+        ColorStr.parse($scolor);
+    }
+    else {
+        my $res = try ColorStr.parse($scolor, :actions(CSTR-Actions));
+        ? ($res && $res.made)
+    }
+}
+
+# proto method new(|) {*}
+
+multi method new(Str:D :$name, *%c) {
+    my %rgb = Vikna::Color::Named.rgb-by-name($name);
+    if %rgb {
+        (Vikna::Color but Vikna::Color::Named).bless(|%rgb, :$name, |%c);
+    }
+    else {
+        Nil
+    }
+}
+
+multi method new(Int:D :$index, *%c) {
+    my %rgb = Vikna::Color::Index.rgb-by-index($index);
+    (Vikna::Color but Vikna::Color::Index).bless(|%rgb, :$index, |%c);
+}
+
+multi method new(Str:D :$web, *%c) {
+    (Vikna::Color but Vikna::Color::RGB).new($web, |%c)
+}
+
+multi method new(Str:D :$weba, *%c) {
+    (Vikna::Color but Vikna::Color::RGBA).new($weba, |%c)
+}
+
+multi method new(*%c where { .<role>:exists }) {
+    (Vikna::Color but (%c<role>:delete)).new(|%c)
+}
+
+multi method new(*%c) {
+    nextwith |%c, app => "me"
+}
