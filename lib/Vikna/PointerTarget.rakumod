@@ -36,7 +36,7 @@ multi method route-event(::?ROLE:D: Event::Pointer:D $ev, *%) {
         $old-owner.?pointer-leave: $ev if $old-owner;
         $.pointer-owner: $ev, $new-owner;
         $new-owner.?pointer-enter: $ev;
-        $.dispatch: Event::Pointer::OwnerChange, :$old-owner, :$new-owner, at => $ev.at;
+        $.dispatch: Event::Pointer::OwnerChange, :from($old-owner), :to($new-owner), at => $ev.at;
     }
     $.trace: "Dispatching via the new owner ", $new-owner, :event;
     $new-owner.dispatch: $ev;

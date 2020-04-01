@@ -44,10 +44,12 @@ class X::Canvas::BadViewport is X::Base does X::Geometry is export {
 }
 
 class X::BadColor is X::Base is export {
+    has Str $.which;
     has $.color;
 
     method message {
-        "Bad color: " ~ $!color
+        my $which = $!which ?? " " ~ $!which !! "";
+        "Bad$which color: '" ~ $!color ~ "'"
     }
 }
 
@@ -66,7 +68,7 @@ class X::Event::Unsubscribe is X::Base {
 
 class X::Event::Stopped does X::Eventish {
     method message {
-        "Can't send " ~ $.ev.^name ~ ": event handling is stopped on " ~ $.obj.WHICH
+        "Can't send " ~ $.ev.^name ~ ": event handling is stopped on " ~ $.obj.name
     }
 }
 
@@ -132,5 +134,13 @@ class X::PosOwner::Exists does X::Eventish {
         "Cannot set owner for pointer event of type '"
         ~ $.ev.kind
         ~ "': it is still owned by another widget"
+    }
+}
+
+class X::Color::BadChanType is X::Comp {
+    has $.expected;
+    has $.got;
+    method message {
+        "Expected channel value of type $!expected but got $!got"
     }
 }

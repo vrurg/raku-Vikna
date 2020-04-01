@@ -6,6 +6,7 @@ use Vikna::Point;
 use Vikna::Child;
 use Vikna::Parent;
 use Vikna::Dev::Kbd;
+use Vikna::CAttr;
 use Vikna::X;
 use AttrX::Mooish;
 
@@ -79,6 +80,12 @@ role Event::Prio::Out      { method default-priority { PrioOut      } }
 # Events which should be auto-dispatched to children
 class Event::Spreadable { }
 
+# State-transition events.
+role Event::Changish[::T \type = Any] {
+    has T $.from is required;
+    has T $.to   is required;
+}
+
 # Events with this role must follow the rules of focused dispatching. See Event::Kbd
 role Event::Focusish { }
 
@@ -127,20 +134,8 @@ role Event::Vectorish {
     has Vikna::Point:D $.to is required;
 }
 
-# Any color event
-role Event::Colorish {
-    has $.fg;
-    has $.bg;
-}
-
 # Any event which might result in window moving to the top.
 class Event::Pointer::Elevatish { }
-
-# Color changes of any kind.
-role Event::ColorChange does Event::Colorish {
-    has $.old-fg;
-    has $.old-bg;
-}
 
 # Parent/child relations
 role Event::Childish {
@@ -200,8 +195,9 @@ class Event::Cmd::Clear               is Event::Command { }
 class Event::Cmd::Close               is Event::Command { }
 class Event::Cmd::Focus::Update       is Event::Command { }
 class Event::Cmd::Focus::Request      is Event::Command { }
-class Event::Cmd::Quit                is Event::Command { }
 class Event::Cmd::Nop                 is Event::Command { }
+class Event::Cmd::Print::String       is Event::Command { method default-priority { PrioOut } }
+class Event::Cmd::Quit                is Event::Command { }
 class Event::Cmd::Redraw              is Event::Command { }
 class Event::Cmd::Refresh             is Event::Command { method default-priority { PrioReleased } }
 class Event::Cmd::RemoveChild         is Event::Command { }
@@ -211,10 +207,12 @@ class Event::Cmd::Scroll::By          is Event::Command { }
 class Event::Cmd::Scroll::Fit         is Event::Command { }
 class Event::Cmd::Scroll::SetArea     is Event::Command { }
 class Event::Cmd::Scroll::To          is Event::Command { }
+class Event::Cmd::SetAttr             is Event::Command { }
 class Event::Cmd::SetBgPattern        is Event::Command { }
 class Event::Cmd::SetColor            is Event::Command { }
 class Event::Cmd::SetGeom             is Event::Command { }
 class Event::Cmd::SetHidden           is Event::Command { }
+class Event::Cmd::SetStyle            is Event::Command { }
 class Event::Cmd::ScreenGeom          is Event::Command { }
 class Event::Cmd::SetText             is Event::Command { }
 class Event::Cmd::SetTitle            is Event::Command { }
@@ -241,20 +239,16 @@ class Event::Idle is Event::Informative {
     method default-priority { PrioIdle }
 }
 
-class Event::Changed::Title is Event::Informative {
-    has $.old-title;
-    has $.title;
-}
+# Character attributes has changed
+class Event::Changed::Attr does Event::Changish[Vikna::CAttr] is Event::Informative { }
+class Event::Changed::Color is Event::Changed::Attr { }
+class Event::Changed::Style is Event::Changed::Attr { }
 
-class Event::Changed::Text is Event::Informative {
-    has $.old-text;
-    has $.text;
-}
+class Event::Changed::Title does Event::Changish[Str] is Event::Informative { }
 
-class Event::Changed::BgPattern is Event::Informative {
-    has $.old-pattern;
-    has $.new-pattern;
-}
+class Event::Changed::Text does Event::Changish[Str] is Event::Informative { }
+
+class Event::Changed::BgPattern does Event::Changish[Str] is Event::Informative { }
 
 class Event::Hide         is Event::Informative { }
 class Event::Show         is Event::Informative { }
@@ -269,8 +263,6 @@ class Event::Focus::In    is Event::Informative { } # Our parent widget is in fo
 class Event::Focus::Out   is Event::Informative { } # Our parent widget is out of focus
 
 class Event::Closing   is Event::Informative { }
-
-class Event::WidgetColor is Event::Informative does Event::ColorChange { }
 
 class Event::Changed::Geom   is Event::Informative does Event::Transformish { }
 
@@ -287,10 +279,7 @@ class Event::Updated is Event::Informative {
 class Event::Scroll::Position is Event::Informative does Event::Vectorish { }
 class Event::Scroll::Area     is Event::Informative does Event::Transformish { }
 
-class Event::TextScroll::BufChange is Event::Informative {
-    has Int:D $.old-size is required;
-    has Int:D $.size is required;
-}
+class Event::TextScroll::BufChange does Event::Changish[Int:D] is Event::Informative { }
 
 class Event::Kbd::Down    is Event::Kbd does Event::Kbd::Partial { }
 class Event::Kbd::Up      is Event::Kbd does Event::Kbd::Partial { }
@@ -318,10 +307,7 @@ role Event::Mouse::Transition does Event::Positionish {
 class Event::Mouse::Enter       does Event::Mouse::Transition is Event::Input { }
 class Event::Mouse::Leave       does Event::Mouse::Transition is Event::Input { }
 
-class Event::Pointer::OwnerChange does Event::Positionish is Event::Input {
-    has $.old-owner;
-    has $.new-owner is required;
-}
+class Event::Pointer::OwnerChange does Event::Changish does Event::Positionish is Event::Input { }
 
 class Event::Button             is Event::Informative   { }
 class Event::Button::Down       is Event::Button        { }

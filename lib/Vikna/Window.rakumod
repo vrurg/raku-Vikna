@@ -22,7 +22,7 @@ class Client {
     also does Vikna::PointerTarget;
     also does Vikna::Focusable;
     also is Vikna::Widget::GroupMember;
-    
+
     # Don't allow voluntary client geom change.
     method set-geom(|) { }
 
@@ -72,13 +72,13 @@ submethod profile-default {
 ### Command handlers ###
 
 method cmd-settitle(Str:D $title) {
-    my $old-title = $!title;
+    my $from = $!title;
     $!title = $title;
     with $!border {
         .invalidate: 0, 0, .w, 1;
         .cmd-redraw;
     }
-    self.dispatch: Event::Changed::Title, :$old-title, :$!title;
+    self.dispatch: Event::Changed::Title, :$from, :to($title);
 }
 
 method cmd-setgeom(Vikna::Rect:D $geom) {
@@ -111,6 +111,16 @@ method cmd-window-completeredraw {
 method cmd-setcolor(|c) {
     $!client.cmd-setcolor(|c);
     nextsame;
+}
+
+method cmd-setstyle(|c) {
+    $!client.cmd-setstyle(|c);
+    nextsame
+}
+
+method cmd-setattr(|c) {
+    $!client.cmd-setattr(|c);
+    nextsame
 }
 
 method cmd-addmember(::?CLASS:D: Vikna::Widget::GroupMember:D $member, |) {

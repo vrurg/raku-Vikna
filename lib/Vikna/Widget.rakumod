@@ -18,7 +18,7 @@ use Vikna::X;
 use Vikna::Color;
 use Vikna::Canvas;
 use Vikna::Utils;
-use Vikna::CAttr;
+use Vikna::WAttr;
 use AttrX::Mooish;
 
 my class CanvasRecord {
@@ -40,7 +40,7 @@ has Vikna::Rect $.abs-geom;
 #| Visible rectange of the vidget in it's parent in absolute coords.
 has Vikna::Rect $.abs-viewport;
 
-has Vikna::CAttr $.attr handles«fg bg :bg-pattern<pattern>»;
+has Vikna::WAttr:D $.attr is required handles«fg bg style :bg-pattern<pattern>»;
 has Bool:D $.auto-clear = False;
 # Is widget invisible on purpose?
 has Bool:D $.hidden = False;
@@ -99,13 +99,13 @@ submethod profile-checkin(%profile, %constructor, %, %) {
     unless %profile<geom> {
         %profile<geom> = Vikna::Rect.new(%profile<x y w h>)
     }
-    unless %profile<attr> ~~ Vikna::CAttr {
+    unless %profile<attr> ~~ Vikna::WAttr {
         # Constructor-defined keys override those from other sources.
         %profile<attr>{$_} = %constructor<attr>{$_} // %constructor{$_} // %profile<attr>{$_} // %profile{$_}
-            for <fg bg pattern>;
-        %profile<attr> = cattr(|%profile<attr><fg bg pattern>)
+            for <fg bg style pattern>;
+        %profile<attr> = wattr(|%profile<attr><fg bg style pattern>)
     }
-    %profile<fg bg pattern x y w h>:delete;
+    %profile<fg bg style pattern x y w h>:delete;
 }
 
 method build-canvas {
@@ -248,11 +248,11 @@ method cmd-clear() {
     $.cmd-redraw;
 }
 
-method cmd-setbgpattern(Str $new-pattern) {
-    $.trace: "SET BG PATTERN to ‘$new-pattern’";
-    my $old-pattern = $!attr.pattern;
-    $!attr.pattern = $new-pattern;
-    self.dispatch: Event::Changed::BgPattern, :$old-pattern, :$new-pattern;
+method cmd-setbgpattern(Str $pattern) {
+    $.trace: "SET BG PATTERN to ‘$pattern’";
+    my $from = $!attr.pattern;
+    $!attr.pattern = $pattern;
+    self.dispatch: Event::Changed::BgPattern, :$from, :to($pattern);
     self.invalidate;
     self.redraw;
 }
@@ -400,15 +400,30 @@ method cmd-setgeom(Vikna::Rect:D $geom, :$no-draw?) {
            || $from.w != $!geom.w || $from.h != $!geom.h;
 }
 
+method !change-attr(Event::Changed::Attr:U \evType, *%c) {
+    my $from = $!attr;
+    $!attr = $!attr.dup: |%c;
+    self.dispatch: evType, :$from, :to($!attr) unless $from eqv $!attr
+}
+
 method cmd-setcolor(BasicColor :$fg, BasicColor :$bg) {
     return if (!$fg || ($!attr.fg eqv $fg)) && (!$bg || ($!attr.bg eqv $bg));
-    my ($old-fg, $old-bg);
-    $old-fg = $!attr.fg;
-    $old-bg = $!attr.bg;
-    $!attr.fg = $fg;
-    $!attr.bg = $bg;
-    self.dispatch: Event::WidgetColor, :$old-fg, :$old-bg, :$fg, :$bg
-        if ($old-fg && ($old-fg ne $fg)) || ($old-bg && ($old-bg ne $bg));
+    self!change-attr(Event::Changed::Color, :$fg, :$bg)
+}
+
+method cmd-setstyle(Int $style) {
+    return if $!attr.style == $style;
+    self!change-attr(Event::Changed::Style, :$style)
+}
+
+proto method cmd-setattr(|) {*}
+multi method cmd-setattr(Vikna::CAttr:D $attr) {
+    return if $!attr eqv $attr;
+    self!change-attr(Event::Changed::Attr, |$attr.Profile);
+}
+multi method cmd-setattr(%profile) {
+    return if $!attr.Profile eqv %profile;
+    self!change-attr(Event::Changed::Attr, |%profile)
 }
 
 method cmd-to-top(::?CLASS:D $child) {
@@ -495,7 +510,23 @@ multi method set-geom(Vikna::Rect:D $rect) {
 }
 
 method set-color(BasicColor :$fg, BasicColor :$bg) {
+    self.throw: X::BadColor, :which<foreground>, :color($fg)
+        unless Vikna::Color.is-valid($fg, :empty-ok, :throw);
+    self.throw: X::BadColor, :which<background>, :color($bg)
+        unless Vikna::Color.is-valid($bg, :empty-ok, :throw);
     $.send-command: Event::Cmd::SetColor, :$fg, :$bg
+}
+
+method set-style($style) {
+    $.send-command: Event::Cmd::SetStyle, to-style($style)
+}
+
+proto method set-attr(|) {*}
+multi method set-attr(Vikna::CAttr:D $attr) {
+    $.send-command: Event::Cmd::SetAttr, $attr
+}
+multi method set-attr(*%c) {
+    $.send-command: Event::Cmd::SetAttr, %c
 }
 
 method set-bg-pattern($pattern) {
@@ -725,12 +756,12 @@ method draw(Vikna::Canvas:D :$canvas) {
 method draw-background(Vikna::Canvas:D :$canvas) {
     if $.attr.pattern {
         $.trace: "DRAWING BACKGROUND, pattern: ‘{$.attr.pattern}’";
+        # Don't use $!attr or it breaks Focusable.
         my $bgpat = $.attr.pattern;
         my $back-row = ( $bgpat x ($.w.Num / $bgpat.chars).ceiling );
-        my $fg := $.attr.fg;
-        my $bg := $.attr.bg;
+        my %attr-profile = $.attr.Profile;
         for ^$.h -> $row {
-            $canvas.imprint(0, $row, $back-row, :$fg, :$bg);
+            $canvas.imprint(0, $row, $back-row, |%attr-profile);
         }
     }
 }
@@ -770,7 +801,7 @@ method !release-redraw-event {
 method !hold-redraw-event($ev) {
     my $drop;
     # cas block can be ran more than once. Thus, no irreversible actions should be done and $drop flag must be set on
-    # both branches of if for consistency.
+    # both 'if' branches for consistency.
     cas $!redraw-on-hold, {
         if $_ {
             $.trace: "ALREADY HOLDING ", $_;

@@ -33,6 +33,10 @@ method build-is-unicode {
     %*ENV<TERM>.fc.contains: "utf".fc
 }
 
+method build-color-depth {
+    24 # just stub it for now
+}
+
 method build-geom {
     Vikna::Rect.new: 0, 0, w => columns(), h => rows()
 }
@@ -41,19 +45,24 @@ method build-cursor-sub {
     move-cursor-template($!terminal-profile)
 }
 
-my %color-cache = '' => '';
-my $cc-lock = Lock.new;
 multi method ansi-color(Vikna::Canvas::Cell:D $cell) {
-    self.ansi-color: :fg($cell.fg), :bg($cell.bg);
+    self.ansi-color: :fg($cell.fg), :bg($cell.bg), :style($cell.style);
 }
-multi method ansi-color(Vikna::Color :$fg?, Vikna::Color :$bg?) {
-    self.ansi-color: :fg($fg.Str), :bg($bg.Str)
+multi method ansi-color(Vikna::Color :$fg?, Vikna::Color :$bg?, :$style?) {
+    self.ansi-color: :fg($fg.Str), :bg($bg.Str), :$style
 }
-multi method ansi-color(:$fg?, :$bg?) {
+# Qhick map of style Int representation into a string.
+my $style-shortcuts := nqp::list(
+    '', 'bold', 'italic', 'bold italic', 'underline', 'bold underline', 'italic underline', 'bold italic underline'
+);
+multi method ansi-color(:$fg?, :$bg?, :$style?) {
     my $cl := nqp::list();
     nqp::stmts(
         nqp::if($fg, nqp::push($cl, nqp::decont($fg))),
         nqp::if($bg, nqp::push($cl, "on_{$bg}")),
+        nqp::if(
+            nqp::if(nqp::defined($style), nqp::bitand_i($style, VSBase)),
+            nqp::push($cl, nqp::atpos($style-shortcuts, nqp::bitand_i($style, VSMask))))
     );
     nqp::join(" ", $cl)
 }
@@ -75,20 +84,20 @@ multi method screen-print(Int:D $x, Int:D $y, Vikna::Canvas:D $viewport, *%c ) {
     self!OUT-PRINT: $.ANSI-str( $x, $y, $viewport, |%c )
 }
 
-multi method screen-print(Int:D $x, Int:D $y, Str:D $string, Vikna::Color:D :$fg?, Vikna::Color:D :$bg?) {
-    self!OUT-PRINT: &!cursor-sub($x, $y) ~ $.color2esc(self.ansi-color: :$fg, :$bg) ~ $string ~ RESET-COLOR
+multi method screen-print(Int:D $x, Int:D $y, Str:D $string, Vikna::Color:D :$fg?, Vikna::Color:D :$bg?, :$style?) {
+    self!OUT-PRINT: &!cursor-sub($x, $y) ~ $.color2esc(self.ansi-color: :$fg, :$bg, :style(to-style($style))) ~ $string ~ RESET-COLOR
 }
 
 multi method screen-print(Int:D $x, Int:D $y, Vikna::Canvas:D $viewport, :$str! where *.so, *%c) {
     $.ANSI-str($x, $y, $viewport, |%c)
 }
 
-multi method ANSI-str( ::?CLASS:D: Int:D $x, Int:D $y, Vikna::Canvas:D $viewport, :$default-fg?, :$default-bg?)
+multi method ANSI-str( ::?CLASS:D: Int:D $x, Int:D $y, Vikna::Canvas:D $viewport, :$default-fg?, :$default-bg?, :$default-style?)
 {
     my $vlines := nqp::list();
-    my $default-color := $.color2esc( $.ansi-color(fg => $default-fg, bg => $default-bg) );
-    my ($cplane, $fgplane, $bgplane);
-    $viewport.get-planes($cplane, $fgplane, $bgplane);
+    my $default-color := $.color2esc( $.ansi-color(fg => $default-fg, bg => $default-bg, style => to-style($default-style)) );
+    my ($cplane, $fgplane, $bgplane, $stplane);
+    $viewport.get-planes($cplane, $fgplane, $bgplane, $stplane);
     my $vw = $viewport.w;
     my $vh = $viewport.h;
     my $vrow = -1;
@@ -102,14 +111,17 @@ multi method ANSI-str( ::?CLASS:D: Int:D $x, Int:D $y, Vikna::Canvas:D $viewport
             (my $crow := nqp::atpos(nqp::decont($cplane), $vrow)),
             (my $fgrow := nqp::atpos(nqp::decont($fgplane), $vrow)),
             (my $bgrow := nqp::atpos(nqp::decont($bgplane), $vrow)),
+            (my $strow := nqp::atpos(nqp::decont($stplane), $vrow)),
             (my $vcol = -1),
             nqp::while(
                 ++$vcol < $vw,
                 nqp::stmts(
                     (my $char := nqp::defor(nqp::atpos($crow, $vcol), '')),
                     (my $fg = nqp::atpos($fgrow, $vcol)),
+                    # (my $bg = nqp::if($viewport.is-paintable($vcol, $vrow), 'magenta', nqp::atpos($bgrow, $vcol))),
                     (my $bg = nqp::atpos($bgrow, $vcol)),
-                    (my $color := nqp::decont($.ansi-color(:$fg, :$bg))),
+                    (my $style = nqp::atpos($strow, $vcol)),
+                    (my $color := nqp::decont($.ansi-color(:$fg, :$bg, :style($style.ord)))),
                     nqp::if(
                         nqp::isne_s($color, $last-color),
                         nqp::stmts(
@@ -146,39 +158,32 @@ multi method ANSI-str( ::?CLASS:D: Int:D $x, Int:D $y, Vikna::Canvas:D $viewport
     nqp::join("", $vlines);
 }
 
-multi method color(Str:D $name) {
-    # Strings of form "R,G,B,A" are to be converted into positionals
-    return self.color( |$name.split(",").map: *.Int ) if $name.index(",");
-    note "named color($name)";
-    my @ns = <X11 XKCB CSS>;
-    my @rgb;
-    for @ns -> $n {
-        with Color::Names.color-data($n){$name} {
-            @rgb.append: |$_<rgb>;
-            note "= FOUND: [{@rgb}]";
-            last
-        }
-    }
-    # TODO add support for terminal numeric colors
-    note "= CREATING COLOR OBJ";
-    Vikna::Color::Named.new: :$name, |%(<r g b> Z=> @rgb)
-}
-
-multi method color(UInt:D $r, UInt:D $g, UInt:D $b, UInt:D $a = 255) {
-    Vikna::Color::RGB.new: :$r, :$g, :$b, :$a
-}
-
-# multi method color(@chan) {
-#     Vikna::Color::RGB.new: |%( <r g b a> Z=> @chan )
+# multi method color(Str:D $name) {
+#     # Strings of form "R,G,B,A" are to be converted into positionals
+#     return self.color( |$name.split(",").map: *.Int ) if $name.index(",");
+#     my @ns = <X11 XKCB CSS>;
+#     my @rgb;
+#     for @ns -> $n {
+#         with Color::Names.color-data($n){$name} {
+#             @rgb.append: |$_<rgb>;
+#             last
+#         }
+#     }
+#     # TODO add support for terminal numeric colors
+#     Vikna::Color::Named.new: :$name, |%(<r g b> Z=> @rgb)
 # }
-
-multi method color(*%chan) {
-    Vikna::Color::RGB.new: |%chan
-}
-
-multi method color(Vikna::Color:D $c) {
-    $c.clone
-}
+#
+# multi method color(UInt:D $r, UInt:D $g, UInt:D $b, UInt:D $a?) {
+#     Vikna::Color::RGB.new: :$r, :$g, :$b, :$a
+# }
+#
+# multi method color(*%chan) {
+#     Vikna::Color::RGB.new: |%chan
+# }
+#
+# multi method color(Vikna::Color:D $c) {
+#     $c.clone
+# }
 
 method hide-cursor {
     print-command 'hide-cursor', $!terminal-profile;

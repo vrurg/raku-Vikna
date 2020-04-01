@@ -45,7 +45,7 @@ has Bool:D $.auto-scroll = True;
 ### Command handlers ###
 
 method cmd-textscroll-addtext(Str:D $text is copy) {
-    my $old-size = @!buffer.elems;
+    my $from = @!buffer.elems;
 
     # Translate escapes.
     $text ~~ s:g| \x1B | ^[ |;
@@ -99,7 +99,7 @@ method cmd-textscroll-addtext(Str:D $text is copy) {
             self!scroll( dy => $ovflow );
         }
     }
-    $.dispatch: Event::TextScroll::BufChange, :$old-size, :size( @!buffer.elems );
+    $.dispatch: Event::TextScroll::BufChange, :$from, :to( @!buffer.elems );
     $.invalidate;
     $.redraw;
 }

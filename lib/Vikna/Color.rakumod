@@ -31,7 +31,8 @@ my %cpfx =
 my $cache;
 
 my sub cache-color-producer($key, Capture:D \c) {
-    return Vikna::Color.new: |c
+    my $c = Vikna::Color.new: |c;
+    $c
 }
 
 INIT $cache = Cache::Async.new(:producer(&cache-color-producer), :max-size(10000));
@@ -107,6 +108,7 @@ class CSTR-Actions {
     }
 
     method !new-color($cache-key, |c) {
+        # note "new color: ", c.raku;
         $!no-cache ?? Vikna::Color.new(|c) !! await $cache.get($cache-key, c)
     }
 
@@ -160,14 +162,15 @@ method parse(Str:D $scolor, :$no-cache) {
     $res.made
 }
 
-method is-valid(Str:D $scolor, :$parse-only) {
-    if $parse-only {
-        ColorStr.parse($scolor);
-    }
-    else {
-        my $res = try ColorStr.parse($scolor, :actions(CSTR-Actions));
-        ? ($res && $res.made)
-    }
+method is-valid(Str:D $scolor, :$empty-ok = False, :$parse-only?) {
+    my $valid = (!$scolor && $empty-ok)
+                || ($parse-only
+                    ?? ColorStr.parse($scolor)
+                    !! do {
+                        my $res = try ColorStr.parse($scolor, :actions(CSTR-Actions.new));
+                        ? ($res && $res.made)
+                    });
+    $valid
 }
 
 # proto method new(|) {*}
@@ -175,7 +178,7 @@ method is-valid(Str:D $scolor, :$parse-only) {
 multi method new(Str:D :$name, *%c) {
     my %rgb = Vikna::Color::Named.rgb-by-name($name);
     if %rgb {
-        (Vikna::Color but Vikna::Color::Named).bless(|%rgb, :$name, |%c);
+        (Vikna::Color but Vikna::Color::Named).Color::new(|%rgb, :$name, |%c);
     }
     else {
         Nil
@@ -184,7 +187,7 @@ multi method new(Str:D :$name, *%c) {
 
 multi method new(Int:D :$index, *%c) {
     my %rgb = Vikna::Color::Index.rgb-by-index($index);
-    (Vikna::Color but Vikna::Color::Index).bless(|%rgb, :$index, |%c);
+    (Vikna::Color but Vikna::Color::Index).Color::new(|%rgb, :$index, |%c);
 }
 
 multi method new(Str:D :$web, *%c) {
@@ -196,7 +199,13 @@ multi method new(Str:D :$weba, *%c) {
 }
 
 multi method new(*%c where { .<role>:exists }) {
-    (Vikna::Color but (%c<role>:delete)).new(|%c)
+    my $role = %c<role>:delete;
+    (Vikna::Color but $role).new(|%c)
+}
+
+multi method new(:$r!, :$g!, :$b!, *%c) {
+    my $role := %c<a>:exists ?? Vikna::Color::RGBA !! Vikna::Color::RGB;
+    (Vikna::Color but $role).Color::new(:$r, :$g, :$b, |%c)
 }
 
 # Operators

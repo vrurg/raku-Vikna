@@ -229,6 +229,10 @@ method gist {
 
 method CALL-ME(*@pos) { ::?CLASS.new: |@pos }
 
-multi infix:<+>(::?CLASS:D $r, Vikna::Point:D $delta) {
+multi infix:<+>(::?CLASS:D $r, Vikna::Point:D $delta) is export {
     $r.move-by: $delta
+}
+
+multi infix:<==>(Vikna::Rect:D $a, Vikna::Rect:D $b) is export {
+    $a.x == $b.x && $a.y == $b.y && $a.w == $b.w && $a.h == $b.h
 }

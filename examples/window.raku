@@ -153,6 +153,7 @@ class Moveable is Vikna::Window {
 
     multi method event(Event::NextStage:D $ev) {
         self<info-lbl>.set-hidden( ! $ev.stage % 2 );
+        $.set-style: ($ev.stage % 2 == 0) ?? VSUnderline !! VSNone;
         my $close-at-stage = -7;
         if $ev.stage < $close-at-stage {
             $.app.desktop<Static>.set-bg-pattern("[{$ev.stage}]");
@@ -202,12 +203,14 @@ class MovingApp is Vikna::App {
                                                 :name<Moveable>, :title('Moveable Window'), :pattern<#>,
                                                 # :auto-clear,
                                                 :bg<blue>,
+                                                :style('udnerline'),
                                                 # :inv-mark-color<00,50,00>,
                                                 ;
         my $lbl = $mw.create-child: Vikna::Label,
                                     :3x, :10y, :1h, :30w,
                                     :name<info-lbl>, :text('Info Label'),
-                                    :bg('0,80,150 underline');
+                                    :bg('0,80,150'),
+                                    :style('underline italic');
         $.desktop.create-child: EventReporter, StBack, x => $.desktop.w - 50, y => $.desktop.h - 20, :50w, :20h,
                                 :name<EventList>, :pattern(' '), :bg<black>, :fg<cyan>;
         $lbl does role {

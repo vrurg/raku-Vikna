@@ -3,7 +3,7 @@ use Test;
 use Vikna::Rect;
 use Vikna::Point;
 
-plan 5;
+plan 6;
 
 subtest "Rect objects" => {
     plan 9;
@@ -208,6 +208,16 @@ subtest "Relative/absolute" => {
     $r2 = Vikna::Rect.new(-5, -5, 20, 10);
     $abs = $r2.absolute($r1, :clip);
     is-deeply ($abs.x, $abs.y, $abs.w, $abs.h), (15, 8, 10, 5), "relative -> absolute with clipping 2";
+}
+
+subtest "Operators" => {
+    plan 2;
+
+    my $r1 = Vikna::Rect.new: 10, 5, 42, 13;
+    my $delta = Vikna::Point.new: 1, 10;
+
+    is ($r1 + $delta).List, (11, 15, 42, 13), "add a point";
+    ok $r1 == Vikna::Rect.new(10, 5, 42, 13), "equality of rects";
 }
 
 done-testing;

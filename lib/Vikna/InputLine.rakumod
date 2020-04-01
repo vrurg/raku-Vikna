@@ -23,10 +23,10 @@ has Lock::Async:D $!position-lock .= new;
 
 submethod profile-default {
     attr => {
-        :fg<default>, :bg('black underline'), :pattern(' '),
+        :fg<default>, :bg<black>, :style('underline'), :pattern(' '),
     },
     focused-attr => {
-        :fg<white>, :bg('black bold underline'), :pattern(' '),
+        :fg<black>, :bg<white>, :style('bold underline'), :pattern(' '),
     },
     h => 1,
     w => 20,
@@ -108,10 +108,10 @@ multi method event(Event::Kbd::Press:D $ev) {
 method draw(:$canvas) {
     $.draw-background(:$canvas);
     if $!text.chars {
-        $canvas.imprint(0, 0, $!text.substr($!shift, $.w), :fg($.attr.fg), :bg($.attr.bg));
+        $canvas.imprint(0, 0, $!text.substr($!shift, $.w), $.attr);
     }
     else {
-        $canvas.imprint: 0, 0, "Input text here...", :fg('100,100,100');
+        $canvas.imprint: 0, 0, "Input text here...", |$.attr.Profile, :fg('100,100,100');
     }
 }
 

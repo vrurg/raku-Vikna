@@ -4,7 +4,7 @@ unit role Vikna::Focusable;
 
 use Vikna::Widget;
 use Vikna::Events;
-use Vikna::CAttr;
+use Vikna::WAttr;
 use Hash::Merge;
 
 has ::?ROLE $.focus;
@@ -13,16 +13,17 @@ has Bool:D $.in-focus = False;
 # Shall we auto-focus the topmost child?
 has Bool:D $.focus-topmost = False;
 
-has Vikna::CAttr $.focused-attr;
+has Vikna::WAttr $.focused-attr;
 
 submethod profile-checkin(%profile, %, %, %) {
-    return unless any %profile<focused-attr focused-fg focused-bg focused-pattern>;
-    unless %profile<focused-attr> ~~ Vikna::CAttr {
+    my @focused-keys = <focused-fg focused-bg focused-style focused-pattern>;
+    return unless any %profile{'focused-attr', |@focused-keys};
+    unless %profile<focused-attr> ~~ Vikna::WAttr {
         my %fa = $_ with %profile<focused-attr>;
-        %fa{$_} //= %profile{$_} if $_ for <focused-fg focused-bg focused-pattern>;
-        %profile<focused-attr> = %profile<attr>.clone(|%fa);
+        %fa{$_} //= %profile{ S/^focused\-// } for @focused-keys;
+        %profile<focused-attr> = %profile<attr>.dup(|%fa);
     }
-    %profile<focused-fg focused-bg focused-pattern>:delete;
+    %profile{@focused-keys}:delete;
 }
 
 multi method route-event(::?ROLE:D: Event::Focusish:D $ev) is default {

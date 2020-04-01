@@ -20,9 +20,9 @@ method default-pad { $.attr.pattern // ' ' }
 
 ### Command handlers ###
 method cmd-settext(Str:D $text) {
-    my $old-text = $!text;
+    my $from = $!text;
     $!text = $text;
-    self.dispatch: Event::Changed::Text, :$old-text, :$text;
+    self.dispatch: Event::Changed::Text, :$from, :to($text);
     self.invalidate;
     self.redraw;
 }

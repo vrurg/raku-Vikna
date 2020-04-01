@@ -16,6 +16,10 @@ has Int $.id is mooish(:lazy);
 has $.name is mooish(:lazy);
 
 multi method new(*%c) {
+    nextwith |self.make-object-profile(%c);
+}
+
+method make-object-profile(%c) {
     my %config;
     with %c<app> {
         %config = .profile-config(self.^name, %c<name>)
@@ -29,7 +33,7 @@ multi method new(*%c) {
     self.WALK(:name<profile-checkin>, :!methods, :roles).reverse.(%profile, %c, %default, %config);
     # .trace: "Profile for ", self.^name, "::new\n", %profile.map({ .key ~ " => " ~ (.value ~~ Vikna::Object ?? .value.WHICH !! .value.raku) }).join("\n")
     #     with %c<app>;
-    nextwith |%profile;
+    %profile
 }
 
 submethod profile-default { %() }

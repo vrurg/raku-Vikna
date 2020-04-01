@@ -19,32 +19,11 @@ use Vikna::Rect;
 use Vikna::Point;
 use Vikna::Color;
 use Vikna::Utils;
+use Vikna::CAttr;
 
 class Cell {
     has Str $.char where { !.defined || .chars == 0 | 1 };
-    has BasicColor $.fg;
-    has BasicColor $.bg;
-
-    multi method FROM(::?CLASS:D: |c) { self.WHAT.FROM(|c) }
-
-    # This method returns the char unmodified if no colors defined.
-    multi method FROM(::?CLASS:U: Str:D $char where *.chars == 0 | 1, :$fg?, :$bg?, *%c) {
-        if $fg || $bg {
-            self.new: :$char, :$fg, :$bg, |%c
-        }
-        else {
-            $char
-        }
-    }
-    multi method FROM(::?CLASS:U: Any:U, *%c) { %c ?? Cell.new: |%c !! Any }
-
-    multi method FROM(::?CLASS:U: Cell:D $cell, *%c) {
-        $cell.clone: |%c;
-    }
-
-    multi method FROM(::?CLASS:U: *%c) {
-        self.new: |%c
-    }
+    has Vikna::CAttr:D $.attr is required handles<fg bg style>;
 
     method Str { $!char }
 }
@@ -53,13 +32,14 @@ has Vikna::Rect:D $.geom is required handles <x y w h>;
 has Mu $!paintable-mask;
 has Bool $!paintable-expired = True;
 
-# nqp::list() of 3 planes:
-# 0 - characters
-# 1 - fg color
-# 2 - bg color
-# [planned] 3 - attributes (bold, italic, underline, etc.)
-# Each plane is nqp::list() of rows, each row is nqp::list() of elems.
-my constant PLANE-COUNT = 3;
+# nqp::list() of 3 planes, each plane is nqp::list() of rows, each row is nqp::list() of elems.
+# Planes:
+#   0 - characters
+#   1 - fg color
+#   2 - bg color
+#   3 - style
+# Style is a char. Meaning see in Vikna::Utils
+my constant PLANE-COUNT = 4;
 has Mu $!planes;
 
 # Viewport
@@ -183,12 +163,16 @@ proto method imprint(UInt:D $x, UInt:D $y, |) {
 }
 
 # a string
-multi method imprint($x, $y, Str:D() $line, :$fg? is copy, :$bg? is copy, Int :$span?)
+multi method imprint($x, $y, Str:D() $line, Vikna::CAttr:D $attr, Int :$span?) {
+    self.imprint($x, $y, $line, |$attr.Profile, :$span)
+}
+multi method imprint($x, $y, Str:D() $line, :$fg? is copy, :$bg? is copy, :$style? is copy, Int :$span?)
 {
     return if $y >= $.h || $x >= $.w;
     self!build-paintable-mask;
-    $fg = $fg.join(",") if $fg ~~ Positional:D;
-    $bg = $bg.join(",") if $bg ~~ Positional:D;
+    $fg    = $fg.join(",") if $fg ~~ Positional:D;
+    $bg    = $bg.join(",") if $bg ~~ Positional:D;
+    $style = to-style-char($style);
     nqp::stmts(
         (my $char-count := $line.chars),
         (my $len := min ($.w - $x), ($span // $char-count)),
@@ -198,6 +182,7 @@ multi method imprint($x, $y, Str:D() $line, :$fg? is copy, :$bg? is copy, Int :$
         (my $crow := nqp::atpos(nqp::atpos($!planes, 0), $y)),
         (my $fgrow := nqp::atpos(nqp::atpos($!planes, 1), $y)),
         (my $bgrow := nqp::atpos(nqp::atpos($!planes, 2), $y)),
+        (my $strow := nqp::atpos(nqp::atpos($!planes, 3), $y)),
         (my $prow := nqp::atpos($!paintable-mask, $y)),
         (my $i = -1),
         nqp::while(
@@ -205,11 +190,12 @@ multi method imprint($x, $y, Str:D() $line, :$fg? is copy, :$bg? is copy, Int :$
             nqp::stmts(
                 (my $cx := $x + $i),
                 nqp::if(
-                    nqp::atpos_i($prow, $cx),
+                    nqp::if(nqp::isge_i($cx, 0), nqp::atpos_i($prow, $cx)), # $cx >= 0 && printable
                     nqp::stmts(
                         nqp::if($i < $char-count, nqp::bindpos($crow, $cx, nqp::atpos($chars, $i))),
                         nqp::if($fg, nqp::bindpos($fgrow, $cx, $fg)),
                         nqp::if($bg, nqp::bindpos($bgrow, $cx, $bg)),
+                        nqp::if($style, nqp::bindpos($strow, $cx, $style))
                     )
                 )
             )
@@ -218,21 +204,27 @@ multi method imprint($x, $y, Str:D() $line, :$fg? is copy, :$bg? is copy, Int :$
 }
 
 # fill a rect with color
-multi method imprint($x, $y, $w, $h, :$fg? is copy, :$bg? is copy) {
+multi method imprint($x, $y, $w, $h, Vikna::CAttr:D $attr) {
+    self.imprint($x, $y, $w, $h, |$attr.Profile)
+}
+multi method imprint($x, $y, $w, $h, :$fg? is copy, :$bg? is copy, :$style? is copy) {
     self!build-paintable-mask;
-    $fg = $fg.join(",") if $fg ~~ Positional:D;
-    $bg = $bg.join(",") if $bg ~~ Positional:D;
+    $fg    = $fg.join(",") if $fg ~~ Positional:D;
+    $bg    = $bg.join(",") if $bg ~~ Positional:D;
+    $style = to-style-char($style);
     nqp::stmts(
         (my $cw := min $x + $w, $.w),
         (my $ch := min $y + $h, $.h),
         (my $cy = ($y max 0) - 1),
         (my $fgplane := nqp::atpos($!planes, 1)),
         (my $bgplane := nqp::atpos($!planes, 2)),
+        (my $stplane := nqp::atpos($!planes, 3)),
         nqp::while(
             (++$cy < $ch),
             nqp::stmts(
                 (my $fgrow := nqp::atpos($fgplane, $cy)),
                 (my $bgrow := nqp::atpos($bgplane, $cy)),
+                (my $strow := nqp::atpos($stplane, $cy)),
                 (my $prow := nqp::atpos($!paintable-mask, $cy)),
                 (my $cx = ($x max 0) - 1),
                 nqp::while(
@@ -240,8 +232,9 @@ multi method imprint($x, $y, $w, $h, :$fg? is copy, :$bg? is copy) {
                     nqp::if(
                         nqp::atpos_i($prow, $cx),
                         nqp::stmts(
-                            nqp::if($fg, nqp::bindpos($fgrow, $cx, $fg)),
-                            nqp::if($bg, nqp::bindpos($bgrow, $cx, $bg)),
+                            nqp::if($fg,    nqp::bindpos($fgrow, $cx, $fg)),
+                            nqp::if($bg,    nqp::bindpos($bgrow, $cx, $bg)),
+                            nqp::if($style, nqp::bindpos($strow, $cx, $style)),
                         )
                     )
                 ),
@@ -259,9 +252,11 @@ multi method imprint($x, $y, ::?CLASS:D $from, :$skip-empty = True) {
         (my $from-cplane := nqp::atpos($from-planes, 0)),
         (my $from-fgplane := nqp::atpos($from-planes, 1)),
         (my $from-bgplane := nqp::atpos($from-planes, 2)),
+        (my $from-stplane := nqp::atpos($from-planes, 3)),
         (my $cplane := nqp::atpos($!planes, 0)),
         (my $fgplane := nqp::atpos($!planes, 1)),
         (my $bgplane := nqp::atpos($!planes, 2)),
+        (my $stplane := nqp::atpos($!planes, 3)),
         (my $from-w := $from.w),
         (my $w := $.w),
         (my $from-y = $from.h),
@@ -273,9 +268,11 @@ multi method imprint($x, $y, ::?CLASS:D $from, :$skip-empty = True) {
                 (my $from-crow := nqp::atpos($from-cplane, $from-y)),
                 (my $from-fgrow := nqp::atpos($from-fgplane, $from-y)),
                 (my $from-bgrow := nqp::atpos($from-bgplane, $from-y)),
+                (my $from-strow := nqp::atpos($from-stplane, $from-y)),
                 (my $crow := nqp::atpos($cplane, $to-y)),
                 (my $fgrow := nqp::atpos($fgplane, $to-y)),
                 (my $bgrow := nqp::atpos($bgplane, $to-y)),
+                (my $strow := nqp::atpos($stplane, $to-y)),
                 (my $prow := nqp::atpos($!paintable-mask, $to-y)),
                 (my $from-x = $from-w),
                 nqp::if($from-x > (my $ww := $w - $x), ($from-x = $ww)),
@@ -295,6 +292,9 @@ multi method imprint($x, $y, ::?CLASS:D $from, :$skip-empty = True) {
                                 nqp::if(
                                     nqp::unless((my $from-bg := nqp::atpos($from-bgrow, $from-x)), $no-skip),
                                     nqp::bindpos($bgrow, $to-x, $from-bg)),
+                                nqp::if(
+                                    nqp::unless((my $from-st := nqp::atpos($from-strow, $from-x)), $no-skip),
+                                    nqp::bindpos($strow, $to-x, $from-st)),
                             )
                         )
                     )
@@ -317,18 +317,23 @@ method pick($x is copy, $y is copy, :$viewport?) {
         (my $cplane := nqp::atpos($!planes, 0)),
         (my $fgplane := nqp::atpos($!planes, 1)),
         (my $bgplane := nqp::atpos($!planes, 2)),
+        (my $stplane := nqp::atpos($!planes, 3)),
         Cell.new(
             char => nqp::atpos(nqp::atpos($cplane, $y), $x),
-            fg => nqp::atpos(nqp::atpos($fgplane, $y), $x),
-            bg => nqp::atpos(nqp::atpos($bgplane, $y), $x),
+            attr => cattr(
+                fg    => nqp::atpos(nqp::atpos($fgplane, $y), $x),
+                bg    => nqp::atpos(nqp::atpos($bgplane, $y), $x),
+                style => nqp::atpos(nqp::atpos($stplane, $y), $x),
+            )
         )
     )
 }
 
-method get-planes(\cplane, \fgplane, \bgplane) is raw {
+method get-planes(\cplane, \fgplane, \bgplane, \stplane) {
     cplane = nqp::atpos($!planes, 0);
     fgplane = nqp::atpos($!planes, 1);
     bgplane = nqp::atpos($!planes, 2);
+    stplane = nqp::atpos($!planes, 3);
 }
 
 #| With four parameters viewport is been set.
@@ -343,6 +348,7 @@ multi method viewport(Vikna::Rect:D $rect) {
 }
 
 multi method viewport(--> Vikna::Canvas:D) {
+    return self if $!vp-geom == $!geom;
     self.new: geom => $!vp-geom, :from(self), :viewport;
 }
 
@@ -452,10 +458,10 @@ method invalidations {
     nqp::hllize($!inv-rects)
 }
 
-multi method fill(Str:D $char where *.chars == 1, BasicColor :$fg?, BasicColor :$bg?) {
+multi method fill(Str:D $char where *.chars == 1, BasicColor :$fg?, BasicColor :$bg?, :$style?) {
     my $line = $char x $.w;
     for ^$.h -> $row {
-        $.imprint(0, $row, $line, :$fg, :$bg);
+        $.imprint(0, $row, $line, :$fg, :$bg, :$style);
     }
 }
 
