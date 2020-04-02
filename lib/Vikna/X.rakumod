@@ -144,3 +144,11 @@ class X::Color::BadChanType is X::Comp {
         "Expected channel value of type $!expected but got $!got"
     }
 }
+
+# Can't be X::Base because is used by low-level subs
+class X::CAttr::UnknownStyle is Exception {
+    has Str:D $.style is required;
+    method message {
+        "Unknown style name '$!style'"
+    }
+}
