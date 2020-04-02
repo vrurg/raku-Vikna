@@ -43,18 +43,28 @@ proto sub to-style(| --> Int) is export {*}
 # One way to set a transparent style is to to-style(VSTransparent) or just don't have the VSBase bit set.
 multi sub to-style(Int:D $style) {
     $style +& VSBase
-        ?? $style +& ( VSBase +| VSMask )
+        ?? $style +& VSBaseMask
         !! VSTransparent
 }
-multi sub to-style(+@styles) { VSBase +| (( [+|] @styles ) +& VSMask) }
+multi sub to-style(+@styles) {
+    VSBase +| (( [+|] @styles ) +& VSMask)
+}
 # This is another way to set the transparent style
 multi sub to-style('') { 0 }
-multi sub to-style(Str:D $style where *.chars == 1) { $style.ord +& VSBaseMask }
+multi sub to-style(Str:D $style where *.chars == 1) {
+    $_ +& VSBase ?? $_ !! VSTransparent given $style.ord +& VSBaseMask
+}
 # Take a space-separated list of style names
 multi sub to-style(Str:D $style) {
     my $int-style = VSTransparent;
     for $style.split(/\s+/) -> $st {
-        $int-style +|= VSBase +| $_ with %VSBits{$st}
+        with %VSBits{$st} {
+            $int-style +|= VSBase +| $_
+        }
+        else {
+            require Vikna::X;
+            fail ::('X::CAttr::UnknownStyle').new(:style($st))
+        }
     }
     $int-style
 }
