@@ -113,7 +113,7 @@ method cmd-focus-update(::?ROLE:D:) {
     return if $.closed;
     my $topmost;
     $.for-children: :reverse, -> $child {
-        if $child ~~ ::?ROLE {
+        if $child ~~ ::?ROLE && !$child.closed {
             $topmost = $child;
             last
         }
