@@ -403,7 +403,7 @@ method cmd-setgeom(Vikna::Rect:D $geom, :$no-draw?) {
 method !change-attr(Event::Changed::Attr:U \evType, *%c) {
     my $from = $!attr;
     $!attr = $!attr.dup: |%c;
-    self.dispatch: evType, :$from, :to($!attr) unless $from eqv $!attr
+    self.dispatch: evType, :$from, :to($!attr) unless $from.Profile eqv $!attr.Profile
 }
 
 method cmd-setcolor(BasicColor :$fg, BasicColor :$bg) {
