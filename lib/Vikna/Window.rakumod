@@ -60,10 +60,10 @@ submethod TWEAK(Bool:D :$border = True) {
 
 submethod profile-default {
     attr => {
-        :fg<default>, :bg<default>, :pattern(' ')
+        :fg<default>, :bg<default>, :style(' '), :pattern(' ')
     },
     focused-attr => {
-        :fg<white>, :bg<blue>, :pattern(' ')
+        :fg<white>, :bg<blue>, :style(' '), :pattern(' ')
     }
 }
 
