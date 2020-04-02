@@ -66,7 +66,7 @@ class Moveable is Vikna::Window {
 
     my class Event::NextStage is Event::Informative {
         has Int:D $.stage is required;
-        method priority { PrioImmediate }
+        method default-priority { PrioImmediate }
     }
     my class Event::Cmd::NextStep is Event::Command { }
 
@@ -153,8 +153,8 @@ class Moveable is Vikna::Window {
 
     multi method event(Event::NextStage:D $ev) {
         self<info-lbl>.set-hidden( ! $ev.stage % 2 );
-        $.set-style: ($ev.stage % 2 == 0) ?? VSUnderline !! VSNone;
-        my $close-at-stage = -7;
+        $.set-style: [($ev.stage % 2 == 0) ?? VSUnderline !! VSItalic];
+        my $close-at-stage = 5;
         if $ev.stage < $close-at-stage {
             $.app.desktop<Static>.set-bg-pattern("[{$ev.stage}]");
         }
@@ -200,10 +200,10 @@ class Moveable is Vikna::Window {
 class MovingApp is Vikna::App {
     method main {
         my $mw = $.desktop.create-child: Moveable, :0x, :0y, w => ($.desktop.w / 3).Int, h => ($.desktop.h / 3).Int,
-                                                :name<Moveable>, :title('Moveable Window'), :pattern<#>,
+                                                :name<Moveable>, :title('Moveable Window'), :pattern<I>,
                                                 # :auto-clear,
                                                 :bg<blue>,
-                                                :style('udnerline'),
+                                                :style('underline'),
                                                 # :inv-mark-color<00,50,00>,
                                                 ;
         my $lbl = $mw.create-child: Vikna::Label,
@@ -227,6 +227,10 @@ class MovingApp is Vikna::App {
                     :30x, :5y, :40w, :5h,
                     :name<Static>,
                     :bg<black>, :fg<white>,
+                    :style(VSTransparent),
+                    focused-attr => {
+                        style => VSTransparent,
+                    },
                     # :inv-mark-color<00,50,00>,
                     :title('Static Window');
         $sw.create-child: Vikna::Label, :0x, :0y, :38w, :1h, :name<s-info-lbl>, :text('info lbl');
