@@ -517,8 +517,8 @@ method set-color(BasicColor :$fg, BasicColor :$bg) {
     $.send-command: Event::Cmd::SetColor, :$fg, :$bg
 }
 
-method set-style($style) {
-    $.send-command: Event::Cmd::SetStyle, to-style($style)
+multi method set-style(|c) {
+    $.send-command: Event::Cmd::SetStyle, to-style(|c)
 }
 
 proto method set-attr(|) {*}
