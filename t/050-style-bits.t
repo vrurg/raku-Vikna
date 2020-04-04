@@ -17,10 +17,10 @@ is to-style(3.chr), VSTransparent, "chars below code is below 0x20 results in tr
 is to-style(0x43.chr), VSTransparent, "chars with codes where VSBase bit is not set result in transparent styles";
 is to-style(Int), VSTransparent, "type object results in transparent style";
 fails-like
-    { to-style("unknown bold style") },
+    { to-style("semi bold style") },
     X::CAttr::UnknownStyle,
     "bad style name causes expected failure",
-    :message(q<Unknown style name 'unknown'>),
-    :style('unknown');
+    :message(q<Unknown style name 'semi'>),
+    :style('semi');
 
 done-testing;
