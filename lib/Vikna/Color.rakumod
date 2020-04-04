@@ -127,6 +127,7 @@ class CSTR-Actions {
     method color:sym<pfx>($/) {
         my $kind = $/<kind>;
         my @ch = $/<cchannel>.map: *.made;
+        $kind ~= 'd' if ($kind eq 'rgb' | 'rgba') && (@ch[0] ~~ Num | Rat);
         my $role = %cpfx{$kind}<role>;
         my $cache-key = $kind ~ ":" ~ @ch.join(",");
         make self!new-color($cache-key, :$role, |($kind => @ch));
