@@ -144,7 +144,6 @@ method panic-shutdown($cause) {
 }
 
 method shutdown {
-    callsame;
     $.app.screen.show-cursor;
-    $.app.screen.shutdown;
+    callsame;
 }
