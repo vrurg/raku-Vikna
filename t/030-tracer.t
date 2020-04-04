@@ -15,7 +15,6 @@ $obj.flow: :sync, :name('TEST TRACER'), {
             $test-db.IO.unlink;
         }
     }
-    diag $test-db;
     wipe-db;
 
     my $tr;

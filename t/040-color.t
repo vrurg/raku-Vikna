@@ -100,10 +100,12 @@ subtest "Cache performance" => {
     await @pready;
     $pstart.keep(True);
 
-    diag "This test might take a while.";
+    diag "Benchmarking, this might take a while." if $*OUT.t;
     await @p;
 
-    diag "Cached parse took " ~ @total[0].fmt("%.2f") ~ " sec";
-    diag "Uncached parse took " ~ @total[1].fmt("%.2f") ~ " sec";
+    if $*OUT.t {
+        diag "Cached parse took " ~ @total[0].fmt("%.2f") ~ " sec";
+        diag "Uncached parse took " ~ @total[1].fmt("%.2f") ~ " sec";
+    }
     ok @total[0] < @total[1], "cached parsing is faster than non-cached by factor " ~ (@total[1] / @total[0]).fmt("%.2f");
 }
