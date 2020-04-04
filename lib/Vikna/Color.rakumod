@@ -151,7 +151,7 @@ class CSTR-Actions {
     method cchannel:sym<rat>($/) {
         # Append 0 because .Num coercion doesn't support 10. form of a fractional number.
         my $fraction = (.Str with $/<fraction>) || '0';
-        my $int-part = (.Str with $/<intpart>) || '0';
+        my $int-part = (.Str with $/<int-part>) || '0';
         make ($int-part ~ "." ~ $fraction).Num;
     }
 }
