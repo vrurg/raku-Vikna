@@ -19,6 +19,8 @@ has %.screen-params;
 has Vikna::Screen $.screen is mooish(:lazy);
 has Vikna::Desktop $.desktop;
 has Vikna::Tracer $.tracer is mooish(:lazy);
+#| Tracer database name
+has Str $.tracer-name is mooish(:lazy);
 has Bool:D $.debugging = False;
 has Vikna::OS $.os is mooish(:lazy) handles <inputs>;
 
@@ -46,10 +48,13 @@ method build-screen {
     $.os.screen
 }
 
+method build-tracer-name {
+    .subst(":", "_", :g) ~ ".sqlite" with self.^name;
+}
+
 method build-tracer {
-    my $db-name = .subst(":", "_", :g) ~ ".sqlite" with self.^name;
     # note "CREATING TRACER DB ", $db-name, " with session ", self.^name;
-    Vikna::Tracer.new: :$db-name, :session-name( self.^name ), :!to-err;
+    Vikna::Tracer.new: :db-name( $.tracer-name ), :session-name( self.^name ), :!to-err;
 }
 
 method trace(*@args, :$obj = self, *%c) {
@@ -72,7 +77,9 @@ multi method run(::?CLASS:D: |c) {
         $!desktop = self.create: Vikna::Desktop,
                                     :name<Desktop>,
                                     :geom($.screen.geom.clone),
-                                    :pattern<.>,
+                                    attr => {
+                                        :pattern<.>,
+                                    },
                                     :!auto-clear,
                                     # :bg<black>,
                                     # :inv-mark-color<00,00,50>,
