@@ -1,46 +1,47 @@
 {
-  "production": true,
+  "support": {
+    "source": "git://github.com/vrurg/raku-Vikna.git"
+  },
+  "source-url": "git://github.com/vrurg/raku-Vikna.git",
+  "license": "Artistic-2.0",
   "authors": [
     "Vadim Belman <vrurg@cpan.org>"
   ],
-  "version": "0.0.1",
-  "meta-version": "0",
-  "resources": [
-    "tracer/html.tmpl"
+  "test-depends": [
+    "Test",
+    "Test::Async",
+    "Test::META"
+  ],
+  "description": "Console UI toolkit",
+  "auth": "github:vrurg",
+  "build-depends": [
+    "Pod::To::Markdown"
   ],
   "depends": [
     "Template::Mustache",
     "DB::SQLite",
     "Terminal::Print",
-    "AttrX::Mooish",
+    "AttrX::Mooish:ver<0.7.3+>",
     "Color",
     "Color::Names",
-    "Concurrent::Queue",
-    "Data::Dump"
+    "Cache::Async",
+    "Concurrent::PChannel",
+    "Hash::Merge"
   ],
-  "build-depends": [
-    "Pod::To::Markdown"
-  ],
-  "support": {
-    "source": "git://github.com/vrurg/raku-Vikna.git"
-  },
-  "source-url": "git://github.com/vrurg/raku-Vikna.git",
-  "name": "Vikna",
+  "meta-version": "0",
   "provides": {
     "Vikna::App": "lib/Vikna/App.rakumod"
   },
-  "license": "Artistic-2.0",
+  "production": true,
+  "resources": [
+    "tracer/html.tmpl"
+  ],
   "tags": [
     "Vikna",
     "UI",
     "console"
   ],
-  "auth": "github:vrurg",
-  "description": "Console UI toolkit",
+  "name": "Vikna",
   "perl": "6.e",
-  "test-depends": [
-    "Test",
-    "Test::META",
-    "Test::When"
-  ]
+  "version": "0.0.1"
 }

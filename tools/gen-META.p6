@@ -15,8 +15,10 @@ my $m = META6.new(
                          AttrX::Mooish:ver<0.7.3+>
                          Color
                          Color::Names
-                         Concurrent::Queue”,
-    test-depends   => <Test Test::META Test::When>,
+                         Cache::Async
+                         Concurrent::PChannel
+                         Hash::Merge”,
+    test-depends   => <Test Test::Async Test::META>,
     build-depends  => <Pod::To::Markdown>,
     tags           => <Vikna UI console>,
     authors        => ['Vadim Belman <vrurg@cpan.org>'],
