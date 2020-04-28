@@ -159,14 +159,17 @@ method build-session-name {
 
 method trigger-session-name( $name, :$builder?, :$old-value?, *%p ) {
     if !$builder && $old-value.defined && ($name ne $old-value) {
-        $.clear-session-id if $.has-session-id;
+        # $.clear-session-id if $.has-session-id;
+        await $.cue({ $.clear-session-id })
+            if $.has-session-id;
     }
 }
 
 method build-session-id {
     $!record-id ⚛= 0;
     $!db.query('INSERT INTO session (name, started) VALUES (?, ?)', $!session-name, now.Rat);
-    $!db.query('SELECT last_insert_rowid()').value
+    my $sid = $!db.query('SELECT last_insert_rowid()').value;
+    $sid
 }
 
 method cue(&code) {
@@ -211,16 +214,18 @@ multi method record(
 {
     note $message if $!to-err;
     ++⚛$!submitted;
-    # Pre-store session id to prevent the record be written to another session if id changes dynamically.
+    # Pre-store session and record ids to prevent the record be written to another session if id changes dynamically.
     my $session-id = $!session-id;
+    my $record-id = ++⚛$!record-id;
     $.cue: {
         CATCH {
             note $_, ~.backtrace;
             exit 1;
         }
         # TODO: Replace with something more readable, perhaps.
+        # say "+ REC: ", $!session-id, "#", $!record-id, ". ‘$message’";
         $!rec-sth.execute(
-            ++⚛$!record-id,
+            $record-id,
             $time,
             $flow.id,
             $flow.name,
