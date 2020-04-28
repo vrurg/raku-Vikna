@@ -271,9 +271,10 @@ class Event::ZOrder::Bottom is Event::Informative does Event::ZOrderish { }
 class Event::ZOrder::Middle is Event::Informative does Event::ZOrderish { }
 class Event::ZOrder::Child  is Event::Informative does Event::ZOrderish does Event::Childish { }
 
-# Dispatched whenever widget content might have changed.
+# Dispatched whenever widget canvas has been flattened into parent
 class Event::Updated is Event::Informative {
-    has $.geom          is required; # Widget geometry at the point of time when the event was dispatched.
+    # Widget canvas geometry
+    has $.geom          is required;
 }
 
 class Event::Scroll::Position is Event::Informative does Event::Vectorish { }

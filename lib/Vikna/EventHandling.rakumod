@@ -34,8 +34,8 @@ method !run-ev-loop {
     my $*VIKNA-EVQ-OWNER = self;
     loop {
         CATCH {
+            note "===EVENT KABOOM=== on {self.?name // self.WHICH}! ", .message, ~.backtrace;
             default {
-                note "===EVENT KABOOM=== on {self.?name // self.WHICH}! ", .message, ~.backtrace;
                 $.trace: "EVENT HANDLING THROWN:\n", .message, .backtrace, :error;
                 unless self.?on-event-queue-fail($_) {
                     $!ev-queue.fail($_) if $!ev-queue;

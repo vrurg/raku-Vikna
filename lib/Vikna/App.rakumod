@@ -17,15 +17,29 @@ my ::?CLASS $app;
 #| Named parameters to be passed to a screen driver constructor
 has %.screen-params;
 has Vikna::Screen $.screen is mooish(:lazy);
-has Vikna::Desktop $.desktop;
+has Vikna::Desktop $.desktop is mooish(:lazy);
 has Vikna::Tracer $.tracer is mooish(:lazy);
 #| Tracer database name
 has Str $.tracer-name is mooish(:lazy);
 has Bool:D $.debugging = False;
 has Vikna::OS $.os is mooish(:lazy) handles <inputs>;
+#| Named parameters for $.desktop constructor
+has %.desktop-profile;
 
 method new(|) {
     $app //= callsame;
+}
+
+method profile-default {
+    desktop-profile => %(
+        :name<Desktop>,
+        attr => {
+            :pattern<.>,
+        },
+        :!auto-clear,
+        # :bg<black>,
+        # :inv-mark-color<00,00,50>,
+    )
 }
 
 my %os2mod =
@@ -57,6 +71,14 @@ method build-tracer {
     Vikna::Tracer.new: :db-name( $.tracer-name ), :session-name( self.^name ), :!to-err;
 }
 
+method build-desktop {
+    self.create:
+        Vikna::Desktop,
+        |%!desktop-profile,
+        :geom($.screen.geom.clone),
+        ;
+}
+
 method trace(*@args, :$obj = self, *%c) {
     return unless $!debugging;
     my $message = @args.join;
@@ -74,16 +96,6 @@ multi method run(::?CLASS:D: |c) {
     $.flow: :sync, :name('MAIN'), {
         PROCESS::<$VIKNA-APP> = self;
         $.trace: "Starting app" ~ self.^name, obj => self, :phase;
-        $!desktop = self.create: Vikna::Desktop,
-                                    :name<Desktop>,
-                                    :geom($.screen.geom.clone),
-                                    attr => {
-                                        :pattern<.>,
-                                    },
-                                    :!auto-clear,
-                                    # :bg<black>,
-                                    # :inv-mark-color<00,00,50>,
-                                    ;
         $!desktop.dispatch: Event::Init;
         $!desktop.dispatch: Event::Focus::In;
         $!desktop.invalidate;
