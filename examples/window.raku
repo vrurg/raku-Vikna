@@ -211,7 +211,10 @@ class MovingApp is Vikna::App {
                                     :name<info-lbl>, :text('Info Label'),
                                     :bg('0,80,150'),
                                     :style('underline italic');
-        $.desktop.create-child: EventReporter, StBack, x => $.desktop.w - 50, y => $.desktop.h - 20, :50w, :20h,
+        $.desktop.create-child: EventReporter, StBack,
+                                x => $.desktop.w - 50,
+                                y => $.desktop.h - 20,
+                                :50w, :20h,
                                 :name<EventList>, :pattern(' '), :bg<black>, :fg<cyan>;
         $lbl does role {
             has $.ttl-pfx = "";
