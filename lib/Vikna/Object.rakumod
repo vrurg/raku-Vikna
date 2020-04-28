@@ -13,7 +13,7 @@ my class CodeFlow {
 
 has $.app;
 has Int $.id is mooish(:lazy);
-has $.name is mooish(:lazy);
+has $!name is mooish(:lazy);
 
 multi method new(*%c) {
     nextwith |self.make-object-profile(%c);
@@ -54,9 +54,12 @@ method build-id {
     nqp::objectid(self)
 }
 
-method build-name {
+method !build-name {
     self.^name ~ "<" ~ $.id ~ ">"
 }
+
+multi method name(::?CLASS:D:) { $!name }
+multi method name(::?CLASS:U:) { self.^name }
 
 multi method throw(X::Base:D $ex) {
     $ex.rethrow
@@ -139,3 +142,5 @@ method panic(Exception:D $cause) {
     note "===PANIC!=== On object ", self.?name // self.WHICH, "\n", $cause.message, ~$cause.backtrace;
     exit 1;
 }
+
+multi method Str { self.name }
