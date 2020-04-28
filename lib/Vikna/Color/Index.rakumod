@@ -9,6 +9,7 @@ has Int $.index;
 
 my $color-idx;
 
+# Take all index => r,g,b mappings from resources/color-index.json
 my sub color-idx {
     $color-idx //= from-json %?RESOURCES<color-index.json>.slurp;
 }
