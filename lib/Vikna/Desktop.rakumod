@@ -123,10 +123,12 @@ method flatten-canvas {
 }
 
 method start-event-handling {
-    $.trace: "Let the event queue start";
+    self.flow: {
+        #    self.trace: "Let the event queue start";
     callsame;
-    $.trace: "Adding event sources";
-    $.add-event-source: $_ for $.app.inputs;
+        #    self.trace: "Adding event sources";
+        self.add-event-source: $_ for $.app.inputs;
+    }, :name('Start Desktop Event Loop'), :sync
 }
 
 method panic-shutdown($cause) {
