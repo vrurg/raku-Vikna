@@ -84,3 +84,9 @@ sub to-styles(|c) is export {
     }
     @styles
 }
+
+# Bypass $*VIKNA-FLOW to a code possibly be ran in a different thread like with Promise::then, etc.
+sub flow-branch(&code) is export {
+    my $vf = $*VIKNA-FLOW;
+    -> |c { my $*VIKNA-FLOW = $vf; &code(|c) }
+}
