@@ -65,18 +65,19 @@ has atomicint $!flatten-misses = 0;
 
 has @.invalidations;
 has Lock $.inv-lock .= new;
+
 # Invalidations mapped into parent's coords. To be pulled out together with widget canvas for imprinting into parent's
 # canvas.
-has $!stash-parent-invs = [];
 # Invalidations for parent widget are to be stashed here first ...
-has $!inv-for-parent = [];
+has $!stash-parent-invs = [];
 # ... and then added here when redraw finalizes
+has $!inv-for-parent = [];
 has Lock:D $!inv4parent-lock .= new;
 
 # Keys are Vikna::Object.id
 has %!child-by-id;
-has %!child-by-name;
 # Maps name into id
+has %!child-by-name;
 
 has $.inv-mark-color is rw;
 # For test purposes only.
@@ -292,10 +293,10 @@ method cmd-close {
         .close
     }
     self.dispatch: Event::Closing;
-    Promise.allof(|@dismissed).then: flow-branch({
+    Promise.allof(|@dismissed).then: {
         self.trace: "CHILDREN DISMISSED, DETACHING";
         $.detach;
-    });
+    };
 }
 
 method flatten-canvas {
@@ -306,8 +307,8 @@ method flatten-canvas {
         ++$!flatten-misses;
         return;
     }
-    return unless $!canvas-geom;
     # No paints were done yet.
+    return unless $!canvas-geom;
     unless $!pcanvas
         && $!pcanvas.w == $!canvas-geom.w
         && $!pcanvas.h == $!canvas-geom.h
@@ -395,7 +396,7 @@ method cmd-setgeom( Vikna::Rect:D $geom, :$no-draw? ) {
     $.update-positions;
     self.trace: "Setgeom invalidations";
     self.add-inv-parent-rect: $from;
-    $.invalidate;
+    self.invalidate;
     self.trace: "Setgeom children visibility";
     self.for-children: {
         .update-positions;
@@ -698,7 +699,7 @@ method begin-draw( Vikna::Canvas $canvas? is copy --> Vikna::Canvas ) {
         :$.w, :$.h,
         :$!inv-mark-color,
         |( $!auto-clear ?? (  ) !! :from( $!canvas ) );
-    $.invalidate if $!auto-clear;
+    self.invalidate if $!auto-clear;
     self.trace: "begin-draw canvas (auto-clear:{ $!auto-clear }): ", $canvas.WHICH, " ", $canvas.w, " x ", $canvas.h;
 
     for @!invalidations {

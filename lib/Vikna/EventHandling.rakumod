@@ -183,8 +183,7 @@ multi method dispatch( ::?ROLE:D: Vikna::Event:U \EvType, EventPriority $priorit
     my %defaults = :origin( self ), :dispatcher( self );
     %defaults.append: :$priority if $priority.defined;
     my $ev = self.create: EvType, |%defaults, |%params;
-    self.trace: "NEW EVENT ", $ev, " with params:\n", %params.pairs».map({ "  " ~ .key ~ " => " ~ (
-    .value // '*undef*' ) }).join("\n");
+    self.trace: "NEW EVENT ", $ev, " with params:\n", %params.pairs».map({ "  " ~ .key ~ " => " ~ ( .value // '*undef*' ) }).join("\n");
     self.dispatch: $ev;
 }
 

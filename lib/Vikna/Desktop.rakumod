@@ -123,9 +123,10 @@ method flatten-canvas {
 }
 
 method start-event-handling {
+    my &super := nextcallee;
     self.flow: {
         #    self.trace: "Let the event queue start";
-        callsame;
+        self.&super();
         #    self.trace: "Adding event sources";
         self.add-event-source: $_ for $.app.inputs;
     }, :name('Start Desktop Event Loop'), :sync
