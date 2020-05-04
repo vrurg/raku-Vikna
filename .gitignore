@@ -1,3 +1,5 @@
+.idea/
+raku-Vikna.iml
 *.sqlite
 trace.html
 lib/.precomp

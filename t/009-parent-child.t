@@ -1,12 +1,12 @@
 use v6.e.PREVIEW;
-use Test;
+use Test::Async;
 
 use Vikna::Parent;
 use Vikna::Child;
 use Vikna::Utils;
 use Vikna::X;
 
-plan 3;
+plan 3, :parallel, :random;
 
 class Child does Vikna::Child is Vikna::Object {
     has $.data;

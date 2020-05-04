@@ -1,12 +1,14 @@
 use v6.e.PREVIEW;
-use Test;
+use Test::Async;
 use Vikna::Color;
 use Vikna::Color::Index;
 use Vikna::Color::Named;
 use Vikna::Color::RGB;
 use Vikna::Color::RGBA;
 
-plan 2;
+plan 2, :parallel;
+
+diag "This suite does benchmarking, this might take a while." if $*OUT.t;
 
 subtest "Parsing" => {
     my @clist =
@@ -42,7 +44,7 @@ subtest "Parsing" => {
             { color => "12,13,14 underline", :!valid },
             ;
 
-    plan +@clist;
+    plan +@clist, :parallel;
 
     for @clist -> %ctest {
         subtest 'Color string: "' ~ %ctest<color> ~ '"' => {
@@ -100,7 +102,6 @@ subtest "Cache performance" => {
     await @pready;
     $pstart.keep(True);
 
-    diag "Benchmarking, this might take a while." if $*OUT.t;
     await @p;
 
     if $*OUT.t {

@@ -1,5 +1,5 @@
 use v6.e.PREVIEW;
-use Test;
+use Test::Async;
 use Vikna::EventHandling;
 use Vikna::Events;
 use Vikna::Object;

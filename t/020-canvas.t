@@ -1,10 +1,10 @@
 use v6;
-use Test;
+use Test::Async;
 use Vikna::App;
 use Vikna::Canvas;
 use Vikna::Utils;
 
-plan 6;
+plan 6, :random, :parallel;
 
 class MyApp is Vikna::App {
 }
@@ -15,7 +15,7 @@ role not-passed { }
 sub test-filled-rect(Vikna::Canvas:D $c, $x, $y, $w, $h, $char, Str:D $msg,
                     BasicColor :$fg = Any but not-passed, BasicColor :$bg = Any but not-passed)
 {
-    subtest "Filled canvas rectangle: " ~ $msg => {
+    subtest :instant, :!async, "Filled canvas rectangle: " ~ $msg => {
         plan 4;
         ok $c.geom.contains($x, $y, $w, $h), "required rectangle fits into the canvas";
         my $char-matches = 0;

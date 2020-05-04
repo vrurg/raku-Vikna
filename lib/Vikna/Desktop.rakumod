@@ -37,16 +37,16 @@ submethod TWEAK {
 my @bg-chars = <+ * .>;
 multi method event(::?CLASS:D: Event::Screen::Geom:D $ev) {
     my $chr = @bg-chars.shift;
-    $.cmd-setbgpattern: $chr;
+    self.cmd-setbgpattern: $chr;
     @bg-chars.push: $chr;
-    $.cmd-setgeom: $ev.to, :no-draw;
+    self.cmd-setgeom: $ev.to, :no-draw;
     $.cmd-redraw;
 }
 
-multi method event(::?CLASS:D: Event::Screen::Ready:D $ev) {
+multi method event(::?CLASS:D: Event::Screen::Ready:D $ev --> Nil) {
     $.flatten-unblock;
     if $!print-needed {
-        $.trace: "SCREEN READY, trying printing again";
+        self.trace: "SCREEN READY, trying printing again";
         # This would result in a call to the print method.
         $.flatten-canvas;
     }
@@ -56,7 +56,7 @@ has $.presses = 0;
 multi method dispatch(::?CLASS:D: Event::Kbd::Control:D $ev, |c) {
     if K_Control ∈ $ev.modifiers && $ev.key eq 'C' {
         $.quit;
-        # $.dispatch: Event::Quit;
+        # self.dispatch: Event::Quit;
         # # Quick reaction expected, thus bypass the normal event handling.
         # $.cmd-quit;
         if ++$!presses > 1 {
@@ -80,8 +80,8 @@ method cmd-quit {
 method quit {
     # Exceptional case: pre-send notification event prior to command execution. Event::Quit has immediate priority thus
     # will give child widgets time to take care of themselves.
-    $.dispatch: Event::Quit;
-    $.send-command: Event::Cmd::Quit;
+    self.dispatch: Event::Quit;
+    self.send-command: Event::Cmd::Quit;
 }
 
 ### Utility methods ###
@@ -90,7 +90,7 @@ method quit {
 method resize(|) { }
 
 method print(::?CLASS:D: Vikna::Canvas:D $canvas?) {
-    $.trace: "DESKTOP REDRAW -> screen";
+    self.trace: "DESKTOP REDRAW -> screen";
     $!on-screen-canvas = $_ with $canvas;
     if $.app.screen.print(0, 0, $!on-screen-canvas) {
         $!print-needed = False;
@@ -110,7 +110,7 @@ method hide-cursor {
             $.app.screen.hide-cursor;
         }
         when * < 0 {
-            $.throw: X::OverUnblock, what => 'cursor hide', count => $_
+            self.throw: X::OverUnblock, what => 'cursor hide', count => $_
         }
     }
 }
@@ -125,14 +125,14 @@ method flatten-canvas {
 method start-event-handling {
     self.flow: {
         #    self.trace: "Let the event queue start";
-    callsame;
+        callsame;
         #    self.trace: "Adding event sources";
         self.add-event-source: $_ for $.app.inputs;
     }, :name('Start Desktop Event Loop'), :sync
 }
 
 method panic-shutdown($cause) {
-    $.trace: "DESKTOP PANIC SHUTDOWN: " ~ $cause;
+    self.trace: "DESKTOP PANIC SHUTDOWN: " ~ $cause;
     $.stop-event-handling;
     $.app.screen.show-cursor;
     try $.app.screen.shutdown;

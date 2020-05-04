@@ -48,13 +48,13 @@ my %os2mod =
     linux   => 'unix';
 
 method build-os {
-    $.throw: X::OS::Unsupported, os => $*VM.osname
+    self.throw: X::OS::Unsupported, os => $*VM.osname
         unless %os2mod{$*VM.osname}:exists;
 
     my $os-module = 'Vikna::OS::' ~ %os2mod{$*VM.osname};
 
     require ::($os-module);
-    $.create: ::($os-module);
+    self.create: ::($os-module);
 }
 
 method build-screen {
@@ -93,21 +93,21 @@ multi method run(::?CLASS:U: |c) {
 }
 
 multi method run(::?CLASS:D: |c) {
-    $.flow: :sync, :name('MAIN'), {
+    self.flow: :sync, :name('MAIN'), {
         PROCESS::<$VIKNA-APP> = self;
-        $.trace: "Starting app" ~ self.^name, obj => self, :phase;
+        self.trace: "Starting app" ~ self.^name, obj => self, :phase;
         $!desktop.dispatch: Event::Init;
         $!desktop.dispatch: Event::Focus::In;
         $!desktop.invalidate;
         $!desktop.redraw;
         $!desktop.sync-events: :transitive;
-        $.trace: "PASSING TO MAIN", :phase;
+        self.trace: "PASSING TO MAIN", :phase;
         $.main(|c);
-        $.trace: "MAIN IS DONE", :phase;
-        $.desktop.sync-events(:transitive);
-        $.trace: "CLOSING DESKTOP", :phase;
+        self.trace: "MAIN IS DONE", :phase;
+        $.desktop.sync-events(:transitive) unless $.desktop.closed;
+        self.trace: "CLOSING DESKTOP", :phase;
         await $.desktop.dismissed;
-        $.trace: "APP DONE!", :phase;
+        self.trace: "APP DONE!", :phase;
 
         LEAVE {
             # $!screen.shutdown;
@@ -116,7 +116,7 @@ multi method run(::?CLASS:D: |c) {
         CATCH {
             default {
                 note .message, ~.backtrace;
-                $.trace: .message, .backtrace, :error;
+                self.trace: .message, .backtrace, :error;
                 .rethrow;
             }
         }
@@ -138,7 +138,7 @@ method panic($cause, :$object?) {
         }
         my $obj-id = $object.?name // $object.WHICH;
         my $msg = "Caused by {$obj-id}\n" ~ $cause ~ $cause.backtrace;
-        $.trace: "APP PANIC! ", $msg, :error;
+        self.trace: "APP PANIC! ", $msg, :error;
         note "===APP PANIC!=== ", $msg;
         $.desktop.panic-shutdown($cause);
         $!tracer.shutdown;

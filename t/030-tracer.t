@@ -1,5 +1,6 @@
 use v6;
-use Test;
+# use Test::Async;
+use Test::Async;
 use Vikna::Tracer;
 use Vikna::Object;
 
@@ -16,6 +17,8 @@ $obj.flow: :sync, :name('TEST TRACER'), {
         }
     }
     wipe-db;
+
+    # diag "TDB: " ~ $test-db;
 
     my $tr;
     lives-ok {
@@ -41,6 +44,7 @@ $obj.flow: :sync, :name('TEST TRACER'), {
     is $tr.sessions[1].name, "Test 2", "second session name";
 
     for $tr.sessions -> $sess {
+        # diag "SESS: " ~ $sess.id;
         subtest "Session " ~ $sess.id => {
             plan 10;
             my $prev-time = DateTime.new: 0;
@@ -48,7 +52,7 @@ $obj.flow: :sync, :name('TEST TRACER'), {
             for $sess.records -> $rec {
                 subtest "Record " ~ $id => {
                     plan 3;
-                    # note ~$rec.time, " ", $rec.object-id, " ", $rec.message;
+                    # diag join ", ", $rec.session-id ~ "#" ~ $rec.id, ~$rec.time, " ", $rec.object-id, " ", $rec.message;
                     is $rec.message, "test " ~ $sess.id ~ " line " ~ $id, "$id. record message";
                     is $rec.id, ++$id, "record id";
                     ok $rec.time > $prev-time, "record time is sequential";

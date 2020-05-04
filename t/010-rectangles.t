@@ -1,9 +1,9 @@
 use v6;
-use Test;
+use Test::Async;
 use Vikna::Rect;
 use Vikna::Point;
 
-plan 6;
+plan 6, :parallel, :random;
 
 subtest "Rect objects" => {
     plan 9;
