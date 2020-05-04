@@ -113,12 +113,12 @@ method free-flow(CodeFlow:D $flow) {
     }
 }
 
-method flow(&code, Str :$name?, :$sync = False) {
-    my $flow = $.allocate-flow(:$name);
+method flow(&code, Str :$name?, :$sync = False, :$branch = False) {
+    my $flow = $branch ?? $*VIKNA-FLOW !! $.allocate-flow(:$name);
 
-    sub flow-start {
+    my sub flow-start {
         my $*VIKNA-FLOW = $flow;
-        LEAVE $.free-flow($flow);
+        LEAVE { $.free-flow($flow) unless $branch };
         &code();
     }
 
@@ -129,7 +129,7 @@ method flow(&code, Str :$name?, :$sync = False) {
         ( $flow.promise = Promise.start(&flow-start) ).then: {
             my $*VIKNA-FLOW = $flow;
             if .status ~~ Broken {
-                $.trace: "FLOW BROKEN: " ~ .cause, ~.cause.backtrace, :error;
+                self.trace: "FLOW BROKEN: " ~ .cause, ~.cause.backtrace, :error;
                 note "===FLOW `{$name}` PANIC!=== ", .cause.message, .cause.backtrace.Str;
                 self.panic(.cause);
                 .cause.rethrow;
