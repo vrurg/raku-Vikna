@@ -23,10 +23,7 @@ has @!event-source;
 has Bool:D $!event-shutdown = False;
 
 submethod TWEAK {
-    # note "TWEAK({self.WHICH}):start-event-handling";
-    # note self.^mro(:roles).map( *.^name ).join(", ");
     self.start-event-handling;
-    # note "TWEAK:start-event-handling done";
 }
 
 method !run-ev-loop {

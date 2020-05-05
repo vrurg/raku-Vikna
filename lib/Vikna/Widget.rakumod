@@ -152,7 +152,7 @@ multi method event( ::?CLASS:D: Event::Detached:D $ev ) {
     if $ev.child === self {
         if $.closed {
             # If a closed widget gets detached it's time to stop every activity.
-            $.shutdown;
+            self.shutdown;
         }
     }
     elsif !$.closed && $ev.parent === self {
@@ -886,7 +886,7 @@ method detach {
 }
 
 method shutdown {
-    $.stop-event-handling.then: {
+    self.stop-event-handling.then: {
         $!dismissed.keep(True);
     }
 }

@@ -15,7 +15,7 @@ multi method post-event(Event:U \evType, *%p) {
             .rethrow;
         }
     }
-    $.post-event: evType.new( :origin(self), :dispatcher(self), |%p );
+    self.post-event: evType.new( :origin(self), :dispatcher(self), |%p );
 }
 multi method post-event(Event:D $ev) {
     $!ev-supplier.emit: $ev;

@@ -40,6 +40,7 @@ multi method move-cursor(UInt:D $x, UInt:D $y) {...}
 
 method init { ... }
 method shutdown {
+    self.Vikna::EventEmitter::shutdown;
     $!shutting-down.keep(True);
 }
 
@@ -52,8 +53,8 @@ method shutdown {
 # multi method color(Any:U)                           { Vikna::Color::RGB }
 
 method cmd-screenprint(::?CLASS:D: Int:D $x, Int:D $y, Vikna::Canvas:D $viewport, *%c ) {
-    $.screen-print($x, $y, $viewport, |%c);
-    $.post-event: Event::Screen::Ready;
+    self.screen-print($x, $y, $viewport, |%c);
+    self.post-event: Event::Screen::Ready;
     $!availability_promise.keep(True);
 }
 
@@ -67,7 +68,7 @@ multi method print(Int:D $x, Int:D $y, Vikna::Canvas:D $viewport, *%c ) {
         else {
             # Available
             $!availability_promise = Promise.new;
-            $.send-command: Event::Cmd::ScreenPrint, $x, $y, $viewport, |%c;
+            self.send-command: Event::Cmd::ScreenPrint, $x, $y, $viewport, |%c;
             True
         }
     }
@@ -75,8 +76,8 @@ multi method print(Int:D $x, Int:D $y, Vikna::Canvas:D $viewport, *%c ) {
 
 method screen-resize {
     my $from = $!geom;
-    $.clear-geom;
-    $.post-event: Event::Screen::Geom, :$from, to => $!geom;
+    self.clear-geom;
+    self.post-event: Event::Screen::Geom, :$from, to => $!geom;
 }
 
 method panic($cause) {
