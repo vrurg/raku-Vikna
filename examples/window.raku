@@ -9,41 +9,41 @@ use AttrX::Mooish;
 
 class EventReporter is Vikna::TextScroll {
     multi method event(Event::Attached:D $ev) {
-        $.fit-into;
-        $.subscribe: $.app.desktop;
+        self.fit-into;
+        self.subscribe: $.app.desktop;
         nextsame
     }
     multi method subscription-event(Event::Input:D $ev) {
         given $ev {
             when Event::Kbd::Control {
-                $.say: "Kbd ", $ev.^shortname.lc, ($ev.char ?? " char: " ~ $ev.char !! 'no char'),
+                self.say: "Kbd ", $ev.^shortname.lc, ($ev.char ?? " char: " ~ $ev.char !! 'no char'),
                         ", mods: ", $ev.modifiers.keys.join(", "), ", key:" ~ $ev.key;
             }
             when Event::Kbd {
-                $.say: "Kbd ", $ev.^shortname.lc, ($ev.char ?? " char: " ~ $ev.char !! 'no char'),
+                self.say: "Kbd ", $ev.^shortname.lc, ($ev.char ?? " char: " ~ $ev.char !! 'no char'),
                         ", mods: ", $ev.modifiers.keys.join(", ");
             }
             default {
-                $.say: $ev.^name;
+                self.say: $ev.^name;
             }
         }
     }
     multi method event(Event::Screen::Geom:D $ev) {
-        $.trace: "Screen geom from subscription: ", $ev;
+        self.trace: "Screen geom from subscription: ", $ev;
         my ($pw, $ph) = .w, .h given $ev.to // $.parent.geom;
         my $w = 10 max ($pw / 3).ceiling;
         my $h = 5 max ($ph / 2).ceiling;
-        $.cmd-setgeom: Vikna::Rect.new($pw - $w, $ph - $h, $w, $h);
-        # $.fit-into: geom => $ev.to;
-        $.cmd-textscroll-addtext: "SCREEN GEOM: " ~ $ev.to ~ "\n";
-        # $.say: "SCREEN GEOM: ", $ev.to;
+        self.cmd-setgeom: Vikna::Rect.new($pw - $w, $ph - $h, $w, $h);
+        # self.fit-into: geom => $ev.to;
+        self.cmd-textscroll-addtext: "SCREEN GEOM: " ~ $ev.to ~ "\n";
+        # self.say: "SCREEN GEOM: ", $ev.to;
     }
     method fit-into(:$geom) {
-        $.trace: "FITTING INTO PARENT: ", $.parent.name;
+        self.trace: "FITTING INTO PARENT: ", $.parent.name;
         my ($pw, $ph) = .w, .h given $geom // $.parent.geom;
         my $w = 10 max ($pw / 3).ceiling;
         my $h = 5 max ($ph / 2).ceiling;
-        $.set-geom: $pw - $w, $ph - $h, $w, $h;
+        self.set-geom: $pw - $w, $ph - $h, $w, $h;
     }
 }
 
@@ -101,7 +101,7 @@ class Moveable is Vikna::Window {
                     $step = -1;
                     ++$stage;
                     # $*ERR.print: "New stage $stage: moving to $dest-x, $dest-y $dest-w x $dest-h; steps: $steps";
-                    $.trace: "New stage $stage: moving to $dest-x, $dest-y $dest-w x $dest-h; steps: $steps";
+                    self.trace: "New stage $stage: moving to $dest-x, $dest-y $dest-w x $dest-h; steps: $steps";
                 }
                 ++$step;
                 my $ds = $step / $steps;
@@ -130,18 +130,18 @@ class Moveable is Vikna::Window {
             return;
         }
 
-        $.dispatch: Event::NextStage, stage => $stage.stage if $stage.step == 0;
+        self.dispatch: Event::NextStage, stage => $stage.stage if $stage.step == 0;
 
         # $*ERR.print: "Stage ", $stage.stage, ", step ", $stage.step, ": ", $stage.geom, "\r";
-        $.trace: "Stage ", $stage.stage, ", step ", $stage.step, ": ", $stage.geom;
+        self.trace: "Stage ", $stage.stage, ", step ", $stage.step, ": ", $stage.geom;
         my $lbl = self<info-lbl>;
         my $ttl-pfx = $lbl ?? $lbl.ttl-pfx !! "";
         my $desktop = $.app.desktop;
         my $sw = $desktop<Static>;
-        $.redraw-hold: {
-            $.set-geom: $stage.geom.clone;
-            $.set-color: fg => $stage.fg, bg => $stage.bg;
-            $.set-title: $ttl-pfx ~ "geom({$stage.stage}): " ~ $stage.geom;
+        self.redraw-hold: {
+            self.set-geom: $stage.geom.clone;
+            self.set-color: fg => $stage.fg, bg => $stage.bg;
+            self.set-title: $ttl-pfx ~ "geom({$stage.stage}): " ~ $stage.geom;
             if $sw {
                 $sw.set-title: "Stage " ~ $stage.stage;
                 .set-text: ~$stage.geom with $sw<s-info-lbl>;
@@ -153,13 +153,13 @@ class Moveable is Vikna::Window {
 
     multi method event(Event::NextStage:D $ev) {
         self<info-lbl>.set-hidden( ! $ev.stage % 2 );
-        $.set-style: [($ev.stage % 2 == 0) ?? VSUnderline !! VSItalic];
+        self.set-style: [($ev.stage % 2 == 0) ?? VSUnderline !! VSItalic];
         my $close-at-stage = 5;
         if $ev.stage < $close-at-stage {
             $.app.desktop<Static>.set-bg-pattern("[{$ev.stage}]");
         }
         elsif $ev.stage == $close-at-stage {
-            $.trace: "Closing Static window";
+            self.trace: "Closing Static window";
             $.app.desktop<Static>.close;
         }
     }
@@ -170,7 +170,7 @@ class Moveable is Vikna::Window {
             && $ev.origin === $.app.desktop
             && $ev.dispatcher === self
         {
-            $.trace: "Next step upon ", $ev;
+            self.trace: "Next step upon ", $ev;
             $!ready4next = False;
             $.next-step;
         }
@@ -178,7 +178,7 @@ class Moveable is Vikna::Window {
     }
 
     multi method event(Event::Attached:D $ev) {
-        $.trace: "WINDOW ATTACHED, CLIENT CODE";
+        self.trace: "WINDOW ATTACHED, CLIENT CODE";
         if $ev.child === self {
             $.nop.head.completed.then: {
                 $.next-step;
@@ -188,16 +188,27 @@ class Moveable is Vikna::Window {
     }
 
     multi method event(Event::Idle:D $ev) {
-        $.trace: "IDLED";
-        $.dispatch: Event::Idle;
+        self.trace: "IDLED";
+        self.dispatch: Event::Idle;
     }
 
     method next-step {
-        $.send-command: Event::Cmd::NextStep;
+        self.send-command: Event::Cmd::NextStep;
     }
 }
 
 class MovingApp is Vikna::App {
+    method build-desktop {
+        callsame() does role :: {
+            my @bg-chars = <+ * .>;
+            multi method event(Event::Screen::Geom:D $ev) {
+                my $chr = @bg-chars.shift;
+                self.cmd-setbgpattern: $chr;
+                @bg-chars.push: $chr;
+                nextsame
+            }
+        }
+    }
     method main {
         my $mw = $.desktop.create-child: Moveable, :0x, :0y, w => ($.desktop.w / 3).Int, h => ($.desktop.h / 3).Int,
                                                 :name<Moveable>, :title('Moveable Window'), :pattern<I>,

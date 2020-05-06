@@ -34,13 +34,9 @@ submethod TWEAK {
 }
 
 ### Event handlers ###
-my @bg-chars = <+ * .>;
 multi method event(::?CLASS:D: Event::Screen::Geom:D $ev) {
-    my $chr = @bg-chars.shift;
-    self.cmd-setbgpattern: $chr;
-    @bg-chars.push: $chr;
     self.cmd-setgeom: $ev.to, :no-draw;
-    $.cmd-redraw;
+    self.cmd-redraw;
 }
 
 multi method event(::?CLASS:D: Event::Screen::Ready:D $ev --> Nil) {
