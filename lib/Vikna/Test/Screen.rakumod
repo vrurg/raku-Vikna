@@ -11,7 +11,7 @@ use Test;
 also does Vikna::Screen;
 
 has Bool:D $.simulate-unicode = True;
-has Vikna::Rect:D $.test-geom is rw is mooish(:filter) .= new: 0, 0, 80, 24;
+has Vikna::Rect:D $.test-geom is rw is mooish(:filter, :trigger) .= new: 0, 0, 80, 24;
 has Int:D $test-color-depth = 24;
 
 has Vikna::Canvas $.buffer is mooish(:lazy, :clearer) handles <pick>;
@@ -39,10 +39,13 @@ method filter-test-geom($new-size is copy, :$constructor?, *%c) {
     if $new-size ~~ Positional && $new-size.elems == 4 {
         $new-size = Vikna::Rect.new: |$new-size;
     }
+    $new-size
+}
+
+method trigger-test-geom(*@, :$constructor, *%) {
     unless $constructor {
         self.screen-resize;
     }
-    $new-size
 }
 
 submethod profile-default {

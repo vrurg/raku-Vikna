@@ -25,7 +25,7 @@ class Cell {
     has Str $.char where { !.defined || .chars == 0 | 1 };
     has Vikna::CAttr:D $.attr is required handles<fg bg style>;
 
-    method Str { $!char }
+    method Str { $!char.raku }
 }
 
 has Vikna::Rect:D $.geom is required handles <x y w h>;
@@ -87,7 +87,7 @@ method clone {
 
 method !setup-planes(:$from?, :$viewport?) {
     my ($w, $h) = $.w, $.h;
-    $.trace: "Setting up canvas planes from ", $from.WHICH;
+   self.trace: "Setting up canvas planes from ", $from.WHICH;
     my ($from-x, $from-y, $from-w, $from-h, $from-planes);
     my ($copy-w, $copy-h);
     if $from {
@@ -306,12 +306,12 @@ multi method imprint($x, $y, ::?CLASS:D $from, :$skip-empty = True) {
 
 method pick($x is copy, $y is copy, :$viewport?) {
     if $viewport {
-        return if $x < $.vx || $x >= ($.vx + $.vw) || $y < $.vy || $y >= ($.vy + $.vh);
+        return Nil if $x < $.vx || $x >= ($.vx + $.vw) || $y < $.vy || $y >= ($.vy + $.vh);
         $x += $.vx;
         $y += $.vy;
     }
     else {
-        return if $x < 0 || $x >= $.w || $y < 0 || $y >= $.h;
+        return Nil if $x < 0 || $x >= $.w || $y < 0 || $y >= $.h;
     }
     nqp::stmts(
         (my $cplane := nqp::atpos($!planes, 0)),
@@ -338,12 +338,12 @@ method get-planes(\cplane, \fgplane, \bgplane, \stplane) {
 
 #| With four parameters viewport is been set.
 multi method viewport(UInt:D $x, UInt:D $y, Int:D $w where * > 0, Int:D $h where * > 0 --> Nil) {
-    $.throw: X::Canvas::BadViewport, :$x, :$y, :$w, :$h unless $!geom.contains($x, $y, $w, $h);
-    $!vp-geom = $.create: Vikna::Rect, :$x, :$y, :$w, :$h;
+    self.throw: X::Canvas::BadViewport, :$x, :$y, :$w, :$h unless $!geom.contains($x, $y, $w, $h);
+    $!vp-geom = self.create: Vikna::Rect, :$x, :$y, :$w, :$h;
 }
 
 multi method viewport(Vikna::Rect:D $rect) {
-    $.throw: X::Canvas::BadViewport, :$rect unless $!geom.contains($rect);
+    self.throw: X::Canvas::BadViewport, :$rect unless $!geom.contains($rect);
     $!vp-geom = $rect.clone;
 }
 
@@ -359,8 +359,8 @@ multi method invalidate(::?CLASS:D: Vikna::Rect:D $rect) {
     $.add-inv-rect($rect) unless $.is-paintable-rect($rect);
 }
 multi method invalidate(+@rect where *.elems == 4) {
-    my $r := $.create: Vikna::Rect, @rect;
-    $.add-inv-rect: $r unless $.is-paintable-rect: $r;
+    my $r := self.create: Vikna::Rect, @rect;
+    self.add-inv-rect: $r unless self.is-paintable-rect: $r;
 }
 
 method is-paintable(::?CLASS:D: $x, $y) {

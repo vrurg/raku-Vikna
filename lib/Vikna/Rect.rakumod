@@ -14,11 +14,11 @@ has Int $.right;
 has Int $.bottom;
 
 multi method new(::?CLASS: +@r where *.elems == 4, *%c) {
-    $.new: |%( <x y w h> Z=> @r ), |%c
+    self.new: |%( <x y w h> Z=> @r ), |%c
 }
 
 multi method new(::?CLASS: +@r where *.elems == 2, *%c) {
-    $.new: |%( <w h> Z=> @r ), |%c
+    self.new: |%( <w h> Z=> @r ), |%c
 }
 
 multi method new(*@p where *.elems != 0 | 2 | 4) {
@@ -71,7 +71,7 @@ my sub clip-coords(@r is copy, @into) {
     @r
 }
 
-multi method clip(::?CLASS:D: +@into where *.elems == 4, :$copy?) { $.clip( ::?CLASS.new: @into, :$copy ) }
+multi method clip(::?CLASS:D: +@into where *.elems == 4, :$copy) { $.clip( ::?CLASS.new: @into, :$copy ) }
 multi method clip(::?CLASS:D: ::?CLASS:D $into, :$copy! where ?*) { $.clone.clip: $into }
 multi method clip(::?CLASS:D: ::?CLASS:D $into) {
     if $.overlap($into) {
@@ -236,3 +236,4 @@ multi infix:<+>(::?CLASS:D $r, Vikna::Point:D $delta) is export {
 multi infix:<==>(Vikna::Rect:D $a, Vikna::Rect:D $b) is export {
     $a.x == $b.x && $a.y == $b.y && $a.w == $b.w && $a.h == $b.h
 }
+

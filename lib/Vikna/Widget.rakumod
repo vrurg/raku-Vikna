@@ -354,9 +354,9 @@ method flatten-canvas {
 
 method cmd-redraw( :$force? ) {
     return unless $.visible;
-    if $.redraw-blocked {
+    if self.redraw-blocked {
         self.trace: "SKIP REDRAW UNTIL UNBLOCKED";
-        $.redraw;
+        self.redraw;
     }
     else {
         my Vikna::Canvas:D $canvas = $!canvas;
@@ -367,7 +367,7 @@ method cmd-redraw( :$force? ) {
             self.draw(:$canvas);
             self.end-draw(:$canvas);
             $!canvas = $canvas;
-            $.flatten-canvas;
+            self.flatten-canvas;
             self.trace: "REDRAWN";
         }
     }

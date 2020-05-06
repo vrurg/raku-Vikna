@@ -16,7 +16,7 @@ my atomicint $sequence = -1;
 enum EventPriority is export ( PrioIdle => 0, |<PrioDefault PrioCommand PrioReleased PrioOut PrioIn PrioImmediate>);
 
 class Event is export {
-    has Int $.seq is built(False);
+    has Int $.id is built(False);
     has $.origin is mooish(:lazy);  # Originating object.
     has $.dispatcher is required;   # Dispatching object. Changes on re-dispatch.
     has Bool:D $.cleared = False;
@@ -25,16 +25,16 @@ class Event is export {
     method default-priority { PrioDefault }
 
     submethod TWEAK {
-        self!set-seq;
+        self!set-id;
     }
 
-    method !set-seq {
-        $!seq = ++⚛$sequence;
+    method !set-id {
+        $!id = ++⚛$sequence;
     }
 
     method dup(*%p) {
-        my $dup = $.clone: |%p;
-        $dup!set-seq;
+        my $dup = self.clone: |%p;
+        $dup!set-id;
         $dup
     }
 
@@ -57,7 +57,7 @@ class Event is export {
     proto method Str(|) {*}
     multi method Str(::?CLASS:U:) { nextsame }
     multi method Str(::?CLASS:D:) {
-        self.^name ~ " #{$!seq}:"
+        self.^name ~ " #{$!id}:"
                    ~ " orig={$!origin.?name // $!origin.WHICH}"
                    ~ " disp={$!dispatcher.?name // $!dispatcher.WHICH}"
                    ~ ($!cleared ?? " clear" !! "")
