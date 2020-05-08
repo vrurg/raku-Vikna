@@ -50,7 +50,7 @@ method trigger-test-geom(*@, :$constructor, *%) {
 
 submethod profile-default {
     simulate-unicode    => True,
-    test-geom           => Vikna::Rect.new(0, 0, 120, 45),
+    test-geom           => (0, 0, 120, 45),
     test-color-depth    => 24,
 }
 
