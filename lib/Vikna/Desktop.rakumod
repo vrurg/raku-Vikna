@@ -25,6 +25,7 @@ submethod profile-default {
         :bg<default>,
         :fg<default>,
         :pattern<.>,
+        :style(VSNone),
     },
     focus-topmost => True,
 }
