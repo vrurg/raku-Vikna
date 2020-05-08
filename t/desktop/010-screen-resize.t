@@ -136,3 +136,5 @@ plan 3;
 given MyApp.new(:!debugging) {
     .run
 }
+
+done-testing;
