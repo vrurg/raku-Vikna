@@ -13,5 +13,5 @@ opportunities to Rakudo.
 
 ## SEE ALSO
 
-[`Vikna`](https://github.com/vrurg/raku-Test-Async/blob/docs/md/Vikna.md)
+[`Vikna`](https://github.com/vrurg/raku-Vikna/blob/master/docs/md/Vikna.md)
 
