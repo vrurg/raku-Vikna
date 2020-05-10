@@ -35,10 +35,23 @@ DESCRIPTION
 
 
 
-SEE ALSO
-========
+This framework is an attempt to provide a full-fledged consule UI for [Raku](https://raku.org). It aims at few primary targets:
 
-[`Vikna::Manual`](https://github.com/vrurg/raku-Test-Async/blob/v0.0.1/docs/md/Vikna/Manual.md), [`Vikna::Widget`](https://github.com/vrurg/raku-Test-Async/blob/v0.0.1/docs/md/Vikna/Widget.md)
+  * Be a multi-platform. This is achieved by:
+
+    * being a pure Raku, i.e. avoid use of any native libraries
+
+    * being OS-independent by incapsulating any OS-specific logic in a driver-like layer
+
+  * Support fully asynchronous model of development
+
+Any other implementation specifics of the framework are decisions taken to meet the above targets.
+
+More information can be found in the following sections:
+
+  * [`Vikna::Manual`](https://github.com/vrurg/raku-Test-Async/blob/v0.0.1/docs/md/Vikna/Manual.md)
+
+  * [`Vikna::Widget`](https://github.com/vrurg/raku-Test-Async/blob/v0.0.1/docs/md/Vikna/Widget.md)
 
 AUTHOR
 ======

@@ -28,10 +28,20 @@ C<Vikna> – all native event-driven Raku console UI
 
 =DESCRIPTION
 
-=head1 SEE ALSO
+This framework is an attempt to provide a full-fledged consule UI for L<Raku|https://raku.org>. It aims at few primary
+targets:
 
-L<C<Vikna::Manual>|https://github.com/vrurg/raku-Test-Async/blob/v0.0.1/docs/md/Vikna/Manual.md>,
-L<C<Vikna::Widget>|https://github.com/vrurg/raku-Test-Async/blob/v0.0.1/docs/md/Vikna/Widget.md>
+=item Be a multi-platform. This is achieved by:
+=item2 being a pure Raku, i.e. avoid use of any native libraries
+=item2 being OS-independent by incapsulating any OS-specific logic in a driver-like layer
+=item Support fully asynchronous model of development
+
+Any other implementation specifics of the framework are decisions taken to meet the above targets.
+
+More information can be found in the following sections:
+
+=item L<C<Vikna::Manual>|https://github.com/vrurg/raku-Test-Async/blob/v0.0.1/docs/md/Vikna/Manual.md>
+=item L<C<Vikna::Widget>|https://github.com/vrurg/raku-Test-Async/blob/v0.0.1/docs/md/Vikna/Widget.md>
 
 =AUTHOR
 
