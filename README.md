@@ -11,4 +11,7 @@ Rakudo had to be reverted from the master Vikna won't work with standard Rakudo 
 will succeed with his total redesign of dispatching which is much awaited by many as it gonna bring a lot of new
 opportunities to Rakudo.
 
-More docs to come when the project is ready...
+## SEE ALSO
+
+[`Vikna`](https://github.com/vrurg/raku-Test-Async/blob/docs/md/Vikna.md)
+
