@@ -35,7 +35,7 @@ DESCRIPTION
 
 
 
-This framework is an attempt to provide a full-fledged consule UI for [Raku](https://raku.org). It aims at few primary targets:
+This framework is an attempt to provide a full-fledged console UI for [Raku](https://raku.org). It aims at few primary targets:
 
   * Be a multi-platform. This is achieved by:
 

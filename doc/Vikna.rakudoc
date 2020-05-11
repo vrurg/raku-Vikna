@@ -28,7 +28,7 @@ C<Vikna> – all native event-driven Raku console UI
 
 =DESCRIPTION
 
-This framework is an attempt to provide a full-fledged consule UI for L<Raku|https://raku.org>. It aims at few primary
+This framework is an attempt to provide a full-fledged console UI for L<Raku|https://raku.org>. It aims at few primary
 targets:
 
 =item Be a multi-platform. This is achieved by:
