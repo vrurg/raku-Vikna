@@ -1,0 +1,3 @@
+[submodule "build-tools"]
+	path = build-tools
+	url = git@github.com:vrurg/raku-build-tools.git
