@@ -3,16 +3,19 @@
 
 SHELL = /bin/sh
 
-MAIN_MOD=lib/Vikna.rakumod
-MOD_VER:=$(shell raku -Ilib -e 'use Vikna; Vikna.^ver.say')
-MOD_NAME_PFX=Vikna
+export MAIN_MOD=Vikna
+MAIN_MOD_FILE=$(addprefix lib/,$(addsuffix .rakumod,$(subst ::,/,$(MAIN_MOD))))
+MOD_VER:=$(shell raku -Ilib -e 'use $(MAIN_MOD); $(MAIN_MOD).^ver.say')
+MOD_NAME_PFX=$(MAIN_MOD)
 MOD_DISTRO=$(MOD_NAME_PFX)-$(MOD_VER)
 MOD_ARCH=$(MOD_DISTRO).tar.gz
 META=META6.json
-META_BUILDER=./tools/gen-META.raku
+BUILD_TOOLD_DIR=./build-tools
+META_BUILDER=$(BUILD_TOOLD_DIR)/gen-META.raku
+DOC_BUILDER=$(BUILD_TOOLD_DIR)/gen-doc.raku
 
 PROVE_CMD=prove6
-PROVE_FLAGS=-l -I ./tools/lib
+PROVE_FLAGS=-l
 TEST_DIRS=t
 PROVE=$(PROVE_CMD) $(PROVE_FLAGS) $(TEST_DIRS)
 
@@ -46,6 +49,9 @@ vpath %.rakudoc $(dir $(POD_SRC))
 .PHONY: all html test author-test release-test is-repo-clean build depends depends-install release meta6_mod meta \
 		archive upload clean install doc md html docs_dirs doc_gen version
 
+tell_var:
+	@echo $(MOD_VER)
+
 #%.md $(addsuffix /%.md,$(MD_SUBDIRS)):: %.rakumod
 #	@echo "===> Generating" $@ "of" $<
 #	@raku -I lib --doc=Markdown $< >$@
@@ -64,19 +70,25 @@ vpath %.rakudoc $(dir $(POD_SRC))
 
 all: release
 
+$(DOC_BUILDER) $(META_BUILDER):
+	@echo "===> Prepare submodule"
+	@git submodule sync --quiet --recursive
+	@git submodule init --quiet
+	@git submodule update --quiet --recursive
+
 doc: docs_dirs doc_gen
 
 #docs_dirs: | $(MD_SUBDIRS) $(HTML_SUBDIRS)
+
 docs_dirs: | $(MD_SUBDIRS)
 
 $(MD_SUBDIRS) $(HTML_SUBDIRS):
 	@echo "===> mkdir" $@
 	@mkdir -p $@
 
-doc_gen:
+doc_gen: $(DOC_BUILDER)
 	@echo "===> Updating documentation sources"
-	@raku -I../raku-Async-Workers/lib ./tools/gen-doc.raku -md $(DOC_SRC)
-#	@raku ./tools/gen-doc.raku -md -o=./README.md doc/Vikna/README.rakudoc
+	@raku $(DOC_BUILDER) -md $(DOC_SRC)
 
 #md: ./README.md $(addprefix $(MD_DIR)/,$(patsubst %.rakudoc,%.md,$(patsubst %.rakumod,%.md,$(DOC_DEST))))
 
@@ -103,7 +115,7 @@ depends: meta depends-install
 
 depends-install:
 	@echo "===> Installing dependencies"
-	@zef install META6 p6doc Pod::To::Markdown
+	@zef install META6 p6doc Pod::To::Markdown Async::Workers
 	@zef --deps-only install .
 
 version: doc meta clean
@@ -115,7 +127,7 @@ release: build is-repo-clean release-test archive
 meta6_mod:
 	@zef locate META6 2>&1 >/dev/null || (echo "===> Installing META6"; zef install META6)
 
-meta: meta6_mod $(META)
+meta: meta6_mod $(META_BUILDER) $(META)
 
 archive: $(MOD_ARCH)
 
@@ -128,9 +140,9 @@ $(MOD_ARCH): $(DIST_FILES)
 	@git push -f --tags
 	@git archive --prefix="$(MOD_DISTRO)/" -o $(MOD_ARCH) $(MOD_VER)
 
-$(META): $(META_BUILDER) $(MAIN_MOD)
+$(META): $(META_BUILDER) $(MAIN_MOD_FILE)
 	@echo "===> Generating $(META)"
-	@$(META_BUILDER) >$(META).out && cp $(META).out $(META)
+	@$(META_BUILDER) $(MAIN_MOD) >$(META).out && cp $(META).out $(META)
 	@rm $(META).out
 
 upload: release
