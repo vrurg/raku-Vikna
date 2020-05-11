@@ -91,7 +91,7 @@ the moving window floats under the static one.
 
 =head2 Widget
 
-Do I need to explain this one? Ok, dear visitor, time to move on to another exhibit...
+Do I need to explain this one? Ok, dear visitor, it's time to move on to another exhibit...
 
 =head2 Events And Event Handling
 
@@ -185,7 +185,7 @@ would just C<use> a module:
     use MyApp::Sensor;
 
     class SensorWin is Vikna::Window {
-        submethod TWEAK {
+        multi method event(Event::Init:D) {
             self.add-event-source: MyApp::Sensor, :$!device-IP;
         }
         multi method event(Event::Sensor::Overload:D $ev) {

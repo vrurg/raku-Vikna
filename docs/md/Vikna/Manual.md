@@ -72,7 +72,7 @@ The [README](https://github.com/vrurg/raku-Vikna) contains a GIFed demo where th
 Widget
 ------
 
-Do I need to explain this one? Ok, dear visitor, time to move on to another exhibit...
+Do I need to explain this one? Ok, dear visitor, it's time to move on to another exhibit...
 
 Events And Event Handling
 -------------------------
@@ -131,7 +131,7 @@ An event source can be attached to any event handling object. For example, imagi
     use MyApp::Sensor;
 
     class SensorWin is Vikna::Window {
-        submethod TWEAK {
+        multi method event(Event::Init:D) {
             self.add-event-source: MyApp::Sensor, :$!device-IP;
         }
         multi method event(Event::Sensor::Overload:D $ev) {
