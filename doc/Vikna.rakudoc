@@ -41,7 +41,7 @@ Any other implementation specifics of the framework are decisions taken to meet 
 More information can be found in the following sections:
 
 =item L<C<Vikna::Manual>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Manual.md>
-=item L<C<Vikna::Widget>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Widget.md>
+=item L<C<Vikna::Classes>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Classes.md>
 
 =AUTHOR
 

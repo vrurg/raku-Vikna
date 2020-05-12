@@ -51,7 +51,7 @@ More information can be found in the following sections:
 
   * [`Vikna::Manual`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Manual.md)
 
-  * [`Vikna::Widget`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Widget.md)
+  * [`Vikna::Classes`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Classes.md)
 
 AUTHOR
 ======
