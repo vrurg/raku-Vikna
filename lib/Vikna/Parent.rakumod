@@ -65,7 +65,7 @@ method remove-child(ChldType:D $child) {
 }
 
 method next-to(ChldType:D $child, :$reverse?, :$on-strata?, :$loop?) {
-    $.is-my-child: $child;
+    self.is-my-child: $child;
     my @children;
     if $on-strata {
         @children = self.children: :$reverse

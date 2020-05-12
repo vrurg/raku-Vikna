@@ -43,13 +43,24 @@ The example demoes the most simple case we can imagine. In real life when one cr
 
   * defaults of the class itself or its parents
 
-Vikna provide a unified way to merge all sources into a final profile to be used. This is done by allowing any type object to have its own `submethod` `profile-default` which is expected to return a profile object coercable into a [`Hash`](https://docs.raku.org/type/Hash) which would contain what the type object conisders to be viable defaults. [`Vikna::Object`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Object.md) then iterates over the `submethods` in reverse MRO order (the same as for the construction time submethods), collects the profiles, and merges them into a final default one.
+Vikna provide a unified way to merge all sources into a final profile to be used. This is done by allowing any type object to have its own `submethod` `profile-default` which is expected to return a profile object coercable into a [`Hash`](https://docs.raku.org/type/Hash) which would contain what the type object conisders to be viable defaults. [`Vikna::Object`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Object.md) then iterates over the `submethods` in reverse RMRO order (the same as for the construction time submethods, see [RMRO](#RMRO) below), collects the profiles, and merges them into a final default one.
 
 When the default profile is built, [`Vikna::Object`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Object.md) then runs it alongside with profiles obtained from the constructor method arguments and from a config file (not implemented yet) through another `submethod` `profile-checkin`. The job of `profile-checkin` is to adjust the final profile so as to adjust some values according to demands of its owning type object. For example, `Vikna::Object::profile-checkin`, which would be invoked first, simply merges default, config, and constructor profiles in the order mentioned into the destination hash. Any subsequent `profile-checkin` would need to modify that final profile if necessary.
 
 An example of how it works can be found in [`Vikna::Widget`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Widget.md) class. It allows creating a new widget by either specifying widget's geometry explicitly, via an instance of [`Vikna::Rect`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md), or by passing `x`, `y`, `w`, `h` keys. In the latter case [`Vikna::Widget`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Widget.md) implicitly create a new `geom` key and removes redundant coordinate keys from the profile. Similarly it handles widget attribute parameters.
 
 One of the future concepts I plan to be implemented with custom profiles is *themes* support. A theme could have own configuration file which would be read by the application and passed into the custom profile processing.
+
+### RMRO
+
+Despite the greatest efforts of Raku/Rakudo documentation team, they can't keep up with the pace of core development. For this reason I'd try to briefly explain the RMRO principle here because there no documentation for it yet. Additional information can be found in [my blog post](http://blogs.perl.org/users/vadim_belman/2019/12/post.html).
+
+Actually, everything is rather simple here. [MRO](https://docs.raku.org/language/objects#Inheritance) is well documented and basically it is an order in which parent classes of a given class are considered when, say, a method is resolved. RMRO is almost the same thing but in addition to classes it also includes consumed roles.
+
+Lazy Attributes
+---------------
+
+Vikna use lazy attribute implementation by [`AttrX::Mooish`](https://modules.raku.org/dist/AttrX::Mooish:cpan:VRURG).
 
 Code Flows
 ----------
@@ -139,8 +150,24 @@ An event source can be attached to any event handling object. For example, imagi
         }
     }
 
+Parent/Child Strata
+-------------------
+
+Nothing has been said so far about parent/child relations of widgets because this is something intrinsic to probaly every UI architecture out there. But what has to be mentioned is that in Vikna children are grouped into strata. There are three of them whith self-explaining names: `StBack`, `StMain`, and `StModal`. Apparently, the purpose is to simplify management of children Z-order. Simply put, if a child widget is installed into `StBack` then whenever it requests to be moved atop, it won't overlap any window from `STMain`.
+
+You can see how widget `EventList` from [the window example script](https://github.com/vrurg/raku-Vikna/blob/master/examples/window.raku) is using `StBack` stratum to stay below both windows.
+
+As long as any widget can be both parent and child, strata are per-widget thing. It makes per-widget modality possible.
+
+Application
+-----------
+
+An application is a glue which binds together OS-dependant layer (*drivers* of a kind) and desktop widget.
+
 SEE ALSO
 ========
+
+[`Vikna::Widget`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Widget.md)
 
 AUTHOR
 ======

@@ -38,8 +38,8 @@ Vikna provide a unified way to merge all sources into a final profile to be used
 to have its own C<submethod> C<profile-default> which is expected to return a profile object coercable into a
 L<C<Hash>|https://docs.raku.org/type/Hash> which would contain what the type object conisders to be viable defaults.
 L<C<Vikna::Object>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Object.md>
-then iterates over the C<submethods> in reverse MRO order (the same as for the construction time submethods), collects
-the profiles, and merges them into a final default one.
+then iterates over the C<submethods> in reverse RMRO order (the same as for the construction time submethods, see
+L<RMRO|#RMRO> below), collects the profiles, and merges them into a final default one.
 
 When the default profile is built, L<C<Vikna::Object>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Object.md> then runs it alongside with profiles obtained from the constructor
 method arguments and from a config file (not implemented yet) through another C<submethod> C<profile-checkin>. The job
@@ -57,6 +57,21 @@ attribute parameters.
 
 One of the future concepts I plan to be implemented with custom profiles is I<themes> support. A theme could have own
 configuration file which would be read by the application and passed into the custom profile processing.
+
+=head3 RMRO
+
+Despite the greatest efforts of Raku/Rakudo documentation team, they can't keep up with the pace of core development.
+For this reason I'd try to briefly explain the RMRO principle here because there no documentation for it yet. Additional
+information can be found in L<my blog post|http://blogs.perl.org/users/vadim_belman/2019/12/post.html>.
+
+Actually, everything is rather simple here. L<MRO|https://docs.raku.org/language/objects#Inheritance> is well documented
+and basically it is an order in which parent classes of a given class are considered when, say, a method is resolved.
+RMRO is almost the same thing but in addition to classes it also includes consumed roles.
+
+=head2 Lazy Attributes
+
+Vikna use lazy attribute implementation by
+L<C<AttrX::Mooish>|https://modules.raku.org/dist/AttrX::Mooish:cpan:VRURG>.
 
 =head2 Code Flows
 
@@ -193,7 +208,27 @@ would just C<use> a module:
         }
     }
 
+=head2 Parent/Child Strata
+
+Nothing has been said so far about parent/child relations of widgets because this is something intrinsic to probaly
+every UI architecture out there. But what has to be mentioned is that in Vikna children are grouped into strata. There
+are three of them whith self-explaining names: C<StBack>, C<StMain>, and C<StModal>. Apparently, the purpose is to
+simplify management of children Z-order. Simply put, if a child widget is installed into C<StBack> then whenever it
+requests to be moved atop, it won't overlap any window from C<STMain>.
+
+You can see how widget C<EventList> from
+L<the window example script|https://github.com/vrurg/raku-Vikna/blob/master/examples/window.raku> is using C<StBack>
+stratum to stay below both windows.
+
+As long as any widget can be both parent and child, strata are per-widget thing. It makes per-widget modality possible.
+
+=head2 Application
+
+An application is a glue which binds together OS-dependant layer (I<drivers> of a kind) and desktop widget.
+
 =head1 SEE ALSO
+
+L<C<Vikna::Widget>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Widget.md>
 
 =AUTHOR
 

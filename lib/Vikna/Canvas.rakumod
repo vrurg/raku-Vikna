@@ -48,6 +48,7 @@ has Vikna::Rect $!vp-geom is mooish(:lazy, :clearer);
 has $.inv-mark-color;
 has $!inv-rects;
 
+# TODO Better be re-implemented with profile-checkin.
 multi method new(Dimension $w, Dimension $h, *%c) {
     self.new: geom => Vikna::Rect.new(:0x, :0y, :$w, :$h), |%c
 }
