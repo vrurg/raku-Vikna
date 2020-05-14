@@ -1,4 +1,11 @@
 use v6.e.PREVIEW;
+
+=begin pod
+=NAME
+
+C<Vikna::Rect> - the rectangle type
+=end pod
+
 use Vikna::Coord;
 # Immutable class
 unit class Vikna::Rect;

@@ -11,9 +11,9 @@ has ::?ROLE:D %!pointer-owners;
 has Lock:D $!po-lock .= new;
 
 multi method route-event(::?ROLE:D: Event::Pointer:D $ev, *%) {
-    $.trace: "Routing pointer event ", $ev, :event;
+    self.trace: "Routing pointer event ", $ev, :event;
     my $new-owner;
-    $.for-children: :reverse, -> $child {
+    self.for-children: :reverse, -> $child {
         next unless $child ~~ ::?ROLE;
         if $child.abs-viewport.contains($ev.at) {
             $new-owner = $child;
@@ -24,21 +24,21 @@ multi method route-event(::?ROLE:D: Event::Pointer:D $ev, *%) {
     # Handle the event myself if no new pointer owner found.
     my $old-owner = $.pointer-owner($ev);
     unless $new-owner {
-        $.trace: "Handle the event myself", :event;
+        self.trace: "Handle the event myself", :event;
         .?pointer-leave($ev) with $old-owner;
-        $.pointer-owner: $ev, :delete;
+        self.pointer-owner: $ev, :delete;
         nextsame
     }
 
     # A child claims the event. See if it's not an owner already.
-    $.trace: "Changing owner? from ", ($old-owner // '*nobody*'), " to ", $new-owner, " for ", $ev, :event;
+    self.trace: "Changing owner? from ", ($old-owner // '*nobody*'), " to ", $new-owner, " for ", $ev, :event;
     unless $old-owner eqv $new-owner {
         $old-owner.?pointer-leave: $ev if $old-owner;
-        $.pointer-owner: $ev, $new-owner;
+        self.pointer-owner: $ev, $new-owner;
         $new-owner.?pointer-enter: $ev;
-        $.dispatch: Event::Pointer::OwnerChange, :from($old-owner), :to($new-owner), at => $ev.at;
+        self.dispatch: Event::Pointer::OwnerChange, :from($old-owner), :to($new-owner), at => $ev.at;
     }
-    $.trace: "Dispatching via the new owner ", $new-owner, :event;
+    self.trace: "Dispatching via the new owner ", $new-owner, :event;
     $new-owner.dispatch: $ev;
 }
 
@@ -49,7 +49,7 @@ multi method route-event(::?ROLE:D: Event::Pointer:D $ev, *%) {
 # Enter/leave handlers for pointer events supporting this kind of event.
 proto method pointer-enter(::?ROLE:D: Event::Pointer:D $, |) {*}
 multi method pointer-enter(Event::Mouse:D $ev) {
-    $.send-event: Event::Mouse::Enter.new(
+    self.send-event: Event::Mouse::Enter.new(
                     origin => self,
                     dispatcher => self,
                     at => $ev.at,
@@ -60,8 +60,8 @@ multi method pointer-enter(Event::Mouse:D $ev) {
 
 proto method pointer-leave(::?ROLE:D: Event::Pointer:D $, |) {*}
 multi method pointer-leave(Event::Mouse:D $ev) {
-    $.trace: "Mouse leave, current po: ", $.pointer-owner($ev) // '*undef*', :event;
-    $.send-command: Event::Cmd::ClearPointerOwner, $ev.dup;
+    self.trace: "Mouse leave, current po: ", $.pointer-owner($ev) // '*undef*', :event;
+    self.send-command: Event::Cmd::ClearPointerOwner, $ev.dup;
 }
 
 # Supporting methods for pointer owners handling.

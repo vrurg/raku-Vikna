@@ -37,16 +37,16 @@ multi method route-event(::?ROLE:D: Event::Focusish:D $ev) is default {
 
 multi method handle-event(::?ROLE:D: Event::ZOrder::Child:D $ev) {
     my $child = $ev.child;
-    $.trace: "Focusable Child ZOrder on ", $child, :event;
+    self.trace: "Focusable Child ZOrder on ", $child, :event;
     if $!focus-topmost && $child ~~ ::?ROLE {
-        $.trace: "Updating focus";
+        self.trace: "Updating focus";
         $.update-focus;
     }
     nextsame
 }
 
 multi method handle-event(::?ROLE:D: Event::Focus::In:D $ev) {
-    $.trace: "set myself into focus by ", $ev;
+    self.trace: "set myself into focus by ", $ev;
     $!in-focus = True;
     .dispatch: Event::Focus::In with $!focus;
     $.invalidate;
@@ -56,9 +56,9 @@ multi method handle-event(::?ROLE:D: Event::Focus::In:D $ev) {
 
 multi method handle-event(::?ROLE:D: Event::Focus::Out:D $ev) {
     # Desktop doesn't lose focu s
-    $.trace: "Focus out event: ", $ev;
+    self.trace: "Focus out event: ", $ev;
     with $.parent {
-        $.trace: "remove focus from myself";
+        self.trace: "remove focus from myself";
         $!in-focus = False;
         with $!focus {
             .dispatch: Event::Focus::Out;
@@ -73,12 +73,12 @@ multi method handle-event(::?ROLE:D: Event::Focus::Out:D $ev) {
 
 method cmd-addchild(::?ROLE:D: $child, |) {
     callsame;
-    $.trace: "Focusable handles attach of ", $child;
+    self.trace: "Focusable handles attach of ", $child;
     if $child ~~ ::?ROLE {
         # If child has reparented it might still preserve its focused status. Reset it.
         if $child.in-focus {
             # By default a child is added unfocused. $.focus-topmost controls if it will gain the focus later.
-            $.trace: "Unfocusing child ", $child.name;
+            self.trace: "Unfocusing child ", $child.name;
             $child.dispatch: Event::Focus::Out;
         }
     }
@@ -97,13 +97,13 @@ method cmd-removechild(::?ROLE:D: $child, |) {
 method !focus-to($child) {
     return if $!focus eqv $child;
     with $!focus {
-        $.trace: "Report focus lose";
+        self.trace: "Report focus lose";
         .dispatch: Event::Focus::Lost;
         .dispatch: Event::Focus::Out if .in-focus;
     }
     $!focus = $child;
     with $child {
-        $.trace: "Report focus take";
+        self.trace: "Report focus take";
         .dispatch: Event::Focus::Take;
         .dispatch: Event::Focus::In if $!in-focus;
     }
@@ -112,20 +112,20 @@ method !focus-to($child) {
 method cmd-focus-update(::?ROLE:D:) {
     return if $.closed;
     my $topmost;
-    $.for-children: :reverse, -> $child {
+    self.for-children: :reverse, -> $child {
         if $child ~~ ::?ROLE && !$child.closed {
             $topmost = $child;
             last
         }
     }
-    $.trace: "Current topmost child is: ", $topmost // '*none*', " vs. focused ", $!focus // '*none*';
+    self.trace: "Current topmost child is: ", $topmost // '*none*', " vs. focused ", $!focus // '*none*';
     # Only if focus changed
     self!focus-to($topmost);
 }
 
 method cmd-focus-request(::?ROLE:D $child) {
-    $.trace: "Requested focus for ", $child;
-    $.is-my-child: $child;
+    self.trace: "Requested focus for ", $child;
+    self.is-my-child: $child;
     self!focus-to($child);
 }
 
@@ -133,7 +133,7 @@ method cmd-focus-request(::?ROLE:D $child) {
 
 # Set $child as focused on parent.
 method update-focus(::?ROLE:D:) {
-    $.send-command: Event::Cmd::Focus::Update
+    self.send-command: Event::Cmd::Focus::Update
 }
 
 method focus {

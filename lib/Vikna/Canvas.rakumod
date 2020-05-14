@@ -1,6 +1,201 @@
 use v6.e.PREVIEW;
 
-# Canvas coordinates might not coniside with screen or widget coords as canvas can be bigger in size. Viewport defines
+=begin pod
+=NAME
+C<Vikna::Canvas> - here we draw
+
+=SYNOPSIS
+
+    my $canvas = Vikna::Canvas.new(42,42);
+    $canvas.invalidate(5, 5, 10, 10);
+    for ^42 -> $y {
+        $canvas.imprint(0, $y, "x" x 42, :fg<yellow>, :bg<blue>);
+    }
+
+    my $cell = $canvas.pick(4,4);
+    say ~$cell; # char:"" fg:*transparent* bg:*transparent* style=0x00
+
+    $cell = $canvas.pick(5,5);
+    say ~$cell; # char:"x" fg:yellow bg:blue style=0x00
+
+=DESCRIPTION
+
+Inherits from L<C<Vikna::Object>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Object.md>.
+
+General information about canvas can be found in L<C<Vikna::Manual>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Manual.md>.
+
+=head2 Technical Details
+
+=head2 Planes And Transparency
+
+Canvas are implemented as a 4-plane rectangle consist of cells. Each cell represents a symbol. Each plane represent 4
+properties of the symbol:
+
+=item the character itself
+=item foreground color
+=item background color
+=item style (see C<VS*> constants in L<C<Vikna::Utils>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Utils.md>)
+
+Each of the four values can either be set or be transparent. This information is important to keep in mind when one
+canvas is imprinted into another. In this case, say, if a cell of the imprinted canvas has a character defined but three
+other properties are transparent then the destination cell in the underlying canvas will have the character changed but
+color and style information preserved. Or, another example, we can define say a "shadow" canvas where colors are set
+(for example, to dark grey fg and black bg) but style and characters are transparent. Then when imprinted into another
+canvas, it would create shadow are by only changing colors of the destination cells.
+
+=head3 Viewports
+
+It is possible to use only a sub-rectangle of canvas by defining so called I<viewport>. A I<viewport> defined what
+area will be used when canvas is imprinted. This could speed up scrolling of big, rarely changing areas by pre-drawing
+the canvas and then setting it's viewport to the area which would exactly fit comparatively small widget. By moving
+a I<viewport> within canvas we can create the effect of scrolling.
+
+=head3 Invalidations
+
+Invalidations are kept as a list of rectangles. To speed up operations in cases when invalidations are mostly kept
+unchanged which is usually the normal way of how things happen, canvas build a so called I<paintable mask>. It's a
+2D array of boolean values (C<int>, in fact) where a C<true> at position C<(x, y)> means that the cell at this position
+can be changed.
+
+The mask is rebuild if the list of invalidations gets changed but not before any draw operation is requested.
+
+=head3 C<Vikna::Canvas::Cell>
+
+The frontend representing a cell withing canvas. While planes are low-level NQP objects, C<Cell> provides a way for
+easy introspection of canvas content.
+
+The class defined two attributes:
+
+=item C<Str $.char>
+=item C<L<Vikna::CAttr|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/CAttr.md>:D $.attr>
+
+=ATTRIBUTES
+
+=head2 C<L<Vikna::Rect|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md>:D $.geom>
+
+Canvas geometry. Handles methods C<x>, C<y>, C<w>, C<h>.
+
+Normally, canvas are positioned at 0,0 coordinates as internally own location means nothing to a canvas object.
+
+=head2 C<$.inv-mark-color>
+
+If defined cells covered by invalidation rectangles will have their background color set to this value. For debugging
+purposes only.
+
+=METHODS
+
+=head2 C<multi new($w, $h, *%c)>
+=head2 C<multi new(:$w, :$h, *%c)>
+
+Shortcut to quick create a canvas object with just its dimensions.
+
+=head2 C<clone>
+
+Creates a full copy for the canvas object.
+
+=head2 C<dup(*%args)>
+
+Create a new canvas which would inherit content from the canvas creating it.
+
+=head2 C<clear>
+
+Resets content to the all-transparent state.
+
+=head2 C<multi imprint($x, $y, Str:D $line, L<C<Vikna::CAttr>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/CAttr.md>:D $attr, Int :$span?)>
+=head2 C<multi imprint($x, $y, Str:D $line, :$fg, :$bg, :$style, Int :$span?)>
+
+Imprints a C<$line> into canvas at (C<$x>,C<$y>) position using the attributes provided. No more symbols will be
+imprinted than defined by C<$span>.
+
+=head2 C<imprint($x, $y, $w, $h, L<C<Vikna::CAttr>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/CAttr.md>:D $attr)>
+=head2 C<imprint($x, $y, $w, $h, :$fg?, :$bg?, :$style?)>
+
+Color and/or style fill of a rectangle.
+
+=head2 C<imprint($x, $y, Vikna::Canvas:D :$from, :$skip-empy = True)>
+
+Imprints canvas C<$from> into self. If C<$skip-empty> is I<False> then transparency is disrespected and empty cells
+of C<$from> canvas planes are forcibly copied over into self.
+
+=head2 C<pick($x, $y, :$viewport)>
+
+Pick a cell from specified position and returns a C<Cell> instance. With C<:viewport> parameter cell position is taken
+relatively to canvas viewport.
+
+=head2 C<get-planes(\c-plane, \fg-plane, \bg-plane, \st-plane)>
+
+Writes back low-level plane data into each respective argument. This method could be useful for testing and for screen
+driver implementations. Otherwise must be strictly avoided.
+
+Plane content is implementation dependent.
+
+=head2 C<multi viewport($x, $y, $w, $h)>
+=head2 C<multi viewport(L<C<Vikna::Rect>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md>:D $rect)>
+
+Sets canvas viewport rectangle.
+
+=head2 C<multi viewport()>
+
+Returns new canvas with viewport content. Note that if viewport rectangle is the canvas itself, then the original
+canvas object is returned.
+
+=head2 C<multi invalidate()>
+
+Invalidates the canvas entirely.
+
+=head2 C<multi invalidate(L<C<Vikna::Rect>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md>:D $inv-rect)>
+=head2 C<multi invalidate($x, $y, $w, $h)>
+
+Invalidates a rectange on canvas.
+
+=head2 C<is-paintable($x, $y)>
+
+Returns true if cell at the specified position falls into invalidated area.
+
+=head2 C<multi is-paintable-rect($x, $y, $w, $h)>
+=head2 C<multi is-paintable-rect(L<C<Vikna::Rect>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md>:D $rect)>
+
+Returns C<True> if the specified rectangle is fully covered by invalidations.
+
+=head2 C<multi add-inv-rect($x, $y, $w, $h)>
+=head2 C<multi add-inv-rect(L<C<Vikna::Rect>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md>:D $rect>
+
+Adds a rectangle to the list of invalidations
+
+=head2 C<clear-inv-rects()>
+
+Emties the list of invalidations effectively returning canvas to immutable state.
+
+=head2 C<invalidations()>
+
+Returns a list of invalidation rectangles.
+
+=head2 C<multi fill(Str:D $char, :$fg, :$bg, :$style)>
+
+Fills entire canvas with C<$char> and the attributes.
+
+=head2 C<vx>, C<vy>, C<vw>, C<vh>
+
+Viewport position and dimenstions.
+
+=head1 SEE ALSO
+
+L<C<Vikna>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna.md>,
+L<C<Vikna::Manual>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Manual.md>,
+L<C<Vikna::Object>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Object.md>,
+L<C<Vikna::CAttr>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/CAttr.md>,
+L<C<Vikna::Color>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Color.md>,
+L<C<Vikna::Point>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Point.md>,
+L<C<Vikna::Rect>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md>,
+L<C<Vikna::Utils>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Utils.md>
+
+=AUTHOR
+
+Vadim Belman <vrurg@cpan.org>
+
+=end pod
+
+# Canvas coordinates might not coincide with screen or widget coords as canvas can be bigger in size. Viewport defines
 # what will be outputted.
 #
 # Output operations thus act on viewport coordinates. Drawing operations act on canvas coordinates.
@@ -25,14 +220,14 @@ class Cell {
     has Str $.char where { !.defined || .chars == 0 | 1 };
     has Vikna::CAttr:D $.attr is required handles<fg bg style>;
 
-    method Str { $!char.raku }
+    method Str { 'char:' ~ $!char.raku ~ " " ~ $!attr }
 }
 
 has Vikna::Rect:D $.geom is required handles <x y w h>;
 has Mu $!paintable-mask;
 has Bool $!paintable-expired = True;
 
-# nqp::list() of 3 planes, each plane is nqp::list() of rows, each row is nqp::list() of elems.
+# nqp::list() of 4 planes, each plane is nqp::list() of rows, each row is nqp::list() of elems.
 # Planes:
 #   0 - characters
 #   1 - fg color
@@ -48,11 +243,11 @@ has Vikna::Rect $!vp-geom is mooish(:lazy, :clearer);
 has $.inv-mark-color;
 has $!inv-rects;
 
-# TODO Better be re-implemented with profile-checkin.
 multi method new(Dimension $w, Dimension $h, *%c) {
     self.new: geom => Vikna::Rect.new(:0x, :0y, :$w, :$h), |%c
 }
 
+# TODO Better be re-implemented with profile-checkin.
 multi method new(Dimension :$w, Dimension :$h, *%c) {
     self.new: geom => Vikna::Rect.new(:0x, :0y, :$w, :$h), |%c
 }
@@ -88,7 +283,7 @@ method clone {
 
 method !setup-planes(:$from?, :$viewport?) {
     my ($w, $h) = $.w, $.h;
-   self.trace: "Setting up canvas planes from ", $from.WHICH;
+    self.trace: "Setting up canvas planes from ", $from.WHICH;
     my ($from-x, $from-y, $from-w, $from-h, $from-planes);
     my ($copy-w, $copy-h);
     if $from {
@@ -159,11 +354,7 @@ method clear {
     self!setup-planes;
 }
 
-proto method imprint(UInt:D $x, UInt:D $y, |) {
-    {*}
-}
-
-# a string
+proto method imprint(UInt:D $x, UInt:D $y, |) {*}
 multi method imprint($x, $y, Str:D() $line, Vikna::CAttr:D $attr, Int :$span?) {
     self.imprint($x, $y, $line, |$attr.Profile, :$span)
 }
@@ -374,7 +565,8 @@ method is-paintable(::?CLASS:D: $x, $y) {
     nqp::atpos_i(nqp::atpos($!paintable-mask, $y), $x)
 }
 
-#| See if the whole rectange is inside another invalidated rectangle.
+# See if the whole rectange is inside another invalidated rectangle.
+# XXX Inefficient implementation, it will be faster if no object is created implicitly.
 multi method is-paintable-rect(UInt:D $x, UInt:D $y, Dimension $w, Dimension $h) { $.is-paintable( Vikna::Rect.new: :$x, :$y, :$w, :$h ) }
 multi method is-paintable-rect(::?CLASS:D: Vikna::Rect:D $rect) {
     # XXX Optimization is possible: for small rectangles it could be faster to test all rectange cells against the
@@ -441,6 +633,7 @@ method !build-paintable-mask {
 #     nqp::push( $!inv-rects, Vikna::Rect.new: $x, $y, $w, $h );
 # }
 
+# XXX Switch over from Vikna::Rect list of invalidation to plain list of x,y,w,h – don't create extra objects.
 multi method add-inv-rect(+@rect where *.elems == 4) {
     nqp::push( $!inv-rects, Vikna::Rect.new: |@rect );
     $!paintable-expired = True;

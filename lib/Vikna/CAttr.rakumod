@@ -62,3 +62,9 @@ multi cattr($fg, $bg?, $style?) {
 multi cattr(*%profile) {
     ::?CLASS.new(|%profile)
 }
+
+method Str {
+    "fg:" ~ ($!fg ?? $!fg.Str !! '*transparent*')
+    ~ " bg:" ~ ($!bg ?? $!bg.Str !! '*transparent*')
+    ~ " style=" ~ $!style.fmt('0x%02x')
+}

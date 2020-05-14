@@ -146,6 +146,15 @@ Standard method to bail out in case of problems. Basically, overriden by higher-
 
 Shortcuts to C<name> method.
 
+=head1 SEE ALSO
+
+L<C<Vikna>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna.md>,
+L<C<Vikna::Manual>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Manual.md>
+
+=AUTHOR
+
+Vadim Belman <vrurg@cpan.org>
+
 =end pod
 
 unit class Vikna::Object;

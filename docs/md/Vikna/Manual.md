@@ -12,8 +12,8 @@ CONCEPTS
 
 This section is briefly describing the basic building blocks of the framework and the ideas moartaring them together.
 
-[`Vikna::Object`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Object.md)
-------------------------------------------------------------------------------------------
+[Vikna::Object](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Object.md)
+----------------------------------------------------------------------------------------
 
 This is the root parent class of almost any other Vikna class except for a few basic data types. It implements the followin key functions:
 
@@ -43,11 +43,11 @@ The example demoes the most simple case we can imagine. In real life when one cr
 
   * defaults of the class itself or its parents
 
-Vikna provide a unified way to merge all sources into a final profile to be used. This is done by allowing any type object to have its own `submethod` `profile-default` which is expected to return a profile object coercable into a [`Hash`](https://docs.raku.org/type/Hash) which would contain what the type object conisders to be viable defaults. [`Vikna::Object`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Object.md) then iterates over the `submethods` in reverse RMRO order (the same as for the construction time submethods, see [RMRO](#RMRO) below), collects the profiles, and merges them into a final default one.
+Vikna provide a unified way to merge all sources into a final profile to be used. This is done by allowing any type object to have its own `submethod` `profile-default` which is expected to return a profile object coercable into a [`Hash`](https://docs.raku.org/type/Hash) which would contain what the type object conisders to be viable defaults. [Vikna::Object](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Object.md) then iterates over the `submethods` in reverse RMRO order (the same as for the construction time submethods, see [RMRO](#RMRO) below), collects the profiles, and merges them into a final default one.
 
-When the default profile is built, [`Vikna::Object`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Object.md) then runs it alongside with profiles obtained from the constructor method arguments and from a config file (not implemented yet) through another `submethod` `profile-checkin`. The job of `profile-checkin` is to adjust the final profile so as to adjust some values according to demands of its owning type object. For example, `Vikna::Object::profile-checkin`, which would be invoked first, simply merges default, config, and constructor profiles in the order mentioned into the destination hash. Any subsequent `profile-checkin` would need to modify that final profile if necessary.
+When the default profile is built, [Vikna::Object](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Object.md) then runs it alongside with profiles obtained from the constructor method arguments and from a config file (not implemented yet) through another `submethod` `profile-checkin`. The job of `profile-checkin` is to adjust the final profile so as to adjust some values according to demands of its owning type object. For example, `Vikna::Object::profile-checkin`, which would be invoked first, simply merges default, config, and constructor profiles in the order mentioned into the destination hash. Any subsequent `profile-checkin` would need to modify that final profile if necessary.
 
-An example of how it works can be found in [`Vikna::Widget`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Widget.md) class. It allows creating a new widget by either specifying widget's geometry explicitly, via an instance of [`Vikna::Rect`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md), or by passing `x`, `y`, `w`, `h` keys. In the latter case [`Vikna::Widget`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Widget.md) implicitly create a new `geom` key and removes redundant coordinate keys from the profile. Similarly it handles widget attribute parameters.
+An example of how it works can be found in [Vikna::Widget](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Widget.md) class. It allows creating a new widget by either specifying widget's geometry explicitly, via an instance of [Vikna::Rect](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md), or by passing `x`, `y`, `w`, `h` keys. In the latter case [Vikna::Widget](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Widget.md) implicitly create a new `geom` key and removes redundant coordinate keys from the profile. Similarly it handles widget attribute parameters.
 
 One of the future concepts I plan to be implemented with custom profiles is *themes* support. A theme could have own configuration file which would be read by the application and passed into the custom profile processing.
 
@@ -67,12 +67,12 @@ Code Flows
 
 One of the problems with debugging a heavily threaded application without a debugger is tracing down messages belonging to a particular thread. A situation could be worsened by the fact that sometimes two or more threads could be logically linked to each other. And in few cases I said myself: even though this method doesn't fork into a thread, it still worth considering it separately from the surrounding code!
 
-So, the *code flows* were born. They turned out to be especially useful with code tracing sub-framework provided by [`Vikna::Tracer`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Tracer.md) and revealed via `Vikna::Object::trace` method. But they proved to be useful in exception reporting too.
+So, the *code flows* were born. They turned out to be especially useful with code tracing sub-framework provided by [Vikna::Tracer](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Tracer.md) and revealed via `Vikna::Object::trace` method. But they proved to be useful in exception reporting too.
 
 Canvas And Invalidating
 -----------------------
 
-Canvas is something we draw on. And the drawing is mostly implemented via *imprinting*. Sorry, the quirks of a text-based UI!
+Canvas is something we draw on. And the drawing is mostly implemented via *imprinting*. Sorry, a quirk of a text-based UI!
 
 A canvas in its normal state is actually immutable. It means, no imprinting would change its state. Drawing is only allowed on invalidated rectangles. This way two goals are achieved. First, it might simplify drawing logic in many cases so that a client using canvas doesn't need to test for boundaries to only update a part of its canvas. Second, it works as an optimization cutting off unnecessary operations.
 
@@ -88,13 +88,13 @@ Do I need to explain this one? Ok, dear visitor, it's time to move on to another
 Events And Event Handling
 -------------------------
 
-An event is a class instance inheriting from [`Vikna::Event`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Event.md). Events are split into categories. But what's more important, events in Vikna also have priorities. But I'll get back to it a little later.
+An event is a class instance inheriting from [Vikna::Event](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Event.md). Events are split into categories. But what's more important, events in Vikna also have priorities. But I'll get back to it a little later.
 
 Handling of events always happens in a dedicated thread. Literally, almost every object capable of event handling has an associated thread which runs its event loop. While it might sound like "wow, isn't it gonna be too many threads?", I'd say: yes, most like it is. But considering the nature of a UI application, most of the time these threads would be spending awaiting. Memory consuming – yes, but otherwise no harm is expected. For example, Rakudo re-uses OS-level threads so that one system thread could be shared among many application threads unless they all is ran simultaneously.
 
 The advantage we get with this model is as fast widget response to an event as possible.
 
-Let me step aside here and tell you a bit of Vikna history. At some point I needed to develop a web scraper to assist my wife in her work. In the process I wished I could output reports from different scraper threads into individual windows. So, the scraper turned out to be unneeded after all, but the initial idea is currently implemented by Vikna. Say, an instance of [`Vikna::TextScroll`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/TextScroll.md) can be used like this:
+Let me step aside here and tell you a bit of Vikna history. At some point I needed to develop a web scraper to assist my wife in her work. In the process I wished I could output reports from different scraper threads into individual windows. So, the scraper turned out to be unneeded after all, but the initial idea is currently implemented by Vikna. Say, an instance of [Vikna::TextScroll](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/TextScroll.md) can be used like this:
 
     $!reporter = self.create: Vikna::TextScroll, ...;
     ...
@@ -110,6 +110,13 @@ Another problem we get solved with single-threaded event loop is avoidance of a 
 As a bottom line we can say that the model chosen for Vikna allows combining the advantages of a state machine architecture for maintaining object state while providing all the advantages of fully async interfaces for code using it.
 
 *Note* that to model be the most effective any reaction to an event must be as short in time as possible. So far, the longest operation happening within an event loop thread is actual widget drawing. Yet a measure was taken to minimize its impact on the overall performance.
+
+Event Origin And Dispatcher
+---------------------------
+
+Every event has two key properties attached: *origin* and *dispatcher* objects. The *origin* is purely informative but very important property as it allows in certain cases to make a decision on whether we must or must not react to an event. For example, command events handling code throws if a command received has been originated by another another object.
+
+*dispatcher* has more influence over the event lifecycle as it is explicitly tells the even loop code which object is to handle the event. Commonly, both *origin* and *dispatcher* point to the same originating object. But, for example, events coming event sources (see [Vikna::EventHandling](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/EventHandling.md)) would typically have their *origin* set to the source while dispatcher will point to the widget the source is attached to.
 
 Event Priority
 --------------
@@ -135,7 +142,7 @@ What are the typical sources for events? Keyboard, mouse, internal program state
 
     $device.Supply.tap: -> $ev { self.dispatch: $ev };
 
-but sometimes things are a bit more complicated than that. To provide a way for incapsulation of the code taking care of such case, event handling subsystem supports so called *event sources*. A *source* is an object which produces Vikna-capable events. Examples of such objects are [`Vikna::Screen::ANSI`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Screen/ANSI.md) and `Input` defined in [`Vikna::OS::unix`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/OS/unix.md).
+but sometimes things are a bit more complicated than that. To provide a way for incapsulation of the code taking care of such case, event handling subsystem supports so called *event sources*. A *source* is an object which produces Vikna-capable events. Examples of such objects are [Vikna::Screen::ANSI](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Screen/ANSI.md) and `Input` defined in [Vikna::OS::unix](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/OS/unix.md).
 
 An event source can be attached to any event handling object. For example, imagine one having a bunch of sensor reporting their status back to our application. We can have a window per sensor with an event source translating sensor data into specific events and injecting them into window's event loop. In this case the rest of the system won't care about those events, the window doesn't need to filter out the events belonging to it. And to stop monitoring of a sensor it'd be enough to just close its associated window! Besides, the driver for the sensor can be supplied by a third party, so we would just `use` a module:
 
@@ -164,10 +171,31 @@ Application
 
 An application is a glue which binds together OS-dependant layer (*drivers* of a kind) and desktop widget.
 
+PRINCIPLES
+==========
+
+
+
+The framework is built upon a few principles enlisted in this chapter.
+
+Kick And Go Use Pattern
+-----------------------
+
+While user code does its work, Vikna do the work for the user code. I.e. the best implementation of anything is when users can focus on solving their problems and only send as simple as possible commands to Vikna or receive simple and clear responses. One of the best example of the implemenation of this principle is [`Vikna::TextScroll`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/TextScroll.md) widget which can be used as a kind of simple terminal object with `say` and `print` methods:
+
+    $ts.say: "Put something\rSay\non the widget";
+
+That's it. We *kick* a `Vikna::TextScroll` object in `$ts` with `say` command and we *go* on with own business. Vikna will do the rest transparently.
+
+Responsive Event Handling
+-------------------------
+
+No event should be processed longer than it takes to irritate the end user. If an event results in a unavoidably long code run than the code must be forked into a separate async flow.
+
 SEE ALSO
 ========
 
-[`Vikna::Widget`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Widget.md)
+[Vikna::Widget](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Widget.md)
 
 AUTHOR
 ======

@@ -1,4 +1,33 @@
 use v6.e.PREVIEW;
+
+=begin pod
+=NAME
+
+C<Vikna::Widget> - the basic one
+
+=head1 SEE ALSO
+
+L<C<Vikna>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna.md>,
+L<C<Vikna::Manual>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Manual.md>,
+L<C<Vikna::Object>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Object.md>,
+L<C<Vikna::Parent>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Parent.md>,
+L<C<Vikna::Child>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Child.md>,
+L<C<Vikna::EventHandling>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/EventHandling.md>,
+L<C<Vikna::CommandHandling>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/CommandHandling.md>,
+L<C<Vikna::Rect>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md>,
+L<C<Vikna::Events>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Events.md>,
+L<C<Vikna::Coloe>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Coloe.md>,
+L<C<Vikna::Canvas>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Canvas.md>,
+L<C<Vikna::Utils>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Utils.md>,
+L<C<Vikna::WAttr>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/WAttr.md>,
+L<C<AttrX::Mooish>|https://modules.raku.org/dist/AttrX::Mooish>
+
+=AUTHOR
+
+Vadim Belman <vrurg@cpan.org>
+
+=end pod
+
 unit class Vikna::Widget;
 use Vikna::Object;
 use Vikna::Parent;

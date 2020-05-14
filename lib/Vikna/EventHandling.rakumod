@@ -1,5 +1,174 @@
 use v6.e.PREVIEW;
 
+=begin pod
+=NAME
+
+C<Vikna::EventHandling> – role implementing event loop and dispatching
+
+=DESCRIPTION
+
+This role implicitly starts a new event-handling thread for the object which consumes it.
+
+The process of event dispatching is split into two stages, depending on which code flow is handling event packet. The
+first stage is done within the code flow which sends an event. It includes:
+
+=item method C<dispatch>
+=item event routing with C<route-event> method
+=item optional filtering
+=item sending the packet over event channel
+
+The second stage is the event loop itself where received event packet:
+
+=item received and handled
+=item passed into to method C<event>
+=item submitted to subsribers (see C<subscribe> method below)
+
+See also event-related sections in L<C<Vikna::Manual>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Manual.md>.
+
+=ATTRIBUTES
+
+=head2 C<Supply:D $.events>
+
+Subscription supply where processed event packets are submitted to.
+
+=METHODS
+
+=head2 C<multi dispatch(Event:U \evType, EventPriority $priority?, *%params)>
+
+The method to dispatch events:
+
+    self.dispatch: Event::Idle;
+
+C<%params> will be passed over to event constructor as profile:
+
+    self.dispatch: Event::MyEvent, :foo(42);
+
+is equivalent to:
+
+    self.dispatch: Event::MyEvent.new(:origin(self), :dispatcher(self), :foo(42));
+
+If C<$priority> is specified it is also added to the event constructor profile so that the resulting event object
+will have it's C<profile> attribute as specified by the caller.
+
+The newly created event instance is fed back to C<dispatch> method for final dispatching.
+
+=head2 C<multi dispatch(Event:D $ev, EventPriority $priority?)>
+
+This C<dispatch> candidate submits event packet to C<route-event> method. But prior it checks if we're recorded as
+the event dispatcher. If not, the event is cloned with C<:dispatcher(self)> parameter and the clone is then sent down to
+C<route-event>. If C<$priority> is defined it doesn't affect the value of C<$ev> C<priority> attribute and only used
+as explicit instruction for C<send-event> method.
+
+Returns C<route-event> return value.
+
+=head2 C<re-dispatch(Event:D $ev, |c)>
+
+Similar to the second C<dispatch> candidate but doesn't alter the event object whatsoever. Capture C<c> is bypassed to
+C<route-event> method.
+
+=head2 C<start-event-handling()>
+
+This method is implicitly invoked at construction time. Starts the event loop code flow.
+
+=head2 C<stop-event-handling()>
+
+Shuts down all event sources, unsubscribes the object from all of its subscriptions, and closes the even queue.
+
+Returns a promise which is kept when all queued events are processed.
+
+=head2 C<multi handle-event(Event:D $ev)>
+
+Stage 2 method. It does three things:
+
+=item installs an event monitor (see below)
+=item passes the event packet C<$ev> to C<event> method
+=item forks code flow and emits C<$ev> to subscribers
+
+The event monitor is responsible for not letting an event to be processed for longer than a certain interval. Current
+interval is hardcoded at 15 seconds. The reason for the monitor to exists is to:
+
+=item prevent user code from accidental deadlocks
+=item prevent user code from doing too extensive operations within the event loop. This imposes the principle of code
+responsiveness to event processing code (see I<PRINCIPLES> chapter in
+L<C<Vikna::Manual>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Manual.md>).
+
+=head2 C<send-event(Event:D $ev, EvenPriority :$priority?)>
+
+Stage 1 method. The first thing it does it tries to invoke C<event-filter> method on self. If succeeds then event(s)
+returned by the method are used as replacement for C<$ev> argument. Then event(s) are send over the event queue into
+the event loop flow if the queue is defined. Otherwise the event is passed directly into C<$ev.dispatcher>
+C<handle-event> method. This last variant is used by widget groups (see
+L<C<Vikna::Widget::Group>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Widget/Group.md> and
+L<C<Vikna::Widget::GroupMember>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Widget/GroupMember.md>).
+
+Throws C<X::Event::Stopped> if event loop has been stopped already.
+
+Returns event(s) that were actually pushed into the event queue.
+
+=head2 C<multi route-event(Event:D $ev, *%c)>
+
+Stage 1 method. By default re-transmits C<$ev> to C<send-event>. But it allows some early re-routing of events before
+they're pushed into the queue. For example,
+L<C<Vikna::Focusable>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Focusable.md>
+is using this method to re-dispatch focus-dependent events directly to the widget in focus.
+
+=head2 C<multi drop-event(Event:D $ev)>
+
+This method is invoked instead of C<handle-event> when event loop is shut down but an event comes from the queue.
+Normally does nothing except for C<Event::Command> category of events which are I<completed> with
+C<X::Event::Dropped> exception with C<False> mixin.
+
+=head2 C<multi event(Event:D $ev)>
+
+Prototype for consuming class C<event> method candidates.
+
+=head2 C<multi event-filter(Event:D $ev)>
+
+Prototype for event filtering method invoked by C<send-event>. By default returns just C<[$ev]>.
+
+=head2 C<multi add-event-source(Vikna::EventEmitter:U \evsType, |c)>
+
+Instantiates C<evsType> passing capture C<c> to the constructor. Then re-submits the instance to the next candidate.
+
+=head2 C<multi add-event-source(Vikna::EventEmitter:D $evs)>
+
+Adds C<$evs> to the list of event handling object event sources. Installs a tap on C<$evs>
+L<C<Supply>|https://docs.raku.org/type/Supply> which redispatches emitted event objects.
+
+=head2 C<subscribe(Vikna::EventHandling:D $obj, &code?)>
+
+Subscribes self to another event handling object. If C<&code> argument is defined then it is invoked for each event from
+the subscription with the event packet as the only parameter. Otherwise, the event is submitted to C<subscription-event>.
+
+=head2 C<unsubscribe(Vikna::EventHandling:D $obj)>
+
+Cancels the subscription to C<$obj>. Throws C<X::Event::Unsubscribe> if no such subscription has been made earlier.
+
+=head2 C<queue-protect( &code )>
+
+Lock-protects invocation of C<&code> to prevent race conditions with event loop flow. It allows to pause the event queue
+processing while we do something in a parallel thread:
+
+    $child.queue-protect: {
+        # Neither $my-event nor any other event won't be processed by $child event loop until foo finishes and this code
+        # block returns.
+        $child.dispatch: $my-event;
+        self.foo;
+    }
+
+=head1 SEE ALSO
+
+L<C<Vikna>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna.md>,
+L<C<Vikna::Manual>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Manual.md>,
+L<C<Vikna::Events>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Events.md>,
+L<C<Vikna::CommandHandling>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/CommandHandling.md>
+
+=AUTHOR
+
+Vadim Belman <vrurg@cpan.org>
+
+=end pod
+
 unit role Vikna::EventHandling;
 
 use Vikna::Events;
@@ -53,6 +222,7 @@ method !run-ev-loop {
         $!ev-lock.protect: {
             if $!event-shutdown {
                 self.trace: "EVENT QUEUE SHUTDOWN, dropping event ", $ev;
+                # XXX Shouldn't it be $ev.dispatcher.?drop-event?
                 self.?drop-event($ev);
             }
             else {
@@ -184,7 +354,7 @@ multi method dispatch( ::?ROLE:D: Vikna::Event:U \EvType, EventPriority $priorit
     self.dispatch: $ev;
 }
 
-# Preserve event's dispatcher. route-event sugar, for readability.
+# Preserve event's dispatcher.
 method re-dispatch( ::?ROLE:D: Event:D $ev, |c ) {
     self.route-event: $ev, |c
 }
@@ -194,12 +364,12 @@ proto method drop-event( ::?CLASS:D: Event:D )  {*}
 multi method drop-event( Event::Command:D $ev ) {
     self.trace: "DROPPING ", $ev;
     $ev.complete(X::Event::Dropped.new(:obj( self ), :$ev) but False)
-    if $ev.completed.status ~~ Planned;
+        if $ev.completed.status ~~ Planned;
 }
 multi method drop-event( Event:D ) {}
 
 proto method event( ::?ROLE:D: Event:D $ ) {*}
-# Sink event. Don't drop it because it might have been handled previously and happend to end up here as a result of
+# Sink event. Don't drop it because it might have been handled previously and happened to end up here as a result of
 # next/callsame.
 multi method event( ::?ROLE:D: Event $ ) {}
 
