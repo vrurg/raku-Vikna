@@ -169,6 +169,7 @@ subtest "Coloring" => {
         my @tpoints = {msg => "Upper left", :$x, :$y, char => $ul-char},
                       {msg => "Bottom right", :x($x + $w - 1), :y($y + $h - 1), char => $br-char};
         subtest $msg => {
+            plan +@tpoints, :parallel;
             for @tpoints -> %t {
                 subtest %t<msg> ~ " corner at {%t<x>},{%t<y>}"  => {
                     my $cell = $c.pick(%t<x>, %t<y>);
