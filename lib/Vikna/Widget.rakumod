@@ -16,7 +16,7 @@ L<C<Vikna::EventHandling>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/m
 L<C<Vikna::CommandHandling>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/CommandHandling.md>,
 L<C<Vikna::Rect>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md>,
 L<C<Vikna::Events>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Events.md>,
-L<C<Vikna::Coloe>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Coloe.md>,
+L<C<Vikna::Color>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Coloe.md>,
 L<C<Vikna::Canvas>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Canvas.md>,
 L<C<Vikna::Utils>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Utils.md>,
 L<C<Vikna::WAttr>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/WAttr.md>,

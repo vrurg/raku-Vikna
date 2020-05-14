@@ -26,7 +26,7 @@ General information about canvas can be found in L<C<Vikna::Manual>|https://gith
 
 =head2 Technical Details
 
-=head2 Planes And Transparency
+=head3 Planes And Transparency
 
 Canvas are implemented as a 4-plane rectangle consist of cells. Each cell represents a symbol. Each plane represent 4
 properties of the symbol:
