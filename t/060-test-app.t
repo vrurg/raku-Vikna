@@ -1,7 +1,6 @@
 use v6.e.PREVIEW;
 
-use Test;
-use Vikna::Test;
+use Test::Async <Base Vikna::Test>;
 use Vikna::Test::App;
 use Vikna::Desktop;
 use Vikna::Events;
@@ -21,7 +20,7 @@ class MyDesktop is Vikna::Desktop {
         if $!test-first-draw && $!drawn {
             pass "Printed to the screen";
             my $screen = $.app.screen;
-            test-rect-fill
+            is-rect-filled
                 $screen.buffer,
                 $.app.screen.geom,
                 "desktop filled the screen",
