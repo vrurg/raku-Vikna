@@ -88,7 +88,7 @@ $(MD_SUBDIRS) $(HTML_SUBDIRS):
 
 doc_gen: $(DOC_BUILDER)
 	@echo "===> Updating documentation sources"
-	@raku $(DOC_BUILDER) -md $(DOC_SRC)
+	@raku $(DOC_BUILDER) -m=Vikna -md $(DOC_SRC)
 
 #md: ./README.md $(addprefix $(MD_DIR)/,$(patsubst %.rakudoc,%.md,$(patsubst %.rakumod,%.md,$(DOC_DEST))))
 
