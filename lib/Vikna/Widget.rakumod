@@ -184,9 +184,6 @@ multi method event( ::?CLASS:D: Event::Detached:D $ev ) {
             self.shutdown;
         }
     }
-    elsif !$.closed && $ev.parent === self {
-        $.redraw;
-    }
 }
 multi method event( ::?CLASS:D: Event::Attached:D $ev ) {
     if $ev.child === self {
