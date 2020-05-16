@@ -44,7 +44,7 @@ subtest "Parsing" => {
             { color => "12,13,14 underline", :!valid },
             ;
 
-    plan +@clist, :parallel;
+    plan +@clist, :parallel, :random;
 
     for @clist -> %ctest {
         subtest 'Color string: "' ~ %ctest<color> ~ '"' => {
