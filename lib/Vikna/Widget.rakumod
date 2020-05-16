@@ -223,9 +223,7 @@ method cmd-addchild( ::?CLASS:D: Vikna::Widget:D $child, ChildStrata:D $stratum,
 
     if self.Vikna::Parent::add-child($child, :$stratum) {
         self.trace: " ADDED CHILD ", $child.name, " with parent: ", $child.parent.name;
-        %!child-by-id{
-        %!child-by-name{$child-name} = $child.id;
-        } = %( :$child);
+        %!child-by-id{ %!child-by-name{$child-name} = $child.id } = %( :$child);
         # note self.name, " ADDED CHILD ", $child.name, " with parent: ", $child.parent.name;
         self.subscribe-to-child($child) if $subscribe;
         $child.dispatch: Event::Attached, :$child, :parent( self );
@@ -249,12 +247,14 @@ method cmd-removechild( ::?CLASS:D: Vikna::Widget:D $child, :$unsubscribe = True
     my $is-topmost = $.is-topmost( $child );
     my $is-bottommost = $.is-bottommost( $child );
     my $stratum = $.child-stratum( $child );
+    my $cgeom = $child.geom;
     my sub remove-finally {
-        self.Vikna::Parent::remove-child: $child;
         self.dispatch: Event::Detached, :$child, :parent( self );
-        self.invalidate: $child.geom;
+        self.invalidate: $cgeom;
         self.redraw;
     }
+    self.Vikna::Parent::remove-child: $child;
+    $child.dispatch: Event::Detached, :$child, :parent( self );
     if $child.closed {
         self.trace: "CHILD ", $child.name, " CLOSED, awaiting dismissal; current dismiss status is ", $child.dismissed
             .status;
@@ -266,7 +266,6 @@ method cmd-removechild( ::?CLASS:D: Vikna::Widget:D $child, :$unsubscribe = True
     else {
         remove-finally;
     }
-    $child.dispatch: Event::Detached, :$child, :parent( self );
     if $.elems( $stratum ) {
         if $is-topmost {
             my $top = $.children.tail;
@@ -486,8 +485,8 @@ multi method cmd-contains( $obj ) {
 
 ### Command senders ###
 
-method add-child( ::?CLASS:D $child, ChildStrata $stratum = StMain ) {
-    self.send-command: Event::Cmd::AddChild, $child, $stratum;
+method add-child( ::?CLASS:D $child, ChildStrata $stratum = StMain, :$subscribe = True ) {
+    self.send-command: Event::Cmd::AddChild, $child, $stratum, :$subscribe;
 }
 
 method remove-child( ::?CLASS:D $child ) {
