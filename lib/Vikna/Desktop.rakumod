@@ -36,7 +36,7 @@ submethod TWEAK {
 
 ### Event handlers ###
 multi method event(::?CLASS:D: Event::Screen::Geom:D $ev) {
-    self.cmd-setgeom: $ev.to, :no-draw;
+    self.cmd-setgeom: .x, .y, .w, .h, :no-draw with $ev.to;
     self.cmd-redraw;
 }
 

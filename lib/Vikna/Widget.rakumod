@@ -411,13 +411,13 @@ method cmd-childcanvas( ::?CLASS:D $child, Vikna::Rect:D $canvas-geom, Vikna::Ca
     $.flatten-canvas;
 }
 
-method cmd-setgeom( Vikna::Rect:D $geom, :$no-draw? ) {
-    self.trace: "Changing geom to ", $geom;
+method cmd-setgeom(Int:D $x, Int:D $y, Int:D $w, Int:D $h, :$no-draw? ) {
     my $from;
     cas $!geom, {
         $from = $_;
-        $geom.clone
+        Vikna::Rect.new: :$x, :$y, :$w, :$h
     };
+    self.trace: "Changing geom to ", $!geom;
     $.update-positions;
     self.trace: "Setgeom invalidations";
     self.add-inv-parent-rect: $from;
@@ -515,33 +515,20 @@ method clear {
     self.send-command: Event::Cmd::Clear;
 }
 
-method close {
-    self.send-command: Event::Cmd::Close;
-}
-
-method quit {
-    if $.app && $.app.desktop {
-        $.app.desktop.quit;
-    }
-    else {
-        $.close;
-    }
-}
-
 method resize( Dimension:D $w, Dimension:D $h ) {
-    self.set-geom: $!geom.clone(:$w, :$h);
+    self.set-geom: $!geom.x, $!geom.y, $w, $h;
 }
 
 method move( Int:D $x, Int:D $y ) {
-    self.set-geom: $!geom.clone(:$x, :$y);
+    self.set-geom: $x, $y, $!geom.w, $!geom.h;
 }
 
 proto method set-geom( ::?CLASS:D: | ) {*}
 multi method set-geom( Int:D $x, Int:D $y, Dimension:D $w, Dimension:D $h ) {
-    self.set-geom: Vikna::Rect.new(:$x, :$y, :$w, :$h)
+    self.send-command: Event::Cmd::SetGeom, $x, $y, $w, $h;
 }
 multi method set-geom( Vikna::Rect:D $rect ) {
-    self.send-command: Event::Cmd::SetGeom, $rect
+    self.send-command: Event::Cmd::SetGeom, .x, .y, .w, .h with $rect
 }
 
 method set-color( BasicColor :$fg, BasicColor :$bg ) {
@@ -897,6 +884,19 @@ method next-sibling( :$loop = False, :$on-strata = False ) {
 method prev-sibling( :$loop = False, :$on-strata = False ) {
     return Nil unless $!parent;
     .children-protect: { .next-to: self, :reverse, :$loop, :$on-strata } with $!parent
+}
+
+method close {
+    self.send-command: Event::Cmd::Close;
+}
+
+method quit {
+    if $.app && $.app.desktop {
+        $.app.desktop.quit;
+    }
+    else {
+        $.close;
+    }
 }
 
 method detach {
