@@ -79,8 +79,14 @@ method build-desktop {
         ;
 }
 
-method trace(*@args, :$obj = self, *%c) {
+proto method trace(|) {
     return unless $!debugging;
+    {*}
+}
+multi method trace(&code, *%c) {
+    self.trace: |&code(), |%c
+}
+multi method trace(*@args, :$obj = self, *%c) {
     my $message = @args.join;
     for <phase debug event error> { # predefined classes
         %c<class> = $_ if %c{$_}:delete;
