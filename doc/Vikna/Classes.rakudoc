@@ -1,6 +1,53 @@
 =begin pod
-=head1 Vikna CLASSES
+=head1 Vikna CLASSES AND ROLES
 
+=item L<C<Vikna::App>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/App.md>
+=item L<C<Vikna::Border>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Border.md>
+=item L<C<Vikna::Button>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Button.md>
+=item L<C<Vikna::Canvas>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Canvas.md>
+=item L<C<Vikna::CAttr>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/CAttr.md>
+=item L<C<Vikna::Child>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Child.md>
+=item L<C<Vikna::Color>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Color.md>
+=item L<C<Vikna::Color::Index>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Color/Index.md>
+=item L<C<Vikna::Color::Named>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Color/Named.md>
+=item L<C<Vikna::Color::RGB>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Color/RGB.md>
+=item L<C<Vikna::Color::RGBA>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Color/RGBA.md>
+=item L<C<Vikna::CommandHandling>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/CommandHandling.md>
+=item L<C<Vikna::Coord>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Coord.md>
+=item L<C<Vikna::Desktop>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Desktop.md>
+=item L<C<Vikna::Elevatable>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Elevatable.md>
+=item L<C<Vikna::EventEmitter>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/EventEmitter.md>
+=item L<C<Vikna::EventHandling>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/EventHandling.md>
+=item L<C<Vikna::Events>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Events.md>
+=item L<C<Vikna::Focusable>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Focusable.md>
+=item L<C<Vikna::InputLine>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/InputLine.md>
+=item L<C<Vikna::Label>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Label.md>
 =item L<C<Vikna::Object>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Object.md>
+=item L<C<Vikna::OS>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/OS.md>
+=item L<C<Vikna::OS::unix>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/OS/unix.md>
+=item L<C<Vikna::Parent>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Parent.md>
+=item L<C<Vikna::Point>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Point.md>
+=item L<C<Vikna::PointerTarget>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/PointerTarget.md>
+=item L<C<Vikna::Rect>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md>
+=item L<C<Vikna::Screen>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Screen.md>
+=item L<C<Vikna::Screen::ANSI>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Screen/ANSI.md>
+=item L<C<Vikna::Scrollable>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Scrollable.md>
+=item L<C<Vikna::Test>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Test.md>
+=item L<C<Vikna::Test::App>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Test/App.md>
+=item L<C<Vikna::Test::EventSequencer>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Test/EventSequencer.md>
+=item L<C<Vikna::Test::OS>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Test/OS.md>
+=item L<C<Vikna::Test::Screen>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Test/Screen.md>
+=item L<C<Vikna::TextScroll>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/TextScroll.md>
+=item L<C<Vikna::Tracer>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Tracer.md>
+=item L<C<Vikna::WAttr>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/WAttr.md>
+=item L<C<Vikna::Widget>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Widget.md>
+=item L<C<Vikna::Widget::Group>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Widget/Group.md>
+=item L<C<Vikna::Widget::GroupMember>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Widget/GroupMember.md>
+=item L<C<Vikna::Window>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Window.md>
+=item L<C<Vikna::X>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/X.md>
+
+=AUTHOR
+
+Vadim Belman <vrurg@cpan.org>
 
 =end pod

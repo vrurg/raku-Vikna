@@ -1,4 +1,68 @@
 use v6.e.PREVIEW;
+
+=begin pod
+=NAME
+
+C<Vikna::Color> - support for different formats of colors
+
+=SYNOPSIS
+
+my $color = Vikna::Color.parse: '#abc'; # RGB 0xAA, 0xBB, 0xCC
+$color = Vikna::Color.parse: '42, 255, 13';
+$color = Vikna::Color.parse: 'rgba: .1, .2, .3, .5';
+
+=DESCRIPTION
+
+Inherits from L<C<Color>|https://modules.raku.org/dist/Color>.
+
+This class function is to provide interface for working with string representation of colors. It supports colors in the
+following forms:
+
+=item ANSI index: I<123>
+=item web: I<#00aa80>, I<#abc>
+=item named: I<green>
+=item RGB triplet: I<255,0,128>
+=item RGB decimal triplet: I<1, 0.1, .5>
+=item prefixed form: I<rgba: 1, 0.5, 0.9, 0.3>
+
+For prefixed form knwon prefixes are I<rgb>, I<rgbd>, I<rgba>, I<rgbad>, I<cmyk>, I<hsl>, I<hsla>, I<hsv>, I<hsva> -
+following the key names supported by L<C<Color>|https://modules.raku.org/dist/Color> class.
+
+The only method to mention is C<parse> which takes a string a returns either a C<Vikna::Color> instance or a Nil if
+the color string is invalid. To be more precise, the object returned will have with one of C<Vikna::Color> roles mixed
+in:
+L<C<Vikna::Color::Index>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Color/Index.md>,
+L<C<Vikna::Color::Named>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Color/Named.md>,
+L<C<Vikna::Color::RGB>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Color/RGB.md>,
+L<C<Vikna::Color::RGBA>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Color/RGBA.md>.
+The difference between the four is in the way they strigify by default and additional methods provided depending on the
+format.
+
+Apparently, API provided by L<C<Coloar>|https://modules.raku.org/dist/Coloar> is available too.
+
+=head2 Caching
+
+Color objects are cached internally to speed up color lookups. But it also means that same color object could be
+returned for two equivalent color strings. Nevertheless, the equivalence of the objects is not guaranteed due to
+limited cache size.
+
+=head1 SEE ALSO
+
+L<C<Vikna>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna.md>,
+L<C<Vikna::Manual>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Manual.md>,
+L<C<Color>|https://modules.raku.org/dist/Color>,
+L<C<Color::Names>|https://modules.raku.org/dist/Color::Names>,
+L<C<Vikna::Color::Index>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Color/Index.md>,
+L<C<Vikna::Color::Named>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Color/Named.md>,
+L<C<Vikna::Color::RGB>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Color/RGB.md>,
+L<C<Vikna::Color::RGBA>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Color/RGBA.md>
+
+=AUTHOR
+
+Vadim Belman <vrurg@cpan.org>
+
+=end pod
+
 unit class Vikna::Color;
 
 use Color;
@@ -100,7 +164,7 @@ my grammar ColorStr {
     }
 }
 
-class CSTR-Actions {
+my class CSTR-Actions {
     has $.no-cache;
 
     method TOP($/) {

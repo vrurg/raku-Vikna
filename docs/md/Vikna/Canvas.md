@@ -71,15 +71,13 @@ ATTRIBUTES
 
 
 
-`L<Vikna::Rect|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md>:D $.geom`
------------------------------------------------------------------------------------------------
+### `L<Vikna::Rect|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md>:D $.geom`
 
 Canvas geometry. Handles methods `x`, `y`, `w`, `h`.
 
 Normally, canvas are positioned at 0,0 coordinates as internally own location means nothing to a canvas object.
 
-`$.inv-mark-color`
-------------------
+### `$.inv-mark-color`
 
 If defined cells covered by invalidation rectangles will have their background color set to this value. For debugging purposes only.
 
@@ -88,126 +86,99 @@ METHODS
 
 
 
-`multi new($w, $h, *%c)`
-------------------------
+### `multi new($w, $h, *%c)`
 
-`multi new(:$w, :$h, *%c)`
---------------------------
+### `multi new(:$w, :$h, *%c)`
 
 Shortcut to quick create a canvas object with just its dimensions.
 
-`clone`
--------
+### `clone`
 
 Creates a full copy for the canvas object.
 
-`dup(*%args)`
--------------
+### `dup(*%args)`
 
 Create a new canvas which would inherit content from the canvas creating it.
 
-`clear`
--------
+### `clear`
 
 Resets content to the all-transparent state.
 
-`multi imprint($x, $y, Str:D $line, L<C<Vikna::CAttr>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/CAttr.md>:D $attr, Int :$span?)`
-----------------------------------------------------------------------------------------------------------------------------------------------------
+### `multi imprint($x, $y, Str:D $line, L<C<Vikna::CAttr>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/CAttr.md>:D $attr, Int :$span?)`
 
-`multi imprint($x, $y, Str:D $line, :$fg, :$bg, :$style, Int :$span?)`
-----------------------------------------------------------------------
+### `multi imprint($x, $y, Str:D $line, :$fg, :$bg, :$style, Int :$span?)`
 
 Imprints a `$line` into canvas at (`$x`,`$y`) position using the attributes provided. No more symbols will be imprinted than defined by `$span`.
 
-`imprint($x, $y, $w, $h, L<C<Vikna::CAttr>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/CAttr.md>:D $attr)`
-----------------------------------------------------------------------------------------------------------------------------
+### `imprint($x, $y, $w, $h, L<C<Vikna::CAttr>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/CAttr.md>:D $attr)`
 
-`imprint($x, $y, $w, $h, :$fg?, :$bg?, :$style?)`
--------------------------------------------------
+### `imprint($x, $y, $w, $h, :$fg?, :$bg?, :$style?)`
 
 Color and/or style fill of a rectangle.
 
-`imprint($x, $y, Vikna::Canvas:D :$from, :$skip-empy = True)`
--------------------------------------------------------------
+### `imprint($x, $y, Vikna::Canvas:D :$from, :$skip-empy = True)`
 
 Imprints canvas `$from` into self. If `$skip-empty` is *False* then transparency is disrespected and empty cells of `$from` canvas planes are forcibly copied over into self.
 
-`pick($x, $y, :$viewport)`
---------------------------
+### `pick($x, $y, :$viewport)`
 
 Pick a cell from specified position and returns a `Cell` instance. With `:viewport` parameter cell position is taken relatively to canvas viewport.
 
-`get-planes(\c-plane, \fg-plane, \bg-plane, \st-plane)`
--------------------------------------------------------
+### `get-planes(\c-plane, \fg-plane, \bg-plane, \st-plane)`
 
 Writes back low-level plane data into each respective argument. This method could be useful for testing and for screen driver implementations. Otherwise must be strictly avoided.
 
 Plane content is implementation dependent.
 
-`multi viewport($x, $y, $w, $h)`
---------------------------------
+### `multi viewport($x, $y, $w, $h)`
 
-`multi viewport(L<C<Vikna::Rect>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md>:D $rect)`
------------------------------------------------------------------------------------------------------------------
+### `multi viewport(L<C<Vikna::Rect>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md>:D $rect)`
 
 Sets canvas viewport rectangle.
 
-`multi viewport()`
-------------------
+### `multi viewport()`
 
 Returns new canvas with viewport content. Note that if viewport rectangle is the canvas itself, then the original canvas object is returned.
 
-`multi invalidate()`
---------------------
+### `multi invalidate()`
 
 Invalidates the canvas entirely.
 
-`multi invalidate(L<C<Vikna::Rect>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md>:D $inv-rect)`
------------------------------------------------------------------------------------------------------------------------
+### `multi invalidate(L<C<Vikna::Rect>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md>:D $inv-rect)`
 
-`multi invalidate($x, $y, $w, $h)`
-----------------------------------
+### `multi invalidate($x, $y, $w, $h)`
 
 Invalidates a rectange on canvas.
 
-`is-paintable($x, $y)`
-----------------------
+### `is-paintable($x, $y)`
 
 Returns true if cell at the specified position falls into invalidated area.
 
-`multi is-paintable-rect($x, $y, $w, $h)`
------------------------------------------
+### `multi is-paintable-rect($x, $y, $w, $h)`
 
-`multi is-paintable-rect(L<C<Vikna::Rect>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md>:D $rect)`
---------------------------------------------------------------------------------------------------------------------------
+### `multi is-paintable-rect(L<C<Vikna::Rect>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md>:D $rect)`
 
 Returns `True` if the specified rectangle is fully covered by invalidations.
 
-`multi add-inv-rect($x, $y, $w, $h)`
-------------------------------------
+### `multi add-inv-rect($x, $y, $w, $h)`
 
-`multi add-inv-rect(L<C<Vikna::Rect>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md>:D $rect`
---------------------------------------------------------------------------------------------------------------------
+### `multi add-inv-rect(L<C<Vikna::Rect>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md>:D $rect`
 
 Adds a rectangle to the list of invalidations
 
-`clear-inv-rects()`
--------------------
+### `clear-inv-rects()`
 
 Emties the list of invalidations effectively returning canvas to immutable state.
 
-`invalidations()`
------------------
+### `invalidations()`
 
 Returns a list of invalidation rectangles.
 
-`multi fill(Str:D $char, :$fg, :$bg, :$style)`
-----------------------------------------------
+### `multi fill(Str:D $char, :$fg, :$bg, :$style)`
 
 Fills entire canvas with `$char` and the attributes.
 
-`vx`, `vy`, `vw`, `vh`
-----------------------
+### `vx`, `vy`, `vw`, `vh`
 
 Viewport position and dimenstions.
 
