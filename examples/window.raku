@@ -33,7 +33,7 @@ class EventReporter is Vikna::TextScroll {
         my ($pw, $ph) = .w, .h given $ev.to // $.parent.geom;
         my $w = 10 max ($pw / 3).ceiling;
         my $h = 5 max ($ph / 2).ceiling;
-        self.cmd-setgeom: Vikna::Rect.new($pw - $w, $ph - $h, $w, $h);
+        self.cmd-setgeom: $pw - $w, $ph - $h, $w, $h;
         # self.fit-into: geom => $ev.to;
         self.cmd-textscroll-addtext: "SCREEN GEOM: " ~ $ev.to ~ "\n";
         # self.say: "SCREEN GEOM: ", $ev.to;
