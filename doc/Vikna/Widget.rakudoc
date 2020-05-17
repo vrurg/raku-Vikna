@@ -1,0 +1,537 @@
+=begin pod
+=NAME
+
+C<Vikna::Widget> - the base of all widgets
+
+=DESCRIPTION
+
+The class provides the foundation for all drawable Vikna classes. It binds together event and command event handling,
+parent/child relations, canvas, color and attribute management. On top of it all it implements basic APIs for drawing,
+sizing/positioning, and event-driven behaviors.
+
+=head2 Flattening Canvas
+
+After a widget has drawn itself Vikna takes a number of step to ensure it is imprinted correctly on its parent and,
+eventually, on the screen. The process is called I<flattening> because figuratively it could be described as if
+Z-order of children canvas is flattened down into parent's canvas. Here is how this happens.
+
+Many good stories starts from the end. This one does it too. Let's skip all preceding steps and say that widget sends
+it's ready canvas (BTW, it is internally called imPrinted canvas and abbreviated to just C<pcanvas>) and all current
+invalidations (converted into parent's coordinate system) to the parent. At this point widget's work is over and it
+clears all invalidations. The next cycle starts now.
+
+Meanwhile, the parent receives C<Event::Cmd::ChildCanvas> and records the received object in its local registry. The
+invalidations which came with the command event are appended to the list of local invalidations. This is where the
+story starts because the parent immediately initiates the I<flattening>. From this moment on we stop using term
+I<parent> and using just I<widget> again.
+
+The first step is checking if the flattening is not blocked for a reason. If so, we increase flatten miss counter and
+leave. When all blockers are done, the framework checks the counter and initiates immediate flattening.
+
+Now, we need to prepare C<pcanvas>. Normally, if widget dimensions are not changed, C<pcanvas> is preserved across
+flattening cycles and only updated using invalidations. It somewhat speeds up the flattening process by avoiding
+extra object allocations and copying of full canvas content each time, especially if only tiny bits of widget are
+updated.
+
+If there is no block installed, then currently active invalidations are applied to C<pcanvas>. Then widget imprints
+own canvas on C<pcanvas> and all collected children canvas from the local registry unless a child is invisible. It
+means that if a child was created and attached but never sent its canvas up to the parent – it would never be displayed.
+
+Children are also get notified of their canvas is used with C<Event::Updated>.
+
+Once again, note that imprinting will only change the areas of the widget which were invalidated either by the widget
+itself or by mapped invalidations from children. A good example of how it works would be the following scheme:
+
+    ...............
+    .. Label ......
+    ...............
+
+The dots represent a parent widget with a L<C<Vikna::Label>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Label.md> child attached. Then, say, we change the label text. No
+other changes were done. Then the only area on C<pcanvas> which will be affected by flattening will be the one-line
+rectangle at C<(x:2, y:1, w:7, h:1)> granted that text change doesn't change label's dimentions. If the parent widget
+is really big this optimization would save us a whole lot copying over! Moreover, the invalidation will then be
+propagated further upstream resulting in the same little changes done in all parents up until the desktop and screen
+themselve.
+
+At this point flattening down of canvas is almost done. If widget has a parent, it invokes C<child-canvas> command
+method on it with C<pcanvas> and mapped invalidations.
+
+If the widget is the top one (i.e. the desktop) then it calls command method C<print> with C<pcanvas>. C<Event::Updated>
+is then sent to self as if our parent notified us of imprint taken place.
+
+And so, the story closes the cycle...
+
+=head2 Redraw Hold
+
+Drawing is probably one of the slowest operations happening inside the framework. Thus, it's not so uncommon for a
+widget to receive a redraw request while another redraw is already in progress. Moreover, there could be few or even
+more than just few requests sent before the current redraw finishes. Without taking special care of such situation,
+there is high risk of redraws stacking up and blocking any other event activity on the widget.
+
+To prevent such bottlenecks, widgets installs an event filter for C<Event::Cmd::Redraw> (see C<send-event> in
+L<C<Vikna::EventHandling>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/EventHandling.md>.
+The filter does two things depending on whether another redraw operation is currently active or now:
+
+=item if no active redraw, it is bypasses the event but installs a C<then> hook on event's completion L<C<Promise>|https://docs.raku.org/type/Promise>
+=item otherwise the new redraw request attempted to be put on hold. If there is no previous hold is held then the
+current request is recorded and released when the active redraw completes. But if there is a hold already then current
+request event is dropped
+
+When a hold is released the event held is re-dispatched using C<re-dispatch> method with C<PrioReleased> priority which
+gives the event preference over many other events and therefore reasonably speeding up system reaction to updates.
+
+=head2 Widget As A Hash
+
+A widget object supports hash-like access to its children. For example:
+
+    $widget<Button0>
+
+would return a child named I<"Button0"> if one exists. I<Nil> otherwise. Similarly
+
+    $widget<Button0>:delete
+
+detaches the child. So, basically:
+
+    $widget1.add-child: $widget<Button0>:delete
+
+is a re-parenting operation.
+
+=ATTRIBUTES
+
+=head3 C<L<Vikna::Rect|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md>:D $.geom>
+
+Widget geometry in its parent coordinate system.
+
+=head3 C<L<Vikna::Rect|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md> $.viewport>
+
+Visible part of the widget in its parent coordinate system. To be more precise, this is widget's C<$.geom> clipped by
+parent's viewport. In the scheme below 1 is our viewport area. It might be even smaller if the parent itself isn't fully
+visible.
+
+               +---------+
+    +---- Parent ----+   |
+    |          |  1  | 2 |
+    |          +-----|---+
+    +----------------+
+
+=head3 C<L<Vikna::Rect|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md> $.abs-geom>
+
+Widget geometry in absolute coordinate system. By I<absolute> we take the screen, but because the desktop object is
+assumed to occupy the whole screen, all absolute coordinates are taken relatively to desktop.
+
+=head3 C<L<Vikna::Rect|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md> $.abs-viewport>
+
+Similar to C<$.abs-geom>, but for C<$.viewport>.
+
+=head3 C<L<Vikna::WAttr|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/WAttr.md>:D $.attr>
+
+Widget default attributes.
+
+=head3 C<Bool:D $.auto-clear>
+
+If I<True> then every new draw operation starts with a fresh canvas. Otherwise new canvas get its content from the
+last draw operation.
+
+=head3 C<Bool:D $.hidden>
+
+If I<True> then widget is intentionally hidden on its parent.
+
+=head3 C<Bool:D $.invisible>
+
+If I<True> then widget is outside of parent's viewport and thus not visible on the screen. The difference with
+C<$.hidden> attribute is that the latter is set intentionally, while this attribute is a result of calculations of
+widget position.
+
+=head3 C<L<Vikna::Canvas|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Canvas.md> $.canvas>
+
+Widget canvas after the last redraw operation.
+
+=head3 C<Promise:D $.dismissed>
+
+This promise is kept with I<True> when widget has shutdown. In particular, its event loop has been stopped.
+
+=head3 C<@.invalidations>
+
+List of invalidation rectangles. Is used for the next redraw operation and cleared after flattened down canvas were
+sent over to the parent.
+
+=METHODS
+
+=head2 General Purpose Methods
+
+=head3 C<submethod profile-checkin(%profile, $constructor, %, %)>
+
+The default widget profile checkin is responsible for the following operations:
+
+=item it converts C<x>, C<y>, C<w>, C<h> profile keys into C<geom> by creating a new
+L<C<Vikna::Rect>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md> instance unless C<geom> is defined explicitly
+=item it converts C<fg>, C<bg>, C<style>, and C<pattern> profile keys into C<attr> by creating a new
+L<C<Vikna::WAttr>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/WAttr.md> instance
+
+All mentioned above source keys are unconditionally deleted from C<%profile>.
+
+=head3 C<create-child(Vikna::Widget:U \widgetType, ChildStrata $stratum = StMain, *%p)>
+
+Create a new widget child. The child is created detached and C<Event::Init> is dispatched on it instantly. Then it is
+added to the widget with C<add-child> method.
+
+Returns the child object.
+
+=head3 C<subscribe-to-child(Vikna::Widget:D $child)>
+
+Method subscribes self to child events and passes them to widget's C<child-event> handler method.
+
+=head3 C<multi route-event(Event::Spreadable:D $ev)>
+
+Re-dispatches C<$ev> to child widgets.
+
+=head3 C<multi child-event(Event:D)>
+
+Proto defined to handle children events if subscribed to a child. By default does nothing.
+
+=head3 C<subscription-event(Event:D $ev)>
+
+Proto defined to handle any other subscription events. By default does nothing.
+See L<C<Vikna::EventHandling>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/EventHandling.md> role.
+
+=head3 C<flatten-canvas()>
+
+Normally one doesn't need this method except special care is required to guarantee correct imprinting of a object on
+its parent.
+
+See L<#Canvas Flattening> section above.
+
+=head3 C<multi get-child(Str:D $name)>
+=head3 C<multi get-child(Int:D $id)>
+
+Returns a child widget by its C<$name> or C<$id>.
+
+=head3 C<Bool()>
+
+Coerces a widget into boolean. Returns C<True> unless widget is closed.
+
+=head3 C<Str()>
+
+Returns widget's name.
+
+=head3 C<gist()>
+
+Stringifies widget to C<$.id ~ ":" ~ $.name>.
+
+=head2 Command Methods
+
+This is a group of methods which sends command events to the widget. Normally they're just shortcuts for
+L<C<Event::CommandHandling>|https://modules.raku.org/dist/Event::CommandHandling>
+C<send-command> method.
+
+Because command methods are what user must interact with, C<cmd-*> methods are not documented as they're
+implementation detail. Where relevant, their behaviors will be elaborated on in description of command methods.
+
+=head3 C<add-child(Vikna::Widget:D $child, ChildStrata $stratum = StMaian, :$subscribe = True)>
+
+C<Event::Cmd::AddChild>. Adds a new child to the widget. This includes subscribtion to child events if C<$subscribe>
+is I<True>.
+
+Upon successfull addition C<Event::Attached> is dipatched on both the child and self. If the added child becomes
+the topmost one on strata, C<Event::ZOrder::Top> is dispatched on the child and C<Event::ZOrder::Child> on self.
+
+=head3 C<remove-child($child)>
+
+C<Event::Cmd::RemoveChild>. Removes a child from the widget children list. Emits C<Event::Detached> on the child.
+
+A child could be removed from its parent for two reasons: either it is closing or it is switching to another parent.
+The command considers both situation. If the child is closing, then the widget awaits until it becomes C<$.dismissed>
+before finalizing the removal. Otherfile finalization takes place immediately.
+
+The finalization of child removal does:
+
+=item dispatches C<Event::Detached> on self
+=item redraws the widget to update the area previously occupied by the child.
+
+Corresponding C<Event::ZOrder::*> events are dispatched if necessary.
+
+=head3 C<child-canvas(Vikna::Widget:D $child, Vikna::Rect:D $canvas-geom, Vikna::Canvas::D $canvas, @invlidations)>
+
+C<Event::Cmd::ChildCanvas>. Register updated child canvas on the widget. Must not be used by user code normally.
+
+Part of the L<#Canvas Flattening> process. A child sends this command every time its own C<pcanvas> is updated.
+
+=head3 C<redraw()>
+
+C<Event::Cmd::Redraw>. Request the widget to redraw itself. The action might not happen in on of the cases:
+
+=item when widget is C<$.invisible>
+=item if redraws are blocked on the widget (see C<redraw-block> method)
+=item if the widget doesn't have any invalidations registered
+
+When drawing is possible, new canvas is created by C<begin-draw> method and passed to widget method C<draw>. When it's
+done C<end-draw> is invoked with the same canvas object which is then set as widget's C<$.canvas>. At the end widget
+flattens canvas, as described in L<#Canvas Flattening>.
+
+=head3 C<to-top(Vikna::Widget:D $child)>
+
+C<Event::Cmd::To::Top>. Sends a C<$child> to the top of Z-order within it's stratum. Then invalidates the rectangle
+occupied by the child and flattens canvas.
+
+C<Event::ZOrder::Top> is dispatched on the child, C<Event::ZOrder::Child> is dispatched on self.
+
+=head3 C<maybe-to-top()>
+
+Normally does nothing. It is used by L<C<Vikna::Elevatable>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Elevatable.md>
+role to signal to a widget it is applied to there is an event happened to which the widget can respond by elevating
+itself to the top of Z-order.
+
+For example see L<C<Vikna::Window>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Window.md>.
+
+=head3 C<clear()>
+
+C<Event::Cmd::Clear>. The command is bypassed down to widget children too. Then fully invalidates and redraws the
+widget.
+
+=head3 C<resize($w, $h)>
+
+Shortcut for C<set-geom> method with preserved widget coordinates.
+
+=head3 C<move($x, $y)>
+
+Shortcut for C<set-geom> method with preserved widget dimensions
+
+=head3 C<multi set-geom($x, $y, $w, $h)>
+=head3 C<multi set-geom(Vikna::Rect:D $geom)>
+
+C<Event::Cmd::SetGeom>. Method changes widget geometry on its parent. It has the following side effects:
+
+=item widget position information is updated by C<update-positions> method.
+=item widget is invalidated as a whole
+=item the old widget rectangle is invalidated on its parent
+=item position information is updated on children
+=item widget redraw is initiated
+
+C<Event::Changed::Geom> is dispatched on self if the requested geometry differs from the previous one.
+
+=head3 C<set-color(:$fg, :$bg)>
+
+C<Event::Cmd::SetColor>. Changes widget default foreground/background colors. Throws C<X::BadColor> if any of the two is
+invalid. Dispatches C<Event::Changed::Color>.
+
+=head3 C<set-style(|c)>
+
+C<Event::Cmd::SetStyle>. Changes widget default style. Takes same arguments as C<to-style> routine from
+L<C<Vikna::Utils>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Utils.md>. Dispatches C<Event::Changed::Style>.
+
+=head3 C<multi set-attr(Vikna::CAttr:D $attr)>
+=head3 C<multi set-attr(*%c)>
+
+C<Event::Cmd::SetAttr>. Changes default widget attributes. In a way we can say it combines C<set-color> and C<set-style>
+method calls. Dispatches C<Event::Changed::Attr>.
+
+=head3 C<set-bg-pattern($pattern)>
+
+C<Event::Cmd::SetBgPatter>. Changes the default widget background patter. Dispatches C<Event::Changed::BgPattern> and
+initiates full widget redraw.
+
+=head3 C<set-hidden($hidden)>, C<hide()>, C<show()>
+
+C<Event::Cmd::SetHidden>. Set widget hidden status. C<hide()> and C<show()> are aliases to C<self.set-hidden(True)> and
+C<self.set-hidden(False)> respectively. Dispatches C<Event::Hide>, C<Event::Show>. If widget C<$.visible> status changes
+then additionally could dispatch C<Event::Visible> or C<Event::Invisible>.
+
+=head3 C<nop()>
+
+C<Event::Cmd::Nop>. No operation.
+
+=head3 C<sync-events(:$transitive)>
+
+This method ensures that all previously dispatched events were handled by the event loop. With event priorities in mind,
+this rule doesn't apply to C<PrioIdle> events.
+
+Technically, the method invokes C<nop>. If C<$transitive> then it also does so on children widgets. C<Event::Cmd::Nop>
+instances are collected and their completion promises are all awaited.
+
+There is a timeout of 30 seconds. If at least one event fails to complete withing the time frame then the method invokes
+C<self.panic> with C<X::AdHoc>.
+
+=head3 C<contains(Vikna::Coord:D $obj, :$absolute)>
+
+C<Event::Cmd::Contains>. The completion promise of the event returned by the method will contain a boolean reporting
+whether the object C<$obj> is contained within widget's geometry. With C<:absolute> the C<$obj> is expected to be
+defined in terms of the desktop coordinates.
+
+=head3 C<close()>
+
+C<Event::Cmd::Close>. Close the widget.
+
+Firs, the command is bypassed down to the widget children. C<Event::Closing> is dispatched on self. Then the widget
+awaits for all children to dismiss and when they have detaches itself from the parent. Then see C<detach> method
+description.
+
+=head3 C<quit()>
+
+Shortcut for quitting the whole application. A child widget invokes C<quit> method on the desktop. The desktop closes
+itself.
+
+=head3 C<detach()>
+
+If the widget has a parent then invokes C<remove-child> on it for self. Otherwise the widget is the desktop, method only
+dispatches C<Event::Detached> on self with event C<child> attribute set to C<self>.
+
+=head3 C<shutdown()>
+
+Stops event loop. Then keeps C<$.dismissed> with I<True>.
+
+=head3 C<panic($cause)>
+
+Causes the whole application to bail out. C<$cause> is an exception explaining the cause of the panic.
+
+=head2 State Methods
+
+Methods reporting current widget state
+
+=head3 C<visible()>
+
+Returns true if widget is visible on the parent.
+
+=head3 C<closed()>
+
+Returns true if the widget is closed. Note that closing is a process consisting of several steps. It is not fully done
+until C<$.dismissed> is kept.
+
+=head2 Utility Methods
+
+Methods in this category are oftem implementation details. Their purpose is provide automation for some common
+operations.
+
+=head3 C<set-invisible($invisible)>
+
+Implementation detail. Must not be used normally.
+
+=head3 C<update-positions(:$transitive)>
+
+Method recalculates widget C<$.viewport>, C<$.abs-geom>, and C<$.abs-viewport>. Because it operates directly on the
+widget status must not be invoked from outside of the event loop.
+
+With C<:transitive> updates all children positions recursively.
+
+Sets widget visibility status.
+
+=head3 C<add-inv-parent-rect(Vikna::Rect:D $rect)>
+
+Add invalidation rectangle C<$rect> to be submitted up to the parent upon canvas flattening.
+
+=head3 C<add-inv-rect(Vikna::Rect:D $rect)>
+
+Adds an invalidation rectangle. Also recalculates it into parent's coordinate system and passes the result to
+C<add-inv-parent-rect()> method.
+
+=head3 C<clear-invalidations()>
+
+Deletes all local invalidations. Those stashed for parent are left intact.
+
+=head3 C<multi invalidate(Vikna::Rect:D $rect)>
+=head3 C<multi invalidate(Int:D $x, Int:D $y, Dimention $w, Dimention $h)>
+=head3 C<multi invalidate(Int:D :$x, Int:D :$y, Dimention :$w, Dimention :$h)>
+=head3 C<multi invalidate(@invalidations)>
+
+Invalidate rectangles on self. Invokes C<add-inv-rect> method.
+
+=head3 C<multi invalidate()>
+
+Invalidates the entire widget.
+
+=head3 C<begin-draw(Vikna::Canvas $canvas? --> Vikna::Canvas)>
+
+Must not be used outside of the event loop.
+
+Start draw operation. If not passed with a canvas object then creates a new one of the size of the widget. If
+C<$.auto-clear> is I<False> then new canvas gets its content from C<$.canvas>. Otherwise an empty one is created and
+entire widget is invalidated. The new canvas gets all invalidations so far applied to the widget.
+
+Method returns the prepared canvas object.
+
+=head3 C<end-draw(:$canvas!)>
+
+Currently does nothing but invoked by the default C<draw> method. Can be used by a descendant class to take necessary
+actions when drawing is over.
+
+Invalidates a rectangle.
+
+=head3 C<draw(Vikna::Canvas:D :$canvas)>
+
+This is the method a child class must override to draw itself. By default only invokes C<draw-background> method.
+
+=head3 C<draw-background(Vikna::Canvas:D :$canvas)>
+
+Draws default widget background using C<$.attr.pattern>. If pattern is not defined then this is a noop.
+
+=head3 C<redraw-block()>, C<redraw-unblock()>, C<redraw-hold(&code, |c)>
+
+Define boundaries of no-redraw zone. Nested, i.e. to re-enable drawing one must call C<redraw-unblock> as many times
+as C<redraw-block>s were called. Transitive operation.
+
+When the last C<redraw-unblock> is invoked, widget attempts to release any postponed redraw event:
+
+    self.redraw-block;
+    self.invalidate;
+    self.redraw; # Nothing happens
+    self.redraw-unblock; # Event::Cmd::Redraw is released.
+
+Extra unblocking results in C<X::OverUnblock> thrown.
+
+Use of C<redraw-hold> method is recommended whenever possible. I.e. the above example is better be written as:
+
+    self.redraw-hold: {
+        self.invalidate;
+        self.redraw;
+    }
+
+It is possible to pass a sub to C<redraw-hold> and submit its arguments alongside:
+
+    self.redraw-hold: &do-many-things, 42, "is The Answer";
+
+=head3 C<flatten-block()>, C<flatten-unblock()>, C<flatten-hold(&code, |c)>
+
+Similar to C<redraw-block> family of methods but block canvas flattening.
+
+=head3 C<multi cursor(Vikna::Point:D $pos)>
+=head3 C<multi cursor(Int:D $x, Int:D $y)>
+
+Positions cursor on the screen.
+
+=head3 C<hide-cursor()>, C<show-cursor()>
+
+Hide or show the cursor.
+
+=head3 C<event-filer(Event::Cmd::Redraw:D $ev)>
+
+Implements redraw hold. See
+L<C<Vikna::EventHandling>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/EventHandling.md>
+C<send-event> method and L<#Redraw Hold> section of this page.
+
+=head3 C<next-sibling(:$loop = False, :$on-strata = False)>
+
+Returns our next sibling in Z-order on parent. See C<:loop> and C<:on-strata> parameters on C<next-to> method of
+L<C<Vikna::Parent>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Parent.md>.
+
+=head1 SEE ALSO
+
+L<C<Vikna>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna.md>,
+L<C<Vikna::Manual>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Manual.md>,
+L<C<Vikna::Classes>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Classes.md>,
+L<C<Vikna::Object>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Object.md>,
+L<C<Vikna::Parent>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Parent.md>,
+L<C<Vikna::Child>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Child.md>,
+L<C<Vikna::EventHandling>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/EventHandling.md>,
+L<C<Vikna::CommandHandling>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/CommandHandling.md>,
+L<C<Vikna::Rect>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md>,
+L<C<Vikna::Events>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Events.md>,
+L<C<Vikna::Color>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Coloe.md>,
+L<C<Vikna::Canvas>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Canvas.md>,
+L<C<Vikna::Utils>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Utils.md>,
+L<C<Vikna::WAttr>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/WAttr.md>,
+L<C<AttrX::Mooish>|https://modules.raku.org/dist/AttrX::Mooish>
+
+=AUTHOR
+
+Vadim Belman <vrurg@cpan.org>
+
+=end pod
