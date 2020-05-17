@@ -195,7 +195,7 @@ class Event::Cmd::Clear               is Event::Command { }
 class Event::Cmd::Close               is Event::Command { }
 class Event::Cmd::Focus::Update       is Event::Command { }
 class Event::Cmd::Focus::Request      is Event::Command { }
-class Event::Cmd::Nop                 is Event::Command { }
+class Event::Cmd::Nop                 is Event::Command { method default-priority { PrioDefault } }
 class Event::Cmd::Print::String       is Event::Command { method default-priority { PrioOut } }
 class Event::Cmd::Quit                is Event::Command { }
 class Event::Cmd::Redraw              is Event::Command { }
