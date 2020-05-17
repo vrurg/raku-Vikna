@@ -98,7 +98,7 @@ is a re-parenting operation.
 
 =ATTRIBUTES
 
-=head3 L<C<Vikna::Rect>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md>C<:D $.geom>
+=head3 L<C<Vikna::Rect:D>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect:D.md> C<$.geom>
 
 Widget geometry in its parent coordinate system.
 
@@ -108,11 +108,13 @@ Visible part of the widget in its parent coordinate system. To be more precise, 
 parent's viewport. In the scheme below 1 is our viewport area. It might be even smaller if the parent itself isn't fully
 visible.
 
+=begin code
                +---------+
     +---- Parent ----+   |
     |          |  1  | 2 |
     |          +-----|---+
     +----------------+
+=end code
 
 =head3 C<L<Vikna::Rect|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md> $.abs-geom>
 
@@ -123,7 +125,7 @@ assumed to occupy the whole screen, all absolute coordinates are taken relativel
 
 Similar to C<$.abs-geom>, but for C<$.viewport>.
 
-=head3 C<L<Vikna::WAttr|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/WAttr.md>:D $.attr>
+=head3 L<C<Vikna::WAttr:D>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/WAttr.md> C<$.attr>
 
 Widget default attributes.
 

@@ -78,7 +78,7 @@ ATTRIBUTES
 
 
 
-### [`Vikna::Rect`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md)`:D $.geom`
+### [`Vikna::Rect:D`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect:D.md) `$.geom`
 
 Widget geometry in its parent coordinate system.
 
@@ -86,12 +86,11 @@ Widget geometry in its parent coordinate system.
 
 Visible part of the widget in its parent coordinate system. To be more precise, this is widget's `$.geom` clipped by parent's viewport. In the scheme below 1 is our viewport area. It might be even smaller if the parent itself isn't fully visible.
 
-    +---------+
-
-    +---- Parent ----+   |
-    |          |  1  | 2 |
-    |          +-----|---+
-    +----------------+
+                   +---------+
+        +---- Parent ----+   |
+        |          |  1  | 2 |
+        |          +-----|---+
+        +----------------+
 
 ### `L<Vikna::Rect|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md> $.abs-geom`
 
@@ -101,7 +100,7 @@ Widget geometry in absolute coordinate system. By *absolute* we take the screen,
 
 Similar to `$.abs-geom`, but for `$.viewport`.
 
-### `L<Vikna::WAttr|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/WAttr.md>:D $.attr`
+### [`Vikna::WAttr:D`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/WAttr.md) `$.attr`
 
 Widget default attributes.
 
