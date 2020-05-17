@@ -831,7 +831,7 @@ multi method event-filter( Event::Cmd::Redraw:D $ev ) {
     if $!redraw-blocks == 0 && $!redraws.try_acquire {
         # There is no current redraws, we just proceed further but first make sure we release the resource when done.
         $ev.completed.then: {
-            self.flow: :name( 'REDRAW RELEASE' ), {
+            self.flow: :name( 'REDRAW RELEASE' ), :sync, {
                 self.trace: "RELEASING REDRAW SEMAPHORE";
                 $!redraws.release;
                 self!release-redraw-event;
