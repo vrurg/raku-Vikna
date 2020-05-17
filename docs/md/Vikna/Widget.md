@@ -78,11 +78,11 @@ ATTRIBUTES
 
 
 
-### `L<Vikna::Rect|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md>:D $.geom`
+### [`Vikna::Rect`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md)`:D $.geom`
 
 Widget geometry in its parent coordinate system.
 
-### `L<Vikna::Rect|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md> $.viewport`
+### [`Vikna::Rect`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md)> $.viewport>
 
 Visible part of the widget in its parent coordinate system. To be more precise, this is widget's `$.geom` clipped by parent's viewport. In the scheme below 1 is our viewport area. It might be even smaller if the parent itself isn't fully visible.
 

@@ -98,11 +98,11 @@ is a re-parenting operation.
 
 =ATTRIBUTES
 
-=head3 C<L<Vikna::Rect|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md>:D $.geom>
+=head3 L<C<Vikna::Rect>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md>C<:D $.geom>
 
 Widget geometry in its parent coordinate system.
 
-=head3 C<L<Vikna::Rect|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md> $.viewport>
+=head3 L<C<Vikna::Rect>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md>> $.viewport>
 
 Visible part of the widget in its parent coordinate system. To be more precise, this is widget's C<$.geom> clipped by
 parent's viewport. In the scheme below 1 is our viewport area. It might be even smaller if the parent itself isn't fully
