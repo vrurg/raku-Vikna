@@ -826,10 +826,10 @@ method set-hidden( $hidden ) {
 }
 
 method hide {
-    self.set-hidden: True
+    self.send-command: Event::Cmd::SetHidden, True
 }
 method show {
-    self.set-hidden: False
+    self.send-command: Event::Cmd::SetHidden, False
 }
 
 method set-invisible( $invisible ) {
