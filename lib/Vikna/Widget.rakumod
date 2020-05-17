@@ -848,7 +848,7 @@ method sync-events( :$transitive ) {
     my $irresponsive = [];
     if $transitive {
         self.for-children: -> $chld {
-            @p.push: %( widget => $chld, promise => $chld.nop[0].completed(:transitive));
+            @p.push: %( widget => $chld, promise => $chld.nop.head.completed(:transitive));
         }
     }
     @p.push: %( widget => self, promise => $.nop.head.completed);
