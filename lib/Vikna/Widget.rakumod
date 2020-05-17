@@ -572,8 +572,7 @@ method sync-events( :$transitive ) {
             note $_<widget>.WHICH, " nop ", $_<promise>.?status.^name;
         }
         note $.name ~ " INTERNAL: { $transitive ?? "transitive " !! "" }sync-events timeout exceeded";
-        self.panic: X::AdHoc.new: payload => $
-            .name ~ " INTERNAL: { $transitive ?? "transitive " !! "" }sync-events timeout exceeded";
+        self.panic: X::AdHoc.new( payload => $.name ~ " INTERNAL: { $transitive ?? "transitive " !! "" }sync-events timeout exceeded" );
     }
 }
 
@@ -603,7 +602,7 @@ method update-positions( :$transitive? ) {
         my $parent-geom = $.parent.geom;
         my $parent-viewport = $.parent.viewport;
         my $parent-abs = $.parent.abs-geom;
-        my $gr = $!geom;
+        #my $gr = $!geom;
         $!viewport = $!geom.clip($parent-viewport).relative-to($!geom);
         $!abs-geom = $!geom.absolute($parent-abs);
         $!abs-viewport = $!viewport.absolute($!abs-geom);
@@ -632,6 +631,7 @@ method update-positions( :$transitive? ) {
 method add-inv-parent-rect( Vikna::Rect:D $rect ) {
     if $.parent {
         self.trace: "ADD TO STASH OF PARENT INVS: ", ~$rect;
+        # TODO Replace with Concurrent::Queue? Needs benchmarking.
         $!inv4parent-lock.protect: {
             $!stash-parent-invs.push: $rect
         }
@@ -698,6 +698,23 @@ method end-draw( :$canvas! ) {
     # self.clear-invalidations;
 }
 
+method draw( Vikna::Canvas:D :$canvas ) {
+    self.draw-background(:$canvas);
+}
+
+method draw-background( Vikna::Canvas:D :$canvas ) {
+    if $.attr.pattern {
+        self.trace: "DRAWING BACKGROUND, pattern: ‘{ $.attr.pattern }’";
+        # Don't use $!attr or it breaks Focusable.
+        my $bgpat = $.attr.pattern;
+        my $back-row = ( $bgpat x ( $.w.Num / $bgpat.chars ).ceiling );
+        my %attr-profile = $.attr.Profile;
+        for ^$.h -> $row {
+            $canvas.imprint(0, $row, $back-row, |%attr-profile);
+        }
+    }
+}
+
 method redraw-block {
     ++⚛$!redraw-blocks;
     self.trace: "REDRAW BLOCK, block count: ", $!redraw-blocks;
@@ -755,23 +772,6 @@ method flatten-hold( &code, |c ) {
     $.flatten-block;
     LEAVE $.flatten-unblock;
     &code( |c )
-}
-
-method draw( Vikna::Canvas:D :$canvas ) {
-    self.draw-background(:$canvas);
-}
-
-method draw-background( Vikna::Canvas:D :$canvas ) {
-    if $.attr.pattern {
-        self.trace: "DRAWING BACKGROUND, pattern: ‘{ $.attr.pattern }’";
-        # Don't use $!attr or it breaks Focusable.
-        my $bgpat = $.attr.pattern;
-        my $back-row = ( $bgpat x ( $.w.Num / $bgpat.chars ).ceiling );
-        my %attr-profile = $.attr.Profile;
-        for ^$.h -> $row {
-            $canvas.imprint(0, $row, $back-row, |%attr-profile);
-        }
-    }
 }
 
 proto method cursor( | ) {*}
