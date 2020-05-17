@@ -98,7 +98,7 @@ is a re-parenting operation.
 
 =ATTRIBUTES
 
-=head3 L<C<Vikna::Rect:D>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect:D.md> C<$.geom>
+=head3 L<C<Vikna::Rect:D>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md> C<$.geom>
 
 Widget geometry in its parent coordinate system.
 

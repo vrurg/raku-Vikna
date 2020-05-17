@@ -78,7 +78,7 @@ ATTRIBUTES
 
 
 
-### [`Vikna::Rect:D`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect:D.md) `$.geom`
+### [`Vikna::Rect:D`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md) `$.geom`
 
 Widget geometry in its parent coordinate system.
 
