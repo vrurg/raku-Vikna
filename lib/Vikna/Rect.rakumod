@@ -54,18 +54,21 @@ method coords(::?CLASS:D: --> List) {
     $!x, $!y, $!right, $!bottom
 }
 
-multi method overlap(::?CLASS:D: +@r where *.elems == 4) { $.overlap( ::?CLASS.new: @r ) }
-multi method overlap(::?CLASS:D: ::?CLASS:D $r) {
+proto method overlap(::?CLASS:D: |) {*}
+multi method overlap(::?CLASS:D: ::?CLASS:D $r) { self.overlap: .x, .y, .w, .h with $r }
+multi method overlap(::?CLASS:D: Int:D $x, Int:D $y, UInt:D $w, UInt:D $h) {
+    my $right = $x + $w - 1;
+    my $bottom = $y + $h - 1;
     return nqp::not_i(
         nqp::unless(
-             nqp::isgt_i( $!x, $r.right ),
-             nqp::unless(
-                nqp::islt_i( $!right, $r.x ),
+            nqp::isgt_i( $!x, $right ),
+            nqp::unless(
+                nqp::islt_i( $!right, $x ),
                 nqp::unless(
-                    nqp::islt_i( $!bottom, $r.y ),
-                    nqp::isgt_i( $!y, $r.bottom )
+                    nqp::islt_i( $!bottom, $y ),
+                    nqp::isgt_i( $!y, $bottom )
                 )
-             )
+            )
         )
     )
 }
@@ -78,11 +81,14 @@ my sub clip-coords(@r is copy, @into) {
     @r
 }
 
-multi method clip(::?CLASS:D: +@into where *.elems == 4, :$copy) { $.clip( ::?CLASS.new: @into, :$copy ) }
-multi method clip(::?CLASS:D: ::?CLASS:D $into, :$copy! where ?*) { $.clone.clip: $into }
-multi method clip(::?CLASS:D: ::?CLASS:D $into) {
-    if $.overlap($into) {
-        self.new: |clip-coords([$!x, $!y, $!right, $!bottom], [.x, .y, .right, .bottom]) with $into;
+proto method clip(::?CLASS:D: |) {*}
+multi method clip(::?CLASS:D: ::?CLASS:D $into, :$copy! where ?*) { self.clone.clip: .x, .y, .w, .h with $into }
+multi method clip(::?CLASS:D: ::?CLASS:D $into) { self.clip: .x, .y, .w, .h with $into }
+multi method clip(::?CLASS:D: Int:D $x, Int:D $y, $w, $h) {
+    if self.overlap($x, $y, $w, $h) {
+        my $right = $x + $w - 1;
+        my $bottom = $y + $h - 1;
+        self.new: |clip-coords([$!x, $!y, $!right, $!bottom], [$x, $y, $right, $bottom]);
     }
     else {
         self.new: :0x, :0y, :0w, :0h
