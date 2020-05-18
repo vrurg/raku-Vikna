@@ -4,6 +4,130 @@ use v6.e.PREVIEW;
 =NAME
 
 C<Vikna::Rect> - the rectangle type
+
+=SYNOPSIS
+
+=begin code
+my $rect = Vikna::Rect(10, 5, 42, 13);
+my $rect2 = $rect.move-by(-5, 5);       # 5, 10, 42, 13
+$rect.contains($rect2);                 # False
+=end code
+
+=DESCRIPTION
+
+Does L<C<Vikna::Coord>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Coord.md>.
+
+Represents a rectangle object.
+
+=ATTRIBUTES
+
+=head3 C<UInt:D $.w>, C<UInt:D $.h>
+
+Width and height of the rectangle, respectively.
+
+=head3 C<Int $.right>, C<Int $.bottom>
+
+Right and bottom widget boundaries.
+
+=METHODS
+
+=head3 C<new($x, $y, $w, $h)>
+
+A shortcut to C<new(:$x, :$y, :$w, :$h)>. The class also supports a callable for of instantiation, as shown in
+L<#SYNPOSIS>.
+
+=head3 C<dup(*%twiddles)>
+
+Duplicates a rectangle instance using C<new>.
+
+=head3 C<Array()>
+
+Coerces a rectangle into an array of it's coordinates and dimensions.
+
+=head3 C<List()>
+
+Similar to C<Array> method above, but coerce into a C<List>.
+
+=head3 C<coords()>
+
+An alias to C<List> method.
+
+=head3 C<multi overlap($x, $y, $w, $h)>
+=head3 C<multi overlap(Vikna::Rect:D $rec)>
+
+Returns I<True> if two rectangles overlap.
+
+=head3 C<multi clip(Vikna::Rect:D $into, :$copy?)>
+=head3 C<multi clip(Int:D $x, Int:D $y, UInt:D $w, UInt:D $h)>
+
+Clip a rectangle by C<$into>.
+
+=head3 C<multi dissect(Vikna::Rect:D $by)>
+=head3 C<multi dissect(Int:D $x, Int:D $y, UInt:D $w, UInt:D $h)>
+
+Dissect a rectangle with C<$by>. It means that C<$by> is cut out of the rectangle we dissect and the remaining area is
+dissected into sub-rectangles.
+
+=head3 C<multi dissect(@by)>
+
+Dissect by a list of rectangles.
+
+=head3 C<multi contains(Int:D $x, Int:D $y)>
+=head3 C<multi contains(Int:D $x, Int:D $y, UInt:D $w, UInt:D $h)>
+=head3 C<multi contains(Vikna::Coord:D $point)>
+=head3 C<multi contains(Vikna::Rect:D $rect)>
+
+Returns I<True> is the argument is contained by rectangle.
+
+=head3 C<multi relative-to(Int:D $x, Int:D $y)>
+=head3 C<multi relative-to(Int:D $x, Int:D $y, UInt:D $w, UInt:D $h, :$clip = False)>
+=head3 C<multi relative-to(Vikna::Coord:D $point)>
+=head3 C<multi relative-to(Vikna::Rect:D $rect, :$clip = False)>
+
+Takes current rectangle and returns a new one which coordinates are relative to coordinates of C<$rect>. With C<:clip>
+clips the new rectangle by C<$rect>.
+
+=head3 C<multi absolute(Int:D $x, Int:D $y)>
+=head3 C<multi absolute(Vikna::Rect:D $rec, :$clip = False)>
+
+Assuming that rectangle coordinates are relative to the argument, transforms them into the "absolute" values and returns
+a new rectangle. With C<:clip> it is cliped by C<$rect>.
+
+=head3 C<multi move(Int:D $x, Int:D $y)>
+=head3 C<multi move(Vikna::Coord:D $point)>
+
+Returns a new rectangle with it's origin set to the argument.
+
+=head3 C<multi move-by(Int:D $dx, Int:D $dy)>
+=head3 C<multi move-by(Vikna::Coord:D $delta)>
+
+Returns a new rectangle shifted by the argument.
+
+=head3 C<Str()>
+=head3 C<gist()>
+
+Strigify rectangle.
+
+=OPERATORS
+
+=head3 C<infix:<+>(Vikna::Rect:D $r, Vikna::Coord:D $delta)>
+
+Same as C<move-by>.
+
+=head3 C<infix:<==>(Vikna::Rect:D $a, Vikna::Rect:D $b)>
+
+Returns I<True> if both rectangles have same origins and dimensions.
+
+=head1 SEE ALSO
+
+L<C<Vikna>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna.md>,
+L<C<Vikna::Manual>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Manual.md>,
+L<C<Vikna::Classes>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Classes.md>,
+L<C<Vikna::Coord>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Coord.md>,
+L<C<Vikna::Point>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Point.md>
+
+=AUTHOR Vadim Belman <vrurg@cpan.org>
+
 =end pod
 
 use Vikna::Coord;
@@ -84,7 +208,7 @@ my sub clip-coords(@r is copy, @into) {
 proto method clip(::?CLASS:D: |) {*}
 multi method clip(::?CLASS:D: ::?CLASS:D $into, :$copy! where ?*) { self.clone.clip: .x, .y, .w, .h with $into }
 multi method clip(::?CLASS:D: ::?CLASS:D $into) { self.clip: .x, .y, .w, .h with $into }
-multi method clip(::?CLASS:D: Int:D $x, Int:D $y, $w, $h) {
+multi method clip(::?CLASS:D: Int:D $x, Int:D $y, UInt:D $w, UInt:D $h) {
     if self.overlap($x, $y, $w, $h) {
         my $right = $x + $w - 1;
         my $bottom = $y + $h - 1;
@@ -167,14 +291,14 @@ multi method contains(Int:D $px, Int:D $py) {
 multi method contains(Vikna::Coord:D $point) {
     self.contains: .x, .y with $point
 }
-multi method contains(Int:D $x, Int:D $y, Int:D $w, Int:D $h) {
+multi method contains(Int:D $x, Int:D $y, UInt:D $w, UInt:D $h) {
     $.contains($x, $y) and $.contains($x + $w - 1, $y + $h - 1)
 }
 multi method contains(Vikna::Rect:D $rect) {
     $.contains(.x, .y) and $.contains(.right, .bottom) given $rect
 }
 
-#| Assuming that the argument is defined in the same coordinate system as ours returns a new rectangle which coordinates
+#Assuming that the argument is defined in the same coordinate system as ours returns a new rectangle which coordinates
 #are relative to the argument. If :clip is defined then the resulting rectange would also be clipped to fit the
 #argument.
 proto method relative-to(::?CLASS:D: |) {*}
@@ -196,7 +320,7 @@ multi method relative-to(Int:D $x, Int:D $y, UInt:D $w, UInt:D $h, Bool :$clip =
 multi method relative-to(Int:D $x, Int:D $y) {
     self.new: $!x - $x, $!y - $y, $!w, $!h
 }
-multi method relative-to(Vikna::Point:D $point) {
+multi method relative-to(Vikna::Coord:D $point) {
     self.new: $!x - .x, $!y - .y, $!w, $!h with $point
 }
 
@@ -217,7 +341,7 @@ multi method absolute(Int:D $x, Int:D $y --> Vikna::Rect:D) {
 }
 
 proto method move(::?CLASS:D: |) {*}
-multi method move(Vikna::Point:D $point) {
+multi method move(Vikna::Coord:D $point) {
     self.new: :x(.x), :y(.y), :$!w, :$!h with $point
 }
 multi method move(Int:D $x, Int:D $y) {
@@ -225,7 +349,7 @@ multi method move(Int:D $x, Int:D $y) {
 }
 
 proto method move-by(::?CLASS:D: |) {*}
-multi method move-by(Vikna::Point:D $dp) {
+multi method move-by(Vikna::Coord:D $dp) {
     self.new: :x($!x + .x), :y($!y + .y), :$!w, :$!h with $dp
 }
 multi method move-by(Int:D $dx, Int:D $dy) {
@@ -242,7 +366,7 @@ method gist {
 
 method CALL-ME(*@pos) { ::?CLASS.new: |@pos }
 
-multi infix:<+>(::?CLASS:D $r, Vikna::Point:D $delta) is export {
+multi infix:<+>(::?CLASS:D $r, Vikna::Coord:D $delta) is export {
     $r.move-by: $delta
 }
 

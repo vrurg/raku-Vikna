@@ -102,7 +102,7 @@ is a re-parenting operation.
 
 Widget geometry in its parent coordinate system.
 
-=head3 L<C<Vikna::Rect>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md>> $.viewport>
+=head3 L<C<Vikna::Rect>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md> C<$.viewport>
 
 Visible part of the widget in its parent coordinate system. To be more precise, this is widget's C<$.geom> clipped by
 parent's viewport. In the scheme below 1 is our viewport area. It might be even smaller if the parent itself isn't fully
@@ -116,12 +116,12 @@ visible.
     +----------------+
 =end code
 
-=head3 C<L<Vikna::Rect|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md> $.abs-geom>
+=head3 L<C<Vikna::Rect>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md> C<$.abs-geom>
 
 Widget geometry in absolute coordinate system. By I<absolute> we take the screen, but because the desktop object is
 assumed to occupy the whole screen, all absolute coordinates are taken relatively to desktop.
 
-=head3 C<L<Vikna::Rect|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md> $.abs-viewport>
+=head3 L<C<Vikna::Rect>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md> C<$.abs-viewport>
 
 Similar to C<$.abs-geom>, but for C<$.viewport>.
 
@@ -144,11 +144,11 @@ If I<True> then widget is outside of parent's viewport and thus not visible on t
 C<$.hidden> attribute is that the latter is set intentionally, while this attribute is a result of calculations of
 widget position.
 
-=head3 C<L<Vikna::Canvas|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Canvas.md> $.canvas>
+=head3 L<C<Vikna::Canvas>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Canvas.md> C<$.canvas>
 
 Widget canvas after the last redraw operation.
 
-=head3 C<Promise:D $.dismissed>
+=head3 L<C<Promise:D>|https://docs.raku.org/type/Promise> C<$.dismissed>
 
 This promise is kept with I<True> when widget has shutdown. In particular, its event loop has been stopped.
 
@@ -524,6 +524,7 @@ L<C<Vikna::Parent>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna
 L<C<Vikna::Child>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Child.md>,
 L<C<Vikna::EventHandling>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/EventHandling.md>,
 L<C<Vikna::CommandHandling>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/CommandHandling.md>,
+L<C<Vikna::Coord>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Coord.md>,
 L<C<Vikna::Rect>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md>,
 L<C<Vikna::Events>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Events.md>,
 L<C<Vikna::Color>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Coloe.md>,

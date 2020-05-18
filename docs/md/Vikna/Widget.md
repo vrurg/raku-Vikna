@@ -82,7 +82,7 @@ ATTRIBUTES
 
 Widget geometry in its parent coordinate system.
 
-### [`Vikna::Rect`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md)> $.viewport>
+### [`Vikna::Rect`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md) `$.viewport`
 
 Visible part of the widget in its parent coordinate system. To be more precise, this is widget's `$.geom` clipped by parent's viewport. In the scheme below 1 is our viewport area. It might be even smaller if the parent itself isn't fully visible.
 
@@ -92,11 +92,11 @@ Visible part of the widget in its parent coordinate system. To be more precise, 
         |          +-----|---+
         +----------------+
 
-### `L<Vikna::Rect|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md> $.abs-geom`
+### [`Vikna::Rect`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md) `$.abs-geom`
 
 Widget geometry in absolute coordinate system. By *absolute* we take the screen, but because the desktop object is assumed to occupy the whole screen, all absolute coordinates are taken relatively to desktop.
 
-### `L<Vikna::Rect|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md> $.abs-viewport`
+### [`Vikna::Rect`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md) `$.abs-viewport`
 
 Similar to `$.abs-geom`, but for `$.viewport`.
 
@@ -116,11 +116,11 @@ If *True* then widget is intentionally hidden on its parent.
 
 If *True* then widget is outside of parent's viewport and thus not visible on the screen. The difference with `$.hidden` attribute is that the latter is set intentionally, while this attribute is a result of calculations of widget position.
 
-### `L<Vikna::Canvas|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Canvas.md> $.canvas`
+### [`Vikna::Canvas`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Canvas.md) `$.canvas`
 
 Widget canvas after the last redraw operation.
 
-### `Promise:D $.dismissed`
+### [`Promise:D`](https://docs.raku.org/type/Promise) `$.dismissed`
 
 This promise is kept with *True* when widget has shutdown. In particular, its event loop has been stopped.
 
@@ -466,7 +466,7 @@ Returns our next sibling in Z-order on parent. See `:loop` and `:on-strata` para
 SEE ALSO
 ========
 
-[`Vikna`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna.md), [`Vikna::Manual`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Manual.md), [`Vikna::Classes`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Classes.md), [`Vikna::Object`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Object.md), [`Vikna::Parent`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Parent.md), [`Vikna::Child`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Child.md), [`Vikna::EventHandling`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/EventHandling.md), [`Vikna::CommandHandling`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/CommandHandling.md), [`Vikna::Rect`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md), [`Vikna::Events`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Events.md), [`Vikna::Color`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Coloe.md), [`Vikna::Canvas`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Canvas.md), [`Vikna::Utils`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Utils.md), [`Vikna::WAttr`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/WAttr.md), [`AttrX::Mooish`](https://modules.raku.org/dist/AttrX::Mooish)
+[`Vikna`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna.md), [`Vikna::Manual`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Manual.md), [`Vikna::Classes`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Classes.md), [`Vikna::Object`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Object.md), [`Vikna::Parent`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Parent.md), [`Vikna::Child`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Child.md), [`Vikna::EventHandling`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/EventHandling.md), [`Vikna::CommandHandling`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/CommandHandling.md), [`Vikna::Coord`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Coord.md), [`Vikna::Rect`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md), [`Vikna::Events`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Events.md), [`Vikna::Color`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Coloe.md), [`Vikna::Canvas`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Canvas.md), [`Vikna::Utils`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Utils.md), [`Vikna::WAttr`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/WAttr.md), [`AttrX::Mooish`](https://modules.raku.org/dist/AttrX::Mooish)
 
 AUTHOR
 ======
