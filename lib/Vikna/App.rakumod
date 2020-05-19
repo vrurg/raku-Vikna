@@ -143,7 +143,8 @@ method panic($cause, :$object?) {
             }
         }
         my $obj-id = $object.?name // $object.WHICH;
-        my $msg = "Caused by {$obj-id}\n" ~ $cause ~ $cause.backtrace;
+        my $msg = "Caused by {$obj-id}\n" ~ $cause ~ $cause.backtrace
+                    ~ "\nPanic path:\n" ~ Backtrace.new;
         self.trace: "APP PANIC! ", $msg, :error;
         note "===APP PANIC!=== ", $msg;
         $.desktop.panic-shutdown($cause);
