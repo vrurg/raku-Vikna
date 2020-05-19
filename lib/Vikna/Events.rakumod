@@ -250,6 +250,9 @@ class Event::Changed::Text does Event::Changish[Str] is Event::Informative { }
 
 class Event::Changed::BgPattern does Event::Changish[Str] is Event::Informative { }
 
+class Event::InitDone     is Event::Informative { }
+class Event::Redrawn      is Event::Informative { }
+class Event::Flattened    is Event::Informative { }
 class Event::Hide         is Event::Informative { }
 class Event::Show         is Event::Informative { }
 class Event::Visible      is Event::Informative { }
