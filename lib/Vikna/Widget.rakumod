@@ -774,6 +774,10 @@ method flatten-hold( &code, |c ) {
     &code( |c )
 }
 
+method flatten-blocked {
+    $!flatten-blocks
+}
+
 proto method cursor( | ) {*}
 multi method cursor( Vikna::Point:D $pos ) {
     $.app.screen.move-cursor: $pos.absolute($!abs-geom);
