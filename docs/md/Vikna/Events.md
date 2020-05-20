@@ -192,7 +192,7 @@ Is `Event`, does `Event::Prio::Default`. Events of this class are only informing
 
 Is `Event`, does `Event::Prio::Command`.
 
-Pass a command to an event handler. Support provided by [`Vikna::CommandHandler`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/CommandHandler.md).
+Pass a command to an event handler. Support provided by [`Vikna::CommandHandling`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/CommandHandling.md).
 
 Attributes
 ----------
@@ -214,7 +214,7 @@ Arguments to invoke the command method with. For example:
     }
     method cmd-resize($w, $h) { ... }
 
-There is a shortcut method `send-command` defined in [`Vikna::CommandHandler`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/CommandHandler.md).
+There is a shortcut method `send-command` defined in [`Vikna::CommandHandling`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/CommandHandling.md).
 
 Methods
 -------

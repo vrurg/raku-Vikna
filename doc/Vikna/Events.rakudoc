@@ -177,7 +177,7 @@ Is C<Event>, does C<Event::Prio::Default>. Events of this class are only informi
 Is C<Event>, does C<Event::Prio::Command>.
 
 Pass a command to an event handler. Support provided by
-L<C<Vikna::CommandHandler>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/CommandHandler.md>.
+L<C<Vikna::CommandHandling>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/CommandHandling.md>.
 
 =head2 Attributes
 
@@ -201,7 +201,7 @@ method cmd-resize($w, $h) { ... }
 =end code
 
 There is a shortcut method C<send-command> defined in
-L<C<Vikna::CommandHandler>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/CommandHandler.md>.
+L<C<Vikna::CommandHandling>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/CommandHandling.md>.
 
 =head2 Methods
 
