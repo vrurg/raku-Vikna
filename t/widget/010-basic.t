@@ -37,30 +37,31 @@ class MyWidget is Vikna::Widget {
                     :checker( -> |c { self!is-drawn(|c) } ),
                     :on-status( -> $passed, $ {
                         evs-syncer('move widget').signal($passed);
-                        # This would kick off the process. Without sync-events the widget gets no events to proceed.
                         self.set-geom(42,12,15,10);
                     } ),
                 ),
             ],
             "desktop with widget to screen",
             :async,
-            :timeout(10),
+            :timeout(30),
+#            :trace-events,
             :defaults{ :quit-on-flunk };
 
         is-event-sequence self,
             [
                 evs-task( Event::Init, "initialized",
                     :on-status( -> $passed, $ { evs-syncer('widget ready').signal($passed); } )),
-                evs-task( Event::Cmd::Redraw, "widget redrawn" ),
-                evs-task( Event::Updated, "widget imprinted on desktop",
+                evs-task( Event::Cmd::Redraw, "widget redrawn",
                     on-status => -> $passed, $, {
                         evs-syncer('widget redrawn').signal($passed);
                     },
-                )
+                ),
+                evs-task( Event::Updated, "widget imprinted on desktop" )
             ],
             "Widget startup",
             :async,
-            :timeout(5),
+            :timeout(20),
+#            :trace-events,
             :defaults{ :quit-on-flunk };
     }
 
@@ -75,6 +76,7 @@ class MyWidget is Vikna::Widget {
             ],
             "desktop on widget move",
             :async,
+#            :trace-events,
             :defaults{ :quit-on-flunk };
 
         is-event-sequence self,
@@ -92,12 +94,20 @@ class MyWidget is Vikna::Widget {
             [
                 evs-task( Event::Cmd::SetGeom, "set geometry command event",
                     :skip-until('move widget'),
-                    :on-status( -> $passed, $ { evs-syncer('widget set geom command').signal($passed) } )),
-                evs-task( Event::Cmd::Redraw, "post-geom change redraw"),
-                evs-task( Event::Updated, "widget updated on parent",
-                    :on-status( -> $passed, $ { evs-syncer('widget post-geom').signal($passed) } )),
+                    :on-status( -> $passed, $ {
+                        $.app.desktop.flatten-block;
+                        evs-syncer('widget set geom command').signal($passed);
+                    } )),
+                evs-task( Event::Cmd::Redraw, "post-geom change redraw" ),
+                evs-task( Event::Flattened, "widget submitted to parent",
+                    :on-status( -> $passed, $ {
+                        evs-syncer('widget post-geom').signal($passed);
+                        $.app.desktop.flatten-unblock;
+                    } )),
+                evs-task( Event::Updated, "widget submitted to parent" ),
             ],
             "Change geometry",
+#            :trace-events,
             :async,
             :defaults{ :quit-on-flunk };
     }
