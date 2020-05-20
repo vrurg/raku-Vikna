@@ -1,0 +1,300 @@
+=begin pod
+=NAME
+
+C<Vikna::Events> - core event classes and roles
+
+=SYNOPSIS
+
+    class Event::Foo is Event::Informative { }
+    class Event::Cmd::Bar is Event::Command { }
+
+=DESCRIPTION
+
+Event is an instance of the class C<Event>.
+
+Events (here and further by referring to an event we refer to its class unless stated otherwise) can be grouped by few
+categories. First, by their type:
+
+=item informative are events which only informs about a state change, or an action took place, or whatever else
+=item commands are events containing a command to be executed; see
+L<C<Event::CommandHandling>|https://modules.raku.org/dist/Event::CommandHandling> for additional details
+=item input events something produced by external devices either virtual or physical
+=item output are events which send output to external devices
+
+These in turn could split into subcategories.
+
+Another event grouping category is event priority. These are (in the order from lower to higher):
+
+=item idle
+=item default
+=item command
+=item released
+=item output
+=item input
+=item immediate
+
+Priorities are defined by C<EventPriority> enum with the following values:
+
+=item C<PrioIdle>
+=item C<PrioDefault>
+=item C<PrioCommand>
+=item C<PrioReleased>
+=item C<PrioOut>
+=item C<PrioIn>
+=item C<PrioImmediate>
+
+While there is hope that priority names are self-explanatory, I<released> is likely needing a few words about.
+
+There is a situation possible where an event is considered to be not on time and gets postponed for later. An example
+of such situation is described in I<Redraw Hold> section of
+L<C<Vikna::Widget>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Widget.md>.
+In this situation it might be considered useful to dispatched the event with slightly higher priority to handle it as
+soon as possible. This is what C<PrioReleased> is useful for. In the case of I<redraw holding> it allows the redraw
+command to be processed before any other command queued making it very likely for the redraw to happen almost right away
+after the previos one is finished.
+
+Next sections are descriptions of classes and roles.
+
+=head1 C<Event>
+
+=head2 Attributes
+
+=head3 C<$.id>
+
+Event unique ID. The uniqueness is guaranteed to be process-wide. This also means that C<dup>-ed events will have
+different IDs (but not C<clone>-d).
+
+=head3 C<$.origin>
+
+What object has created the event. By default is the same as C<$.dispatcher>.
+
+=head3 C<$.dispatcher>
+
+The object which is dispatching an event. It is possible that an event is originated by one object but dispatched by
+another. For example, this is what happens to keyboard or mouse input events.
+
+=head3 C<$.cleared>
+
+If set to I<True> then event has been taken care of and in some cases must not be handled anywhere else.
+
+B<Note> the final semantics of this attribute is not really defined yet.
+
+=head3 C<$.priority>
+
+Event default priority. To set it a sub-class can defined a method C<default-priority> which must return one of
+C<EventPriority> enums.
+
+=head2 Methods
+
+=head3 C<dup(*%p)>
+
+Duplicates an event object giving the copy a new ID.
+
+=head3 C<clear()>
+
+Clears the event (see C<$.cleared> above).
+
+=head3 C<to-method-name(Str:D $prefix)>
+
+Makes a method name from the event class name by cutting out everything up to and including C<Event::>. The remaining
+string is modified by replacing I<"::"> with I<"-"> and lowercasing other parts. C<$prefix> is prepended to the
+beginning of the resulting string with I<"-"> char unless the prefix already ends with it.
+
+=head3 C<Str()>
+
+Stringifies the event object.
+
+=head1 Roles C<Event::Prio::Idle>, C<Event::Prio::Default>, C<Event::Prio::Command>, C<Event::Prio::Released>, C<Event::Prio::In>, C<Event::Prio::Out>
+
+The roles define C<default-priority> method with corresponding C<Prio*> enum value returned.
+
+=head1 Role C<Event::Changish[::T \type = Any]>
+
+The role define a subcategory of events reporting about a state change. It defines attributes C<$.from> and C<$.to> of
+type C<T>.
+
+=head1 Role C<Event::Focusing>
+
+Events consuming this role are routed using the rules of focused dispatching, as implemented by
+L<C<Vikna::Focusable>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Focusable.md>.
+
+=head1 Role C<Event::ZOrderish>
+
+Events of this subcategory are expected to carry information about Z-order changes.
+
+=head1 Role C<Event::Spreadable>
+
+Events of this subcategory are automatically spreaded to children. For example, C<Event::Quit> is sent down to all
+widgets.
+
+=head1 Role C<Event::Geomish>
+
+Subcategory of events bearing information about a rectangle. Defines single attribute C<$.geom> (aliased as C<$.to>) of
+L<C<Event::Rect:D>|https://modules.raku.org/dist/Event::Rect>.
+
+=head1 Role C<Event::Transformish>
+
+Does C<Event::Geomish>. Subcategory of geomish events containing information about a transformation of some kind where
+state is changing I<from> one rectangle I<to> another. Adds C<$.from> attribute of
+L<C<Vikna::Rect:D>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md>.
+
+=head1 Role C<Event::Positionish>
+
+Subcategory of events bearing information about some 2D position. Defines attribute C<$.at> of
+L<C<Vikna::Point:D>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Point.md>
+and handling methods ro-accessors C<x> and C<y>.
+
+=head1 Role C<Event::Vectorish>
+
+Subcategory of events defining a vector-like information with I<from> and I<to> positions. Correspondingly, defines
+attributes C<$.from> and C<$.to> of
+L<C<Vikna::Point>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Point.md>.
+
+=head1 Role C<Event::Pointer::Elevatish>
+
+Subcategory of events which might move a widget to the top of Z-order.
+
+=head1 Role C<Event::Childing>
+
+Subcategory of events bearing information about a L<C<Vikna::Child>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Child.md>.
+Defines attribute C<$.child>.
+
+=head1 Role C<Event::Parentish>
+
+Subcategory of events bearing information about a L<C<Vikna::Parent>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Parent.md>.
+Defines attribute C<$.parent>.
+
+=head1 Role C<Event::Relational>
+
+Does C<Event::Childish> and C<Event::Parentish>. Events with information about both parent and child objects.
+
+=head1 C<Event::Informative>
+
+Is C<Event>, does C<Event::Prio::Default>. Events of this class are only informing about something.
+
+=head1 C<Event::Command>
+
+Is C<Event>, does C<Event::Prio::Command>.
+
+Pass a command to an event handler. Support provided by
+L<C<Vikna::CommandHandler>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/CommandHandler.md>.
+
+=head2 Attributes
+
+=head3 L<C<Promise:D>|https://docs.raku.org/type/Promise> C<$.completed>
+
+This promise is kept when a command is completed with return value of the command method.
+
+=head3 C<$.completed-at>
+
+Will contain a backtrace of invocation of event method C<complete>.
+
+=head3 L<C<Capture:D>|https://docs.raku.org/type/Capture> C<$.args>
+
+Arguments to invoke the command method with. For example:
+
+=begin code
+method resize(Int:D $w, Int:D $h) {
+    self.send-event: Event::Cmd::Resize, :args(\($w, $h));
+}
+method cmd-resize($w, $h) { ... }
+=end code
+
+There is a shortcut method C<send-command> defined in
+L<C<Vikna::CommandHandler>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/CommandHandler.md>.
+
+=head2 Methods
+
+=head3 C<complete($rc)>
+
+Sets command event completion status by keeping C<$.completed> with $rc and recording the backtrace at the point where
+C<complete> is invoked.
+
+=head1 C<Event::Input>
+
+Is C<Event>, does C<Event::Prio::Input>. Category of input events.
+
+=head1 C<Event::Output>
+
+Is C<Event>, does C<Event::Prio::Output>. Category of output events.
+
+=head1 C<Event::Kbd>
+
+Is C<Event::Input>, does C<Event::Focusish>. Category of keyboard events.
+
+=head2 Attributes
+
+=head3 C<$.raw>
+
+Raw key data
+
+=head3 C<$.char>
+
+A character representing the key
+
+=head3 L<C<Set:D>|https://docs.raku.org/type/Set> C<$.modifiers>
+
+Modifier keys. See C<ModifierKeys> enum in L<C<Vikna::Dev::Kbd>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Dev/Kbd.md>.
+
+=head1 Role C<Event::Rbd::Partial>
+
+Keyboard events of this subcategory are not about a key press.
+
+=head1 Role C<Event::Cmd::Complete>
+
+Keyboard events of this subcategory are reporting about a key press.
+
+=head1 C<Event::Pointer>
+
+Is C<Event::Input>, does C<Event::Positionish>. Events of this category are informing about a pointer device events.
+Define a single abstract method C<kind> which has to be overriden by children and return a string returning the pointer
+device name.
+
+=head1 C<Event::Mouse>
+
+Is C<Event::Pointer>. All mouse events are inheriting from this class.
+
+=head2 Attributes
+
+=head3 C<Int:D $.button>
+
+A number of the mouse button.
+
+=head3 C<@.buttons>
+
+All buttons presses at the time of event happened.
+
+=head3 L<C<Set>|https://docs.raku.org/type/Set> C<$.modifiers>
+
+Keyboard modifier keys active at the time of event. See C<$.modifiers> of C<Event::Kbd> above.
+
+=head3 L<C<Vikna::Point>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Point.md> C<$.prev>
+
+Previous mouse position. The first ever mouse event will have it undefined.
+
+=head2 Methods
+
+=head3 C<dup(*%p)>
+
+Duplicates the event object.
+
+=head3 C<kind()>
+
+Returns string I<'mouse'>.
+
+=head1 SEE ALSO
+
+L<C<Vikna>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna.md>,
+L<C<Vikna::Manual>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Manual.md>,
+L<C<Vikna::Rect>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md>,
+L<C<Vikna::Point>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Point.md>,
+L<C<Vikna::Child>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Child.md>,
+L<C<Vikna::Parent>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Parent.md>,
+L<C<Vikna::Dev::Kbd>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Dev/Kbd.md>,
+L<C<Vikna::CAttr>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/CAttr.md>,
+L<C<Vikna::X>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/X.md>,
+L<C<Vikna::Classes>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Classes.md>
+
+=AUTHOR Vadim Belman <vrurg@cpan.org>
+
+=end pod
