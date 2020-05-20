@@ -120,6 +120,10 @@ If *True* then widget is outside of parent's viewport and thus not visible on th
 
 Widget canvas after the last redraw operation.
 
+### [`Promise:D`](https://docs.raku.org/type/Promise) `$.initialized`
+
+This promise is kept when a widget init stage is fully completed, including the first redraw.
+
 ### [`Promise:D`](https://docs.raku.org/type/Promise) `$.dismissed`
 
 This promise is kept with *True* when widget has shutdown. In particular, its event loop has been stopped.
@@ -236,6 +240,10 @@ Part of the [Canvas Flattening](#Canvas Flattening) process. A child sends this 
   * if the widget doesn't have any invalidations registered
 
 When drawing is possible, new canvas is created by `begin-draw` method and passed to widget method `draw`. When it's done `end-draw` is invoked with the same canvas object which is then set as widget's `$.canvas`. At the end widget flattens canvas, as described in [Canvas Flattening](#Canvas Flattening).
+
+At the widget first ever redraw `$.initialized` is kept and `Event::InitDone` is dispatched.
+
+`Event::Redrawn` is dispatched always.
 
 ### `to-top(Vikna::Widget:D $child)`
 
@@ -461,7 +469,9 @@ Implements redraw hold. See [`Vikna::EventHandling`](https://github.com/vrurg/ra
 
 ### `next-sibling(:$loop = False, :$on-strata = False)`
 
-Returns our next sibling in Z-order on parent. See `:loop` and `:on-strata` parameters on `next-to` method of [`Vikna::Parent`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Parent.md).
+### `prev-sibling(:$loop = False, :$on-strata = False)`
+
+Returns our next or preceding sibling in Z-order on parent. See `:loop` and `:on-strata` parameters on `next-to` method of [`Vikna::Parent`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Parent.md).
 
 SEE ALSO
 ========

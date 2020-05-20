@@ -148,6 +148,10 @@ widget position.
 
 Widget canvas after the last redraw operation.
 
+=head3 L<C<Promise:D>|https://docs.raku.org/type/Promise> C<$.initialized>
+
+This promise is kept when a widget init stage is fully completed, including the first redraw.
+
 =head3 L<C<Promise:D>|https://docs.raku.org/type/Promise> C<$.dismissed>
 
 This promise is kept with I<True> when widget has shutdown. In particular, its event loop has been stopped.
@@ -269,6 +273,10 @@ C<Event::Cmd::Redraw>. Request the widget to redraw itself. The action might not
 When drawing is possible, new canvas is created by C<begin-draw> method and passed to widget method C<draw>. When it's
 done C<end-draw> is invoked with the same canvas object which is then set as widget's C<$.canvas>. At the end widget
 flattens canvas, as described in L<#Canvas Flattening>.
+
+At the widget first ever redraw C<$.initialized> is kept and C<Event::InitDone> is dispatched.
+
+C<Event::Redrawn> is dispatched always.
 
 =head3 C<to-top(Vikna::Widget:D $child)>
 
@@ -510,9 +518,10 @@ L<C<Vikna::EventHandling>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/m
 C<send-event> method and L<#Redraw Hold> section of this page.
 
 =head3 C<next-sibling(:$loop = False, :$on-strata = False)>
+=head3 C<prev-sibling(:$loop = False, :$on-strata = False)>
 
-Returns our next sibling in Z-order on parent. See C<:loop> and C<:on-strata> parameters on C<next-to> method of
-L<C<Vikna::Parent>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Parent.md>.
+Returns our next or preceding sibling in Z-order on parent. See C<:loop> and C<:on-strata> parameters on C<next-to>
+method of L<C<Vikna::Parent>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Parent.md>.
 
 =head1 SEE ALSO
 
