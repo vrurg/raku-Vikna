@@ -298,25 +298,19 @@ method cmd-close {
 }
 
 method flatten-canvas {
-    self.trace: "Entering flatten-canvas, blocks count: ", $!flatten-blocks,
-        "\ncanvas geom: ", ( $!canvas-geom // '*no yet*' ),
-        "\npcanvas geom: ", ( $!pcanvas ?? $!pcanvas.geom !! "*not yet*" );
+    self.trace: "Entering flatten-canvas, blocks count: ", $!flatten-blocks, "\ncanvas geom: ",
+        ($!canvas-geom // '*no yet*'), "\npcanvas geom: ", ($!pcanvas ?? $!pcanvas.geom !! "*not yet*");
     if $!flatten-blocks > 0 {
         ++$!flatten-misses;
         return;
     }
     # No paints were done yet.
     return unless $!canvas-geom;
-    unless $!pcanvas
-        && $!pcanvas.w == $!canvas-geom.w
-        && $!pcanvas.h == $!canvas-geom.h
-    {
+    $!flatten-misses = 0;
+    unless $!pcanvas && $!pcanvas.w == $!canvas-geom.w && $!pcanvas.h == $!canvas-geom.h {
         self.trace: "(Re)create pcanvas using ", $!canvas-geom;
         $!pcanvas = self.create:
-            Vikna::Canvas,
-            w => $!canvas-geom.w,
-            h => $!canvas-geom.h,
-            :from( $!pcanvas // $!canvas );
+            Vikna::Canvas, w => $!canvas-geom.w, h => $!canvas-geom.h, :from($!pcanvas // $!canvas);
     }
     $!pcanvas.invalidate: $_ for @!invalidations;
     self.trace: "self invalidations:\n", $!pcanvas.invalidations.map("  " ~*).join("\n");
@@ -326,9 +320,7 @@ method flatten-canvas {
         next unless $child.visible;
         with %!child-by-id{$child.id}<canvas> {
             $!pcanvas.imprint: .geom.x, .geom.y, .canvas;
-            $child.dispatch: Event::Updated,
-                origin => self,
-                geom => .geom;
+            $child.dispatch: Event::Updated, origin => self, geom => .geom;
         }
     }
     $!inv4parent-lock.protect: {
@@ -347,7 +339,7 @@ method flatten-canvas {
     }
     $!pcanvas.clear-inv-rects;
     $.clear-invalidations;
-    $!flatten-misses = 0;
+    self.dispatch: Event::Flattened;
 }
 
 method cmd-redraw( :$force? ) {
