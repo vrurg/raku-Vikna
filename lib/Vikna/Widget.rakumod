@@ -161,6 +161,8 @@ multi method event( ::?CLASS:D: Event::Detached:D $ev ) {
 multi method event( ::?CLASS:D: Event::Attached:D $ev ) {
     if $ev.child === self {
         self.update-positions: :transitive;
+        self.invalidate;
+        self.redraw;
         self.dispatch: Event::Ready;
     }
 }
@@ -202,8 +204,6 @@ method cmd-addchild( ::?CLASS:D: Vikna::Widget:D $child, ChildStrata:D $stratum,
             $child.dispatch: Event::ZOrder::Top;
             self.dispatch:   Event::ZOrder::Child, :$child;
         }
-        $child.invalidate;
-        $child.redraw;
     }
 }
 
