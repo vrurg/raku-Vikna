@@ -77,9 +77,6 @@ role Event::Prio::Released { method default-priority { PrioReleased } }
 role Event::Prio::In       { method default-priority { PrioIn       } }
 role Event::Prio::Out      { method default-priority { PrioOut      } }
 
-# Events which should be auto-dispatched to children
-class Event::Spreadable { }
-
 # State-transition events.
 role Event::Changish[::T \type = Any] {
     has T $.from is required;
@@ -91,6 +88,9 @@ role Event::Focusish { }
 
 # Anything related to the order of widgets on parent
 role Event::ZOrderish { }
+
+# Events which should be auto-dispatched to children
+role Event::Spreadable { }
 
 # Informational events. Usually consequences of actions.
 class Event::Informative is Event does Event::Prio::Default { }
@@ -135,7 +135,7 @@ role Event::Vectorish {
 }
 
 # Any event which might result in window moving to the top.
-class Event::Pointer::Elevatish { }
+role Event::Pointer::Elevatish { }
 
 # Parent/child relations
 role Event::Childish {
@@ -233,7 +233,7 @@ class Event::Cmd::Contains is Event::Cmd::Inquiry { }
 class Event::Init  is Event::Informative { method default-priority { PrioImmediate } }
 class Event::Ready is Event::Informative { method default-priority { PrioImmediate } }
 
-class Event::Quit is Event::Informative is Event::Spreadable { method default-priority { PrioImmediate } }
+class Event::Quit is Event::Informative does Event::Spreadable { method default-priority { PrioImmediate } }
 
 class Event::Idle is Event::Informative {
     method default-priority { PrioIdle }
@@ -300,7 +300,7 @@ class Event::Mouse::Move        is Event::Mouse { }
 class Event::Mouse::Button      is Event::Mouse { }
 class Event::Mouse::Press       is Event::Mouse::Button { }
 class Event::Mouse::Release     is Event::Mouse::Button { }
-class Event::Mouse::Click       is Event::Mouse::Button is Event::Pointer::Elevatish { }
+class Event::Mouse::Click       is Event::Mouse::Button does Event::Pointer::Elevatish { }
 class Event::Mouse::DoubleClick is Event::Mouse::Button { }
 class Event::Mouse::Drag        is Event::Mouse::Move { }
 
@@ -331,7 +331,7 @@ class Event::Screen::Ready is Event::Informative { }
 class Event::Screen::Geom
         is Event::Informative
         does Event::Transformish
-        is Event::Spreadable
+        does Event::Spreadable
 {
     method default-priority { PrioImmediate }
 }
