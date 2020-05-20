@@ -502,10 +502,8 @@ multi method set-geom( Vikna::Rect:D $rect ) {
 }
 
 method set-color( BasicColor :$fg, BasicColor :$bg ) {
-    self.throw: X::BadColor, :which<foreground>, :color( $fg )
-    unless Vikna::Color.is-valid($fg, :empty-ok, :throw);
-    self.throw: X::BadColor, :which<background>, :color( $bg )
-    unless Vikna::Color.is-valid($bg, :empty-ok, :throw);
+    self.throw: X::BadColor, :which<foreground>, :color( $fg ) unless Vikna::Color.is-valid($fg, :empty-ok, :throw);
+    self.throw: X::BadColor, :which<background>, :color( $bg ) unless Vikna::Color.is-valid($bg, :empty-ok, :throw);
     self.send-command: Event::Cmd::SetColor, :$fg, :$bg
 }
 
@@ -713,14 +711,18 @@ method draw-background( Vikna::Canvas:D :$canvas ) {
     }
 }
 
-method redraw-block {
+method redraw-block(:$local = False) {
     ++⚛$!redraw-blocks;
     self.trace: "REDRAW BLOCK, block count: ", $!redraw-blocks;
-    self.for-children: { .redraw-block };
+    unless $local {
+        self.for-children: { .redraw-block };
+    }
 }
 
-method redraw-unblock {
-    self.for-children: { .redraw-unblock };
+method redraw-unblock(:$local = False) {
+    unless $local {
+        self.for-children: { .redraw-unblock };
+    }
     given --⚛$!redraw-blocks {
         when 0 {
             self!release-redraw-event;
