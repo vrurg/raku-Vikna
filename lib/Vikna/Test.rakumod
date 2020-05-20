@@ -360,11 +360,6 @@ package EXPORT {
                 unless %syncers{$name} {
                     my $syncer = EvsSyncer.new: :$name;
                     %syncers{$name} = $syncer;
-                    $syncer.promise.then: {
-                        $slock.protect: {
-                            %syncers{$name}:delete
-                        }
-                    };
                 }
                 %syncers{$name}
             }
