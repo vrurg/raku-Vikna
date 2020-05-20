@@ -53,6 +53,7 @@ has Vikna::Canvas $!pcanvas;
 # Widget's geom at the moment when canvas has been drawn.
 has Vikna::Rect $!canvas-geom;
 
+has Promise:D $.initialized .= new;
 has Promise:D $!closed .= new;
 has Promise:D $.dismissed .= new;
 
@@ -366,6 +367,11 @@ method cmd-redraw( :$force? ) {
             $!canvas = $canvas;
             self.flatten-canvas;
             self.trace: "REDRAWN";
+            unless $!initialized {
+                $!initialized.keep(True);
+                self.dispatch: Event::InitDone;
+            }
+            self.dispatch: Event::Redrawn;
         }
     }
 }
