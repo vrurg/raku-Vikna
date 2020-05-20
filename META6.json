@@ -4,7 +4,6 @@
     "Vadim Belman <vrurg@cpan.org>"
   ],
   "build-depends": [
-    "Pod::To::Markdown"
   ],
   "depends": [
     "Template::Mustache",
