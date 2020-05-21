@@ -10,11 +10,13 @@ use Vikna::Events;
 use Vikna::Utils;
 use Vikna::Border;
 use Vikna::Widget::GroupMember;
+use Vikna::Widget;
 
 also does Vikna::Elevatable;
 also does Vikna::PointerTarget;
 also does Vikna::Focusable;
-also is Vikna::Widget::Group;
+also is   Vikna::Widget::Group;
+also does Vikna::Widget::NeverTop;
 
 class Event::Cmd::Window::CompleteRedraw is Event::Command is export { }
 

@@ -33,6 +33,8 @@ my class AbsolutePosition {
     has Vikna::Rect $.visible;
 }
 
+role NeverTop is export { }
+
 has Vikna::Rect:D $.geom is required handles <x y w h>;
 # Visible part of the widget relative to the parent.
 has Vikna::Rect $.viewport;
@@ -97,6 +99,10 @@ has $.inv-mark-color is rw;
 # }
 
 submethod TWEAK {
+    if self ~~ NeverTop {
+        self.flatten-block;
+        self.redraw-block: :local;
+    }
     self.update-positions;
 }
 
@@ -160,6 +166,10 @@ multi method event( ::?CLASS:D: Event::Detached:D $ev ) {
 }
 multi method event( ::?CLASS:D: Event::Attached:D $ev ) {
     if $ev.child === self {
+        if !$!initialized && self ~~ NeverTop {
+            self.redraw-unblock: :local;
+            self.flatten-unblock;
+        }
         self.update-positions: :transitive;
         self.invalidate;
         self.redraw;
