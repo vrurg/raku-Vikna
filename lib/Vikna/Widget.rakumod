@@ -323,7 +323,7 @@ method flatten-canvas {
             Vikna::Canvas, w => $!canvas-geom.w, h => $!canvas-geom.h, :from($!pcanvas // $!canvas);
     }
     $!pcanvas.invalidate: $_ for @!invalidations;
-    self.trace: "self invalidations:\n", $!pcanvas.invalidations.map("  " ~*).join("\n");
+#    self.trace: "self invalidations:\n", $!pcanvas.invalidations.map("  " ~*).join("\n");
     $!pcanvas.imprint: 0, 0, $!canvas, :!skip-empty;
     self.for-children: -> $child {
         # Newly added children might not have drawn yet. It's ok to skip 'em.
@@ -343,7 +343,7 @@ method flatten-canvas {
         .child-canvas(self, $!canvas-geom.clone, $!pcanvas.clone, $!inv-for-parent) if $!inv-for-parent.elems > 0;
     }
     else {
-        # If no parent then try sending to console.
+        # If no parent then try sending to a screen.
         self.?print($!pcanvas);
         self.dispatch: Event::Updated, geom => $!canvas-geom;
     }
@@ -445,7 +445,7 @@ method cmd-to-top( ::?CLASS:D $child ) {
     self!top-child-changed($.child-stratum( $child ));
     self.Vikna::Parent::to-top($child);
     self.invalidate: $child.geom;
-    $.flatten-canvas;
+    self.flatten-canvas;
     $child.dispatch: Event::ZOrder::Top;
     self.dispatch: Event::ZOrder::Child, :$child;
 }
@@ -916,6 +916,8 @@ method panic( $cause ) {
     }
     exit 1 if $bail-out;
 }
+
+method print(|) { !!! }
 
 proto method get-child( ::?CLASS:D: | ) {*}
 multi method get-child( Str:D $name --> Vikna::Widget ) {
