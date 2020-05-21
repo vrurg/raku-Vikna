@@ -14,17 +14,18 @@ use AttrX::Mooish;
 
 my ::?CLASS $app;
 
-#| Named parameters to be passed to a screen driver constructor
+# Named parameters to be passed to a screen driver constructor
 has %.screen-params;
 has Vikna::Screen $.screen is mooish(:lazy);
 has Vikna::Desktop $.desktop is mooish(:lazy);
 has Vikna::Tracer $.tracer is mooish(:lazy);
-#| Tracer database name
+# Tracer database name
 has Str $.tracer-name is mooish(:lazy);
 has Bool:D $.debugging = False;
 has Vikna::OS $.os is mooish(:lazy) handles <inputs>;
-#| Named parameters for $.desktop constructor
+# Named parameters for $.desktop constructor
 has %.desktop-profile;
+has Vikna::Desktop $.desktop-class;
 
 method new(|) {
     $app //= callsame;
@@ -73,7 +74,7 @@ method build-tracer {
 
 method build-desktop {
     self.create:
-        Vikna::Desktop,
+        $!desktop-class.WHAT,
         |%!desktop-profile,
         :geom($.screen.geom.clone),
         ;
