@@ -193,13 +193,13 @@ method cue(&code) {
 }
 
 method sessions {
-    await $.cue: {
+    await self.cue: {
         $!db.query('SELECT * FROM session').hashes.eager.map: { Session.new(:tracer(self), |$_) };
     }
 }
 
 method session(Int:D $id) {
-    await $.cue: {
+    await self.cue: {
         Session.new: :tracer(self), |$!db.query('SELECT * FROM session WHERE id == ?', $id).hash
     }
 }
@@ -217,7 +217,7 @@ multi method record(
     # Pre-store session and record ids to prevent the record be written to another session if id changes dynamically.
     my $session-id = $!session-id;
     my $record-id = ++⚛$!record-id;
-    $.cue: {
+    self.cue: {
         CATCH {
             note $_, ~.backtrace;
             exit 1;
@@ -238,12 +238,12 @@ multi method record(
 }
 
 multi method record($object, Str:D $message, *%c) {
-    $.record: object-id => ~$object.WHICH, :$message, |%c
+    self.record: object-id => ~$object.WHICH, :$message, |%c
 }
 
 method shutdown {
     # Flush all queued events.
-    my $last = $.cue: { True };
+    my $last = self.cue: { True };
     $!shutdown = True;
     $!msg-queue.close;
     await $last;
@@ -253,7 +253,7 @@ method shutdown {
 
 method templates {
     %( gather {
-        for $?DISTRIBUTION.meta<resources>.grep( *.index('tracer/') == 0 ) -> $tmpl {
+        for $?DISTRIBUTION.meta<resources>.grep( *.index('tracer/') eqv 0 ) -> $tmpl {
             my $format = S/\. \w+ $// with $tmpl.substr(7);
             take $format => %?RESOURCES{$tmpl};
         }
