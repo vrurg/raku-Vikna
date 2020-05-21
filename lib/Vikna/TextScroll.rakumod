@@ -50,56 +50,56 @@ method cmd-textscroll-addtext(Str:D $text is copy) {
     # Translate escapes.
     $text ~~ s:g| \x1B | ^[ |;
 
-    $.trace: "&&& CMD ADD-TEXT «$text»";
+    self.trace: "&&& CMD ADD-TEXT «$text»";
 
     my $max-cols = $.columns;
 
     while $text {
         my $cur-line = $.cur-line;
-        $.trace: "cur-line: ", $cur-line.WHICH;
+        self.trace: "cur-line: ", $cur-line.WHICH;
         if $!wrap && $cur-line.str.chars == $.w {
             $cur-line = self!next-line;
         }
         my $text-width = $!wrap ?? $.w - $cur-line.str.chars !! Inf;
-        my $m = $text ~~ s/$<line>=[ \N ** {0..$text-width} ] [ $<nl>=\n ]?//;
-        $.trace: "IMPRINTING LINE ‘{$m<line>}’ into ‘{$.cur-line.str}’:{$.cur-line.pos}";
+        my $m = $text ~~ s/$<line>=[\N ** { 0 .. $text-width }] [$<nl>=\n]?//;
+        self.trace: "IMPRINTING LINE ‘{ $m<line> }’ into ‘{ $.cur-line.str }’:{ $.cur-line.pos }";
         $cur-line.imprint($m<line>);
-        $.trace: "RESULTING LINE: ‘{$cur-line.str}’";
+        self.trace: "RESULTING LINE: ‘{ $cur-line.str }’";
 
         my $line-length = $cur-line.str.chars;
         $max-cols = $line-length if $max-cols < $line-length;
 
         given $m<nl> {
-            when Nil { }
+            when Nil {}
             when "\c[VERTICAL TABULATION]" | "\c[FORM FEED]" {
-                $.trace: "VERTICAL FEED, cur line is: ", $cur-line.str;
+                self.trace: "VERTICAL FEED, cur line is: ", $cur-line.str;
                 self!next-line.pos = $m<line>.chars;
                 $cur-line.imprint($m<nl>);
             }
             when "\c[CARRIAGE RETURN]" {
-                $.trace: "CARRIAGE RETURN, cur line is: ", $cur-line.str;
+                self.trace: "CARRIAGE RETURN, cur line is: ", $cur-line.str;
                 $cur-line.pos = 0;
             }
             default {
-                $.trace: "PRINT «{$m<nl>}» into «{$cur-line.str}»:{$cur-line.pos}";
+                self.trace: "PRINT «{ $m<nl> }» into «{ $cur-line.str }»:{ $cur-line.pos }";
                 $cur-line.append($m<nl>);
-                # $.trace: "PRINTED «{$m<nl>}» into «{$cur-line.str}»:{$cur-line.pos}";
+                # self.trace: "PRINTED «{$m<nl>}» into «{$cur-line.str}»:{$cur-line.pos}";
                 self!next-line;
             }
         }
     }
 
-    $.scroll-transaction: {
+    self.scroll-transaction: {
         @!buffer.splice: 0, (+@!buffer - $!buffer-size) if +@!buffer > $!buffer-size;
         $!cur-row min= @!buffer.end;
-        self!set-area( :w( $max-cols ), :h( +@!buffer ) );
-        my $ovflow = $.lines - $.dy - $.h ;
+        self!set-area(:w($max-cols), :h(+@!buffer));
+        my $ovflow = $.lines - $.dy - $.h;
         if $!auto-scroll && $ovflow > 0 {
-            $.trace: "SCROLL-BY ", $ovflow;
-            self!scroll( dy => $ovflow );
+            self.trace: "SCROLL-BY ", $ovflow;
+            self!scroll(dy => $ovflow);
         }
     }
-    $.dispatch: Event::TextScroll::BufChange, :$from, :to( @!buffer.elems );
+    self.dispatch: Event::TextScroll::BufChange, :$from, :to(@!buffer.elems);
     $.invalidate;
     $.redraw;
 }
@@ -132,16 +132,16 @@ method cmd-scroll-fit(Bool:D :$width?, Bool:D :$height?) {
 ### Command senders ###
 
 method add-text(Str:D $text is copy) {
-    $.trace: "ADD-TEXT: «$text»";
+    self.trace: "ADD-TEXT: «$text»";
     self.send-command: Event::Cmd::TextScroll::AddText, $text;
 }
 
 method scroll(Int:D $dx = 0, Int:D $dy = 0 ) {
-    $.send-command: Event::Cmd::Scroll::By, $dx, $dy;
+    self.send-command: Event::Cmd::Scroll::By, $dx, $dy;
 }
 
 method scroll-to(Int $x, Int $y) {
-    $.send-command: Event::Cmd::Scroll::To, $x, $y;
+    self.send-command: Event::Cmd::Scroll::To, $x, $y;
 }
 
 method set-area(Int:D :$w where * >= 0, Int:D :$h where * >= 0) {
@@ -156,14 +156,14 @@ method fit(Bool:D :$width?, Bool:D :$height?) {
 ### Event handlers ###
 
 # multi method event(Event::TextScroll::BufChange:D $ev) {
-#     $.trace: "TEXTSCROLL -- REDRAW";
+#     self.trace: "TEXTSCROLL -- REDRAW";
 #     $.invalidate;
 #     $.redraw;
 # }
 
 ### Utility methods ###
 method cur-line(--> BufLine) {
-    $.trace: "CUR ROW: ", $!cur-row, " LINES IN BUFFER: ", +@!buffer;
+    self.trace: "CUR ROW: ", $!cur-row, " LINES IN BUFFER: ", +@!buffer;
      @!buffer[$!cur-row]
   }
 method !next-line {
@@ -172,7 +172,7 @@ method !next-line {
 }
 
 method print(**@args) {
-    $.trace: "TS.PRINT: [[", @args, "]]";
+    self.trace: "TS.PRINT: [[", @args, "]]";
     self.add-text: @args.join: ""
 }
 
@@ -182,7 +182,7 @@ method say(**@args) {
 
 method draw( :$canvas ) {
     callsame;
-    $.trace: "TextScroll draw";
+    self.trace: "TextScroll draw";
     for $.dy..^($.dy + $.h) -> $lnum {
         my $y = $lnum - $.dy;
         my $out = $lnum < @!buffer ?? @!buffer[$lnum].substr($.dx, $.w) !! "";

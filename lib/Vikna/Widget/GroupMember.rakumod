@@ -12,7 +12,7 @@ method start-event-handling { }
 
 proto method route-event(::?CLASS:D: Event:D, *%) {*}
 multi method route-event(Event:D $ev where Event::Spreadable | Event::Positionish, *%c) {
-    $.trace: "Group member dispatch of definite ", $ev;
+    self.trace: "Group member dispatch of definite ", $ev;
     if $ev.dispatcher === self {
         self.Vikna::Widget::route-event: $ev, |%c
     }
@@ -22,7 +22,7 @@ multi method route-event(Event:D $ev where Event::Spreadable | Event::Positionis
     }
 }
 multi method route-event(Event:D $ev, *%c) {
-    $.trace: "GROUP MEMBER {self.name} DISPATCH [$ev] VIA {$.group.name}";
+    self.trace: "GROUP MEMBER {self.name} DISPATCH [$ev] VIA {$.group.name}";
     $.group.re-dispatch: $ev, |%c
 }
 
@@ -34,11 +34,11 @@ method redraw {
 
 proto method send-command(Event::Command $, |) {*}
 multi method send-command(Event::Command:U \evType, |args) {
-    $.trace: "Group member send command (args) ", evType.^name;
+    self.trace: "Group member send command (args) ", evType.^name;
     $.group.send-command: evType, args, %(origin => self, dispatcher => self)
 }
 multi method send-command(Event::Command:U \evType, Capture:D $args) {
-    $.trace: "Group member send command (capture) ", evType.^name;
+    self.trace: "Group member send command (capture) ", evType.^name;
     $.group.send-command: evType, $args, %(origin => self, dispatcher => self)
 }
 
@@ -49,6 +49,6 @@ method detach {
         .remove-member: self;
     }
     else {
-        $.throw: X::Detach::NoParent;
+        self.throw: X::Detach::NoParent;
     }
 }

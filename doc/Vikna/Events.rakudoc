@@ -282,6 +282,206 @@ Duplicates the event object.
 
 Returns string I<'mouse'>.
 
+=head1 C<Event::Cmd::*> Classes
+
+Is C<Event::Command>. Command events are strictly bound to the command methods and thus documented as a part of method
+description. The only thing we would elaborate on here are priorities of some commands:
+
+=item C<Event::Cmd::ChildCanvas> has I<output> priority
+=item C<Event::Cmd::Nop> is I<default>.
+=item C<Event::Cmd::Print::String> is I<output>
+=item C<Event::Cmd::Refresh> has I<released> priority. This command is internal and issued by C<flatten-unblock> method
+when it finds that all blocks are removed and there were missed requests for flattening.
+
+=head1 C<Event::Cmd::Inquiry>
+
+This is a subcategory of commands for implementing state-safe requests to widgets. For now the only example of such
+inquiry command is L<C<Vikna::Widget>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Widget.md>
+method C<contains>.
+
+This feature is even more experimental than Vikna itself and might be gone in the future.
+
+=head1 C<Event::Init>
+
+Is C<Event::Informative>, I<immediate> priority. This is the first event a widget receives right after object creation.
+Dispatched by
+L<C<Vikna::Widget>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Widget.md> C<create-child> method.
+
+=head1 C<Event::Ready>
+
+Is C<Event::Informative>, I<immediate> priority. Dispatched after widget is attached to its parent.
+
+=head1 C<Event::Attached>, C<Event::Detached>
+
+Is C<Event::Informative>, does C<Event::Relational>. Inform about a child being added to or removed from parent child
+list.
+
+=head1 C<Event::Quit>
+
+Is C<Event::Informative>, does C<Event::Spreadable>, I<immediate> priority. Notifies about the application is about to
+quit giving a widget time to shutdown accordingly.
+
+=head1 C<Event::Idle>
+
+Is C<Event::Informative>, I<idle> priority. Not used internally but can be utilized by user code to implement actions
+done when a widget has no other events to process.
+
+=head1 C<Event::Changed::Attr>
+
+Is C<Event::Informative>, does C<Event::Changish[Vikna::CAttr]>. Notifies about widget attribtes change.
+
+=head1 C<Event::Changed::Color>
+
+Is C<Event::Changed::Attr>. Only a color has changed.
+
+=head1 C<Event::Changed::Style>
+
+Is C<Event::Changed::Attr>. Only style has changed.
+
+=head1 C<Event::Changed::Title>
+
+Is C<Event::Informative>, does C<Event::Changish[Str]>.
+L<C<Vikna::Window>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Window.md> title changed.
+
+=head1 C<Event::Changed::Text>
+
+Is C<Event::Informative>, does C<Event::Changish[Str]>. Text has changed. Currently is only used by
+L<C<Vikna::Label>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Label.md>.
+
+=head1 C<Event::Changed::BgPattern>
+
+Is C<Event::Informative>, does C<Event::Changish[Str]>. Widget background patter changed.
+
+=head1 C<Event::Changed::Geom>
+
+Is C<Event::Informative>, does C<Event::Transformish>. Widget position/dimensions changed.
+
+=head1 C<Event::InitDone>
+
+Is C<Event::Informative>. Widget initialization stage is fully completed, including the first redraw.
+
+=head1 C<Event::Redrawn>
+
+Is C<Event::Informative>. Widget redrawn operation completed.
+
+=head1 C<Event::Flattened>
+
+Is C<Event::Informative>. Widget canvas flattening completed.
+
+=head1 C<Event::Hide>, C<Event::Show>
+
+Is C<Event::Informative>. Request to hide or show was processed.
+
+=head1 C<Event::Visible>, C<Event::Invisible>
+
+Is C<Event::Informative>. Dispatched only if widget visibility status changed either explicitly with C<show>/C<hide>
+method calls, or implicitly if a widget is gone out of a viewport.
+
+=head1 C<Event::Focus::Take>, C<Event::Focus::Lost>, C<Event::Focus::In>, C<Event::Focus::Out>
+
+Is C<Event::Informative>. See L<C<Vikna::Focusable>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Focusable.md> for more details.
+
+=head1 C<Event::Closing>
+
+Is C<Event::Informative>. Close request was received.
+
+=head1 C<Event::ZOrder::Top>, C<Event::ZOrder::Bottom>, C<Event::ZOrder::Middle>
+
+Is C<Event::Informative>, does C<Event::ZOrderish>. Informs a widget about changes in its Z-order positions.
+C<Event::ZOrder::Middle> dispatched only when positioning involves top or bottom positions. For example, when a widget
+was atop and shifted down by another sibling elevated.
+
+=head1 C<Event::ZOrder::Child>
+
+Is C<Event::Informative>, does C<Event::ZOrderish>, C<Event::Childish>. Widget is informed that Z-order position of
+one of its children has changed. Similarly to C<Event::ZOrder::Middle> only dispatched if its about top- or bottommost
+positions.
+
+=head1 C<Event::Updated>
+
+Is C<Event::Informative>. Dispatched by parent to a child when child canvas are applied by flattening. Contains
+C<$.geom> attribute which is a copy of the canvas geometry.
+
+=head1 C<Event::Scroll::Position>
+
+Is C<Event::Informative>, does C<Event::Vectorish>. See L<C<Vikna::Scrollable>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Scrollable.md>.
+
+=head1 C<Event::Scroll::Area>
+
+Is C<Event::Informative>, does C<Event::Transformish>. See L<C<Vikna::TextScroll>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/TextScroll.md>.
+
+=head1 C<Event::TextScroll::BufChange>
+
+Is C<Event::Informative>, does C<Event::Changish[Int:D]>. See L<C<Vikna::TextScroll>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/TextScroll.md>.
+
+=head1 C<Event::Kbd::Dow>, C<Event::Kbd::Up>
+
+Is C<Event::Kbd>, does C<Event::Kbd::Partial>. Key down/up events are signaling the begin and the end of key press
+event. Might not be supported by all platforms.
+
+=head1 C<Event::Kbd::Press>
+
+Is C<Event::Kbd>, does C<Event::Kbd::Complete>. Single key press event.
+
+=head1 C<Event::Kbd::Control>
+
+Is C<Event::Kbd>, does C<Event::Kbd::Complete>. A control key press. See C<ControlKeys> in
+L<C<Vikna::Dev::Kbd>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Dev/Kbd.md>.
+
+=head1 C<Event::Mouse::Move>
+
+Is C<Event::Mouse>. Move pointer position change.
+
+=head1 C<Event::Mouse::Button>
+
+Is C<Event::Mouse>. Mouse button event subcategory.
+
+=head1 C<Event::Mouse::Press>, C<Event::Mouse::Release>, C<Event::Mouse::Click>, C<Event::Mouse::DoubleClick>
+
+Is C<Event::Mouse::Button>. C<Event::Mouse::Click> also does C<Event::Pointer::Elevatish>. Press and release are
+simple button events. Click is a result of a fast enough press-release pair of events. Double click is a result of
+fast enough two click events. See more in L<C<Event::Dev::Mouse>|https://modules.raku.org/dist/Event::Dev::Mouse>.
+
+=head1 Role C<Event::Mouse::Transition>.
+
+Does C<Event::Positionish>. A subcategory of events reporting about events resulting from mouse movement.
+
+=head1 C<Event::Mouse::Enter>, C<Event::Mouse::Leave>
+
+Is C<Event::Input>, does C<Event::Mouse::Transition>. Mouse entered or left widget premises.
+
+=head1 C<Event::Pointer::OwnerChange>
+
+Is C<Event::Input>, does C<Event::Changish>, C<Event::Positionish>. Reports a parent about mouse pointer leaving one
+of its children. See L<C<Vikna::PointerTarget>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/PointerTarget.md>.
+
+=head1 C<Event::Button>
+
+Is C<Event::Informative>. A subcategory of events used by
+L<C<Vikna::Button>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Button.md>
+widget.
+
+=head1 C<Event::Button::Down>, C<Event::Button::Up>, C<Event::Button::Press>
+
+Is C<Event::Button>. Stages of clicking a button. Press is a result of down/up pair of events.
+
+=head1 C<Event::Button::Ok>, C<Event::Button::Cancel>
+
+Is C<Event::Button::Press>. Predefined shortcuts for the most typical kinds of buttons.
+
+=head1 C<Event::Screen::FocusIn>, C<Event::Screen::FocusOut>, C<Event::Screen::PasteStart>, C<Event::Screen::PasteEnd>
+
+Is C<Event::Input>. Translation of corresponding ANSI-terminal events. May or may not be supported by other platforms.
+
+=head1 C<Event::Screen::Ready>
+
+Is C<Event::Informative>. Reported by a screen when it finishes a block operation and is ready for the next one.
+
+=head1 C<Event::Screen::Geom>
+
+Is C<Event::Informative>, does C<Event::Transofrmish>, C<Event::Spreadable>. Reports screen dimensions change. Has
+I<immediate> priority.
+
 =head1 SEE ALSO
 
 L<C<Vikna>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna.md>,

@@ -303,6 +303,226 @@ Duplicates the event object.
 
 Returns string *'mouse'*.
 
+`Event::Cmd::*` Classes
+=======================
+
+Is `Event::Command`. Command events are strictly bound to the command methods and thus documented as a part of method description. The only thing we would elaborate on here are priorities of some commands:
+
+  * `Event::Cmd::ChildCanvas` has *output* priority
+
+  * `Event::Cmd::Nop` is *default*.
+
+  * `Event::Cmd::Print::String` is *output*
+
+  * `Event::Cmd::Refresh` has *released* priority. This command is internal and issued by `flatten-unblock` method when it finds that all blocks are removed and there were missed requests for flattening.
+
+`Event::Cmd::Inquiry`
+=====================
+
+This is a subcategory of commands for implementing state-safe requests to widgets. For now the only example of such inquiry command is [`Vikna::Widget`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Widget.md) method `contains`.
+
+This feature is even more experimental than Vikna itself and might be gone in the future.
+
+`Event::Init`
+=============
+
+Is `Event::Informative`, *immediate* priority. This is the first event a widget receives right after object creation. Dispatched by [`Vikna::Widget`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Widget.md) `create-child` method.
+
+`Event::Ready`
+==============
+
+Is `Event::Informative`, *immediate* priority. Dispatched after widget is attached to its parent.
+
+`Event::Attached`, `Event::Detached`
+====================================
+
+Is `Event::Informative`, does `Event::Relational`. Inform about a child being added to or removed from parent child list.
+
+`Event::Quit`
+=============
+
+Is `Event::Informative`, does `Event::Spreadable`, *immediate* priority. Notifies about the application is about to quit giving a widget time to shutdown accordingly.
+
+`Event::Idle`
+=============
+
+Is `Event::Informative`, *idle* priority. Not used internally but can be utilized by user code to implement actions done when a widget has no other events to process.
+
+`Event::Changed::Attr`
+======================
+
+Is `Event::Informative`, does `Event::Changish[Vikna::CAttr]`. Notifies about widget attribtes change.
+
+`Event::Changed::Color`
+=======================
+
+Is `Event::Changed::Attr`. Only a color has changed.
+
+`Event::Changed::Style`
+=======================
+
+Is `Event::Changed::Attr`. Only style has changed.
+
+`Event::Changed::Title`
+=======================
+
+Is `Event::Informative`, does `Event::Changish[Str]`. [`Vikna::Window`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Window.md) title changed.
+
+`Event::Changed::Text`
+======================
+
+Is `Event::Informative`, does `Event::Changish[Str]`. Text has changed. Currently is only used by [`Vikna::Label`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Label.md).
+
+`Event::Changed::BgPattern`
+===========================
+
+Is `Event::Informative`, does `Event::Changish[Str]`. Widget background patter changed.
+
+`Event::Changed::Geom`
+======================
+
+Is `Event::Informative`, does `Event::Transformish`. Widget position/dimensions changed.
+
+`Event::InitDone`
+=================
+
+Is `Event::Informative`. Widget initialization stage is fully completed, including the first redraw.
+
+`Event::Redrawn`
+================
+
+Is `Event::Informative`. Widget redrawn operation completed.
+
+`Event::Flattened`
+==================
+
+Is `Event::Informative`. Widget canvas flattening completed.
+
+`Event::Hide`, `Event::Show`
+============================
+
+Is `Event::Informative`. Request to hide or show was processed.
+
+`Event::Visible`, `Event::Invisible`
+====================================
+
+Is `Event::Informative`. Dispatched only if widget visibility status changed either explicitly with `show`/`hide` method calls, or implicitly if a widget is gone out of a viewport.
+
+`Event::Focus::Take`, `Event::Focus::Lost`, `Event::Focus::In`, `Event::Focus::Out`
+===================================================================================
+
+Is `Event::Informative`. See [`Vikna::Focusable`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Focusable.md) for more details.
+
+`Event::Closing`
+================
+
+Is `Event::Informative`. Close request was received.
+
+`Event::ZOrder::Top`, `Event::ZOrder::Bottom`, `Event::ZOrder::Middle`
+======================================================================
+
+Is `Event::Informative`, does `Event::ZOrderish`. Informs a widget about changes in its Z-order positions. `Event::ZOrder::Middle` dispatched only when positioning involves top or bottom positions. For example, when a widget was atop and shifted down by another sibling elevated.
+
+`Event::ZOrder::Child`
+======================
+
+Is `Event::Informative`, does `Event::ZOrderish`, `Event::Childish`. Widget is informed that Z-order position of one of its children has changed. Similarly to `Event::ZOrder::Middle` only dispatched if its about top- or bottommost positions.
+
+`Event::Updated`
+================
+
+Is `Event::Informative`. Dispatched by parent to a child when child canvas are applied by flattening. Contains `$.geom` attribute which is a copy of the canvas geometry.
+
+`Event::Scroll::Position`
+=========================
+
+Is `Event::Informative`, does `Event::Vectorish`. See [`Vikna::Scrollable`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Scrollable.md).
+
+`Event::Scroll::Area`
+=====================
+
+Is `Event::Informative`, does `Event::Transformish`. See [`Vikna::TextScroll`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/TextScroll.md).
+
+`Event::TextScroll::BufChange`
+==============================
+
+Is `Event::Informative`, does `Event::Changish[Int:D]`. See [`Vikna::TextScroll`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/TextScroll.md).
+
+`Event::Kbd::Dow`, `Event::Kbd::Up`
+===================================
+
+Is `Event::Kbd`, does `Event::Kbd::Partial`. Key down/up events are signaling the begin and the end of key press event. Might not be supported by all platforms.
+
+`Event::Kbd::Press`
+===================
+
+Is `Event::Kbd`, does `Event::Kbd::Complete`. Single key press event.
+
+`Event::Kbd::Control`
+=====================
+
+Is `Event::Kbd`, does `Event::Kbd::Complete`. A control key press. See `ControlKeys` in [`Vikna::Dev::Kbd`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Dev/Kbd.md).
+
+`Event::Mouse::Move`
+====================
+
+Is `Event::Mouse`. Move pointer position change.
+
+`Event::Mouse::Button`
+======================
+
+Is `Event::Mouse`. Mouse button event subcategory.
+
+`Event::Mouse::Press`, `Event::Mouse::Release`, `Event::Mouse::Click`, `Event::Mouse::DoubleClick`
+==================================================================================================
+
+Is `Event::Mouse::Button`. `Event::Mouse::Click` also does `Event::Pointer::Elevatish`. Press and release are simple button events. Click is a result of a fast enough press-release pair of events. Double click is a result of fast enough two click events. See more in [`Event::Dev::Mouse`](https://modules.raku.org/dist/Event::Dev::Mouse).
+
+Role `Event::Mouse::Transition`.
+================================
+
+Does `Event::Positionish`. A subcategory of events reporting about events resulting from mouse movement.
+
+`Event::Mouse::Enter`, `Event::Mouse::Leave`
+============================================
+
+Is `Event::Input`, does `Event::Mouse::Transition`. Mouse entered or left widget premises.
+
+`Event::Pointer::OwnerChange`
+=============================
+
+Is `Event::Input`, does `Event::Changish`, `Event::Positionish`. Reports a parent about mouse pointer leaving one of its children. See [`Vikna::PointerTarget`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/PointerTarget.md).
+
+`Event::Button`
+===============
+
+Is `Event::Informative`. A subcategory of events used by [`Vikna::Button`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Button.md) widget.
+
+`Event::Button::Down`, `Event::Button::Up`, `Event::Button::Press`
+==================================================================
+
+Is `Event::Button`. Stages of clicking a button. Press is a result of down/up pair of events.
+
+`Event::Button::Ok`, `Event::Button::Cancel`
+============================================
+
+Is `Event::Button::Press`. Predefined shortcuts for the most typical kinds of buttons.
+
+`Event::Screen::FocusIn`, `Event::Screen::FocusOut`, `Event::Screen::PasteStart`, `Event::Screen::PasteEnd`
+===========================================================================================================
+
+Is `Event::Input`. Translation of corresponding ANSI-terminal events. May or may not be supported by other platforms.
+
+`Event::Screen::Ready`
+======================
+
+Is `Event::Informative`. Reported by a screen when it finishes a block operation and is ready for the next one.
+
+`Event::Screen::Geom`
+=====================
+
+Is `Event::Informative`, does `Event::Transofrmish`, `Event::Spreadable`. Reports screen dimensions change. Has *immediate* priority.
+
 SEE ALSO
 ========
 

@@ -1,4 +1,31 @@
 use v6.e.PREVIEW;
+
+=begin pod
+=NAME
+
+C<Vikna::X> - collection of exception classes
+
+=DESCRIPTION
+
+Please, consult the source for more information about an exception than is provided by this documentation. Exceptions
+are far from being stabilized and documenting all of them doesn't make big sense yet.
+
+=head1 Class C<X::Base>
+
+Is L<C<Exception>|https://docs.raku.org/type/Exception>. The base class of all Vikna exceptions. Define a single required attribute C<$.obj> which points to
+the object which method thrown the exception.
+
+=head1 SEE ALSO
+
+L<C<Vikna>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna.md>,
+L<C<Vikna::Manual>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Manual.md>,
+L<C<Vikna::Point>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Point.md>,
+L<C<Vikna::Rect>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md>
+
+=AUTHOR Vadim Belman <vrurg@cpan.org>
+
+=end pod
+
 unit module Vikna;
 use Vikna::Rect;
 use Vikna::Point;
