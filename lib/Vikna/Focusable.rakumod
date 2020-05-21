@@ -40,7 +40,7 @@ multi method handle-event(::?ROLE:D: Event::ZOrder::Child:D $ev) {
     self.trace: "Focusable Child ZOrder on ", $child, :event;
     if $!focus-topmost && $child ~~ ::?ROLE {
         self.trace: "Updating focus";
-        $.update-focus;
+        self.cmd-focus-update;
     }
     nextsame
 }
@@ -49,8 +49,8 @@ multi method handle-event(::?ROLE:D: Event::Focus::In:D $ev) {
     self.trace: "set myself into focus by ", $ev;
     $!in-focus = True;
     .dispatch: Event::Focus::In with $!focus;
-    $.invalidate;
-    $.redraw;
+    self.invalidate;
+    self.cmd-redraw;
     nextsame
 }
 
@@ -63,8 +63,8 @@ multi method handle-event(::?ROLE:D: Event::Focus::Out:D $ev) {
         with $!focus {
             .dispatch: Event::Focus::Out;
         }
-        $.invalidate;
-        $.redraw;
+        self.invalidate;
+        self.cmd-redraw;
     }
     nextsame
 }
@@ -89,7 +89,8 @@ method cmd-removechild(::?ROLE:D: $child, |) {
     if $child === $!focus {
         $!focus = Nil;
         if $!focus-topmost {
-            $.update-focus;
+            self.cmd-focus-update;
+#            self.update-focus;
         }
     }
 }
@@ -110,7 +111,7 @@ method !focus-to($child) {
 }
 
 method cmd-focus-update(::?ROLE:D:) {
-    return if $.closed;
+    return if self.closed;
     my $topmost;
     self.for-children: :reverse, -> $child {
         if $child ~~ ::?ROLE && !$child.closed {
