@@ -300,7 +300,7 @@ method !setup-planes(:$from?, :$viewport?) {
         }
         $copy-w = $w min $from-w;
         $copy-h = $h min $from-h;
-        $from-planes := nqp::clone(nqp::getattr(nqp::decont($from), ::?CLASS, '$!planes'));
+        $from-planes := nqp::getattr(nqp::decont($from), ::?CLASS, '$!planes');
     }
     my $p-idx = -1;
     $!planes := nqp::list();
