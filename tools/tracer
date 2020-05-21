@@ -18,7 +18,7 @@ multi MAIN('list-sessions', Str :$db-file = 'Vikna.sqlite') {
 multi MAIN( Str:D $format where * ~~ (any Vikna::Tracer.templates.keys),
             Int :$session?,
             Str:D :$db-file = 'Vikna.sqlite',
-            Str :o(:$output)?
+            Str :o(:$output)
         )
 {
     my $tr = Vikna::Tracer.new: db-name => $db-file;
