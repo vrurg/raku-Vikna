@@ -55,7 +55,7 @@ multi method handle-event(::?ROLE:D: Event::Focus::In:D $ev) {
 }
 
 multi method handle-event(::?ROLE:D: Event::Focus::Out:D $ev) {
-    # Desktop doesn't lose focu s
+    # Desktop doesn't lose focus
     self.trace: "Focus out event: ", $ev;
     with $.parent {
         self.trace: "remove focus from myself";
@@ -90,7 +90,6 @@ method cmd-removechild(::?ROLE:D: $child, |) {
         $!focus = Nil;
         if $!focus-topmost {
             self.cmd-focus-update;
-#            self.update-focus;
         }
     }
 }
@@ -100,7 +99,7 @@ method !focus-to($child) {
     with $!focus {
         self.trace: "Report focus lose";
         .dispatch: Event::Focus::Lost;
-        .dispatch: Event::Focus::Out if .in-focus;
+        .dispatch: Event::Focus::Out if $!in-focus;
     }
     $!focus = $child;
     with $child {
