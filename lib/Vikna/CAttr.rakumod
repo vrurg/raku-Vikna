@@ -74,6 +74,7 @@ L<C<Vikna::Manual>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna
 # Character attributes. Immutable
 unit class Vikna::CAttr;
 
+use Vikna::Color;
 use Vikna::Utils;
 use AttrX::Mooish;
 
@@ -84,19 +85,28 @@ has $.bg;
 has Int $.style = VSTransparent;
 has %.Profile is mooish(:lazy);
 
+my sub normalize-profile(%profile is copy) {
+    %profile<style> = to-style(%profile<style>) if %profile<style>:exists;
+    for <fg bg> -> $color {
+        if %profile{$color}:exists {
+            with %profile{$color} {
+                %profile{$color} = ($_ ~~ Int ?? $_ !! ~(Vikna::Color.parse(%profile{$color}) // $_));
+            }
+        }
+    }
+    %profile
+}
+
 method new(*%c) {
-    nextsame unless %c<style>:exists;
-    nextwith |%c, :style(to-style(%c<style>))
+    nextwith |normalize-profile(%c)
 }
 
 method clone(*%c) {
-    nextsame unless %c<style>:exists;
-    nextwith |%c, :style(to-style(%c<style>))
+    nextwith |normalize-profile(%c)
 }
 
 method dup(*%c) {
-    %c<style> := to-style(%c<style>) if %c<style>:exists;
-    self.new: |%!Profile, |%c
+    self.new: |%!Profile, |normalize-profile(%c)
 }
 
 method build-Profile {
