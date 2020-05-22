@@ -11,7 +11,7 @@ has Vikna::Widget:D $.group is required;
 method start-event-handling { }
 
 proto method route-event(::?CLASS:D: Event:D, *%) {*}
-multi method route-event(Event:D $ev where Event::Spreadable | Event::Positionish, *%c) {
+multi method route-event(::?CLASS:D: Event:D $ev where Event::Spreadable | Event::Positionish, *%c) {
     self.trace: "Group member dispatch of definite ", $ev;
     if $ev.dispatcher === self {
         self.Vikna::Widget::route-event: $ev, |%c
@@ -21,7 +21,7 @@ multi method route-event(Event:D $ev where Event::Spreadable | Event::Positionis
         $.group.dispatch: $ev,
     }
 }
-multi method route-event(Event:D $ev, *%c) {
+multi method route-event(::?CLASS:D: Event:D $ev, *%c) {
     self.trace: "GROUP MEMBER {self.name} DISPATCH [$ev] VIA {$.group.name}";
     $.group.re-dispatch: $ev, |%c
 }
@@ -33,11 +33,11 @@ method redraw {
 }
 
 proto method send-command(Event::Command $, |) {*}
-multi method send-command(Event::Command:U \evType, |args) {
+multi method send-command(::?CLASS:D: Event::Command:U \evType, |args) {
     self.trace: "Group member send command (args) ", evType.^name;
     $.group.send-command: evType, args, %(origin => self, dispatcher => self)
 }
-multi method send-command(Event::Command:U \evType, Capture:D $args) {
+multi method send-command(::?CLASS:D: Event::Command:U \evType, Capture:D $args) {
     self.trace: "Group member send command (capture) ", evType.^name;
     $.group.send-command: evType, $args, %(origin => self, dispatcher => self)
 }
