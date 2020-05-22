@@ -10,16 +10,16 @@ use Vikna::Utils;
 ### Command handlers ###
 
 method cmd-addmember(::?CLASS:D: Vikna::Widget::GroupMember:D $member, ChildStrata:D $stratum, *%c) {
-    self.Vikna::Widget::cmd-addchild($member, $stratum, :subscribe, |%c)
+    self.Vikna::Widget::cmd-addchild($member, $stratum, |%c)
 }
 
 method cmd-removemember(::?CLASS:D: Vikna::Widget::GroupMember:D $member, *%c) {
-    self.Vikna::Widget::cmd-removechild($member, :!unsubscribe, |%c)
+    self.Vikna::Widget::cmd-removechild($member, |%c)
 }
 
 method cmd-redraw {
-    $.trace: "Redraw group members";
-    $.for-children: {
+    self.trace: "Redraw group members";
+    self.for-children: {
         .cmd-redraw;
     }
     nextsame;
@@ -28,11 +28,11 @@ method cmd-redraw {
 ### Command senders ###
 
 method add-member(::?CLASS:D: Vikna::Widget::GroupMember:D $member, ChildStrata $stratum = StMain) {
-    $.send-command: Event::Cmd::AddMember, $member, $stratum
+    self.send-command: Event::Cmd::AddMember, $member, $stratum
 }
 
 method remove-member(::?CLASS:D: Vikna::Widget::GroupMember:D $member) {
-    $.send-command: Event::Cmd::RemoveMember, $member
+    self.send-command: Event::Cmd::RemoveMember, $member
 }
 
 ### Utility methods ###
@@ -40,14 +40,14 @@ method remove-member(::?CLASS:D: Vikna::Widget::GroupMember:D $member) {
 method draw(|) { }
 
 method event-for-children(Event:D $ev) {
-    $.for-children: {
+    self.for-children: {
         .event($ev.clone);
     }
 }
 
 method create-member(::?CLASS:D: Vikna::Widget::GroupMember:U \wtype, ChildStrata:D $stratum = StMain, *%c) {
-    $.trace: "CREATING A GROUP MEMBER OF ", wtype.^name;
-    my $member = $.create: wtype, :group(self), |%c;
-    $.add-member: $member, $stratum;
+    self.trace: "CREATING A GROUP MEMBER OF ", wtype.^name;
+    my $member = self.create: wtype, :group(self), |%c;
+    self.add-member: $member, $stratum;
     $member
 }
