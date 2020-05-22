@@ -116,8 +116,9 @@ submethod profile-checkin( %profile, %constructor, %, % ) {
     }
     unless %profile<attr> ~~ Vikna::WAttr {
         # Constructor-defined keys override those from other sources.
-        %profile<attr>{$_} = %constructor<attr>{$_} // %constructor{$_} // %profile<attr>{$_} // %profile{$_}
-        for <fg bg style pattern>;
+        for <fg bg style pattern> {
+            %profile<attr>{$_} = %constructor<attr>{$_} // %constructor{$_} // %profile<attr>{$_} // %profile{$_};
+        }
         %profile<attr> = wattr(|%profile<attr><fg bg style pattern>)
     }
     %profile<fg bg style pattern x y w h>:delete;
@@ -192,7 +193,7 @@ method !top-child-changed( ChildStrata:D $stratum ) {
     }
 }
 
-method cmd-addchild( ::?CLASS:D: Vikna::Widget:D $child, ChildStrata:D $stratum, :$subscribe = True ) {
+method cmd-addchild( ::?CLASS:D: Vikna::Widget:D $child, ChildStrata:D $stratum, :$subscribe = False ) {
     self.trace: "ADDING CHILD ", $child.name;
 
     my $child-name = $child.name;
@@ -217,7 +218,7 @@ method cmd-addchild( ::?CLASS:D: Vikna::Widget:D $child, ChildStrata:D $stratum,
     }
 }
 
-method cmd-removechild( ::?CLASS:D: Vikna::Widget:D $child, :$unsubscribe = True ) {
+method cmd-removechild( ::?CLASS:D: Vikna::Widget:D $child, :$unsubscribe = False ) {
     self.unsubscribe: $child if $unsubscribe;
     # If a child is closing then we're its last parent and have to wait until it fully dismisses. Otherwise the child is
     # going to stick around for a while and somebody else must take care of it. Most likely it's re-parenting taking
