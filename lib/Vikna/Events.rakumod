@@ -260,10 +260,11 @@ class Event::Invisible    is Event::Informative { }
 
 # Focus::Take is about being potentially in focus.
 # Focus::In is about receiving focus and must result in focusing the last child which got Focus::Take
-class Event::Focus::Take  is Event::Informative { } # Child is focused on parent
-class Event::Focus::Lost  is Event::Informative { } # Child lost focus on parent
-class Event::Focus::In    is Event::Informative { } # Our parent widget is in focus
-class Event::Focus::Out   is Event::Informative { } # Our parent widget is out of focus
+class Event::Focus        is Event::Informative { }
+class Event::Focus::Take  is Event::Focus       { } # Child is focused on parent
+class Event::Focus::Lost  is Event::Focus       { } # Child lost focus on parent
+class Event::Focus::In    is Event::Focus       { } # Our parent widget is in focus
+class Event::Focus::Out   is Event::Focus       { } # Our parent widget is out of focus
 
 class Event::Closing   is Event::Informative { }
 
