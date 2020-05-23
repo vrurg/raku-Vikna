@@ -3,6 +3,7 @@ use Vikna::App;
 use Vikna::Desktop;
 use Vikna::Window;
 use Vikna::Events;
+use Vikna::Utils;
 use Vikna::TextScroll;
 use AttrX::Mooish;
 
@@ -45,7 +46,7 @@ class ZDesktop is Vikna::Desktop {
         }
         $!last-change = now;
         $!info = self.create-child:
-            Vikna::TextScroll,
+            Vikna::TextScroll, StBack,
             :x($.w - 40), :y($.h - 20), :40w, :20h,
             :name<Info>, :pattern(' ');
     }
