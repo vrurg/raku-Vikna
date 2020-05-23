@@ -14,10 +14,12 @@ class MRep
     does Vikna::Focusable {
     submethod profile-default {
         attr => {
-            :fg<default>, :bg<default>, :pattern(' ')
-        }, focused-attr => {
-            :fg<black>, :bg<cyan>, :pattern<_>
-        }
+            :fg(''), :bg(''), :pattern(' '),
+#            :fg<default>, :bg<default>, :pattern(' ')
+        },
+#        focused-attr => {
+#            :fg<black>, :bg<cyan>, :pattern<_>
+#        }
     }
     multi method event(::?CLASS:D: Event::Attached:D $ev) {
         if $ev.child === self {
@@ -61,16 +63,16 @@ class MWin is Vikna::Window {
         }
         nextsame;
     }
-    multi method child-event(::?CLASS:D: Event::Attached:D $ev) {
-        self.trace: "HAVE ATTACHED from { $ev.origin }: ", $ev.child.name, " to ", $ev.parent.name;
-        if $ev.child ~~ MRep {
-            start {
-                for ^3 {
-                    $ev.child.say: "Line $_"
-                }
-            }
-        }
-    }
+#    multi method event(::?CLASS:D: Event::Attached:D $ev) {
+#        self.trace: "HAVE ATTACHED from { $ev.origin }: ", $ev.child.name, " to ", $ev.parent.name;
+#        if $ev.child ~~ MRep {
+#            start {
+#                for ^3 {
+#                    $ev.child.say: "Line $_"
+#                }
+#            }
+#        }
+#    }
 }
 
 # note "MWin mro: ", MWin.^mro_unhidden.map( *.^name ).join(", ");
@@ -80,14 +82,16 @@ class MApp is Vikna::App {
     has @!w;
     method main {
         for ^3 {
-            my $w = 65;
+            my $w = ($.desktop.w * 2 / 3 ).Int;
             my $h = 15;
+            my $dy = (($.desktop.h - $h) / 2).Int;
+            my $dx = ($.desktop.w / 10).Int;
             if $_ == 0 {
-                $w = 100;
+                $w = ($.desktop.w * 7 / 8 ).Int;
                 $h = 20;
             }
             @!w.push: $.desktop.create-child:
-                MWin, :x($_ * 15), :y($_ * 12), :$w, :$h, :name('Window' ~ $_), :title('Window #' ~ $_), :pattern(~$_);
+                MWin, :x($_ * $dx), :y($_ * $dy), :$w, :$h, :name('Window' ~ $_), :title('Window #' ~ $_), :pattern(~$_);
         }
     }
 }
