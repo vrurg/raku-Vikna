@@ -9,7 +9,8 @@ MOD_VER:=$(shell raku -Ilib -e 'use $(MAIN_MOD); $(MAIN_MOD).^ver.say')
 MOD_NAME_PFX=$(MAIN_MOD)
 MOD_DISTRO=$(MOD_NAME_PFX)-$(MOD_VER)
 MOD_ARCH=$(MOD_DISTRO).tar.gz
-META=META6.json
+META6_JSON=META6.json
+META6_MOD_FILE=$(addprefix lib/,$(addsuffix /META.rakumod,$(subst ::,/,$(MAIN_MOD))))
 BUILD_TOOLD_DIR=./build-tools
 META_BUILDER=$(BUILD_TOOLD_DIR)/gen-META.raku
 DOC_BUILDER=$(BUILD_TOOLD_DIR)/gen-doc.raku
@@ -127,7 +128,7 @@ release: build is-repo-clean release-test archive
 meta6_mod:
 	@zef locate META6 2>&1 >/dev/null || (echo "===> Installing META6"; zef install META6)
 
-meta: meta6_mod $(META_BUILDER) $(META)
+meta: meta6_mod $(META_BUILDER) $(META6_JSON)
 
 archive: $(MOD_ARCH)
 
@@ -140,10 +141,11 @@ $(MOD_ARCH): $(DIST_FILES)
 	@git push -f --tags
 	@git archive --prefix="$(MOD_DISTRO)/" -o $(MOD_ARCH) $(MOD_VER)
 
-$(META): $(META_BUILDER) $(MAIN_MOD_FILE)
-	@echo "===> Generating $(META)"
-	@$(META_BUILDER) $(MAIN_MOD) >$(META).out && cp $(META).out $(META)
-	@rm $(META).out
+$(META6_JSON): $(META_BUILDER) $(MAIN_MOD_FILE) $(META6_MOD_FILE)
+	@echo "===> Generating $(META6_JSON)"
+	@echo $(META6_MOD_FILE)
+	@$(META_BUILDER) $(MAIN_MOD) >$(META6_JSON).out && cp $(META6_JSON).out $(META6_JSON)
+	@rm $(META6_JSON).out
 
 upload: release
 	@echo "===> Uploading to CPAN"

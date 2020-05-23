@@ -1,1 +1,4 @@
-lib/Vikna/META.rakumod export-ignore
+lib/Vikna/META.pm6 export-ignore
+build-tools/* export-ignore
+Makefile export-ignore
+.gitignore export-ignore
