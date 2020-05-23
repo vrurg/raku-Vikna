@@ -41,7 +41,7 @@ This framework is an attempt to provide a full-fledged console UI for [Raku](htt
 
     * being a pure Raku, i.e. avoid use of any native libraries
 
-    * being OS-independent by incapsulating any OS-specific logic in a driver-like layer
+    * being OS-independent by encapsulating any OS-specific logic in a driver-like layer
 
   * Support fully asynchronous model of development
 
