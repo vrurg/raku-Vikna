@@ -179,6 +179,8 @@ use Vikna::X;
 use Concurrent::PChannel;
 use AttrX::Mooish;
 
+has Int $.stuck-timeout = 180;
+
 has Supplier:D $.events .= new;
 
 has Lock::Async:D $!ev-lock .= new;
@@ -268,7 +270,7 @@ multi method handle-event( ::?ROLE:D: Event:D $ev ) {
     self.trace: "HANDLING[thread:{ $*THREAD.id }] ", $ev, :event;
     my $ev-handled = Promise.new;
     my $vf = $*VIKNA-FLOW;
-    my $p = Promise.in(15).then({
+    my $p = Promise.in($!stuck-timeout).then({
         my $*VIKNA-FLOW = $vf;
         if $ev-handled.status ~~ Planned {
             self.trace: "STUCK EVENT ", $ev;
