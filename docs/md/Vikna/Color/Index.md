@@ -3,7 +3,7 @@ NAME
 
 
 
-`Vikna::Color::Index` - represents indexed color
+`Vikna::Color::Index` - a role representing indexed color
 
 ATTRIBUTES
 ==========

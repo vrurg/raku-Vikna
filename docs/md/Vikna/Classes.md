@@ -67,8 +67,6 @@ Vikna CLASSES AND ROLES
 
   * [`Vikna::Test::App`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Test/App.md)
 
-  * [`Vikna::Test::EventSequencer`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Test/EventSequencer.md)
-
   * [`Vikna::Test::OS`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Test/OS.md)
 
   * [`Vikna::Test::Screen`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Test/Screen.md)

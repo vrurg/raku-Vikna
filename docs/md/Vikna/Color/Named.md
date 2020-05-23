@@ -3,7 +3,7 @@ NAME
 
 
 
-`Vikna::Color::Named` - represents named colors
+`Vikna::Color::Named` - a role representing named colors
 
 DESCRIPTION
 ===========

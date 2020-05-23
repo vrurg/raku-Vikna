@@ -3,7 +3,7 @@ NAME
 
 
 
-`Vikna::Color::RGB` - RGB representation of a color
+`Vikna::Color::RGB` - a role for RGB representation of a color
 
 DESCRIPTION
 ===========

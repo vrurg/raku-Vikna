@@ -1,14 +1,15 @@
 use v6.e.PREVIEW;
-use Vikna::OS;
 
 unit class Vikna::OS::unix;
-also does Vikna::OS;
 
+use Vikna::OS;
 use Vikna::Object;
 use Vikna::Events;
 use Vikna::EventEmitter;
 use Vikna::Dev::Mouse;
 use Vikna::Screen::ANSI;
+
+also does Vikna::OS;
 
 my class Input {
     also is Vikna::Object;
@@ -88,7 +89,7 @@ my class Input {
 
     method !translate-special-key(SpecialKey $key) {
         return $_ with %special-map{$key};
-        $.throw: X::Input::BadSpecialKey, :$key;
+        self.throw: X::Input::BadSpecialKey, :$key;
     }
 
     method !make-modifiers($ev-packet) {
@@ -100,31 +101,31 @@ my class Input {
     }
 
     method init {
-        $.flow: :name("UNIX INPUT LOOP"), {
+        self.flow: :name("UNIX INPUT LOOP"), {
             my $vf = $*VIKNA-FLOW;
             react {
                 whenever $!in-supply -> $term-ev {
                     my $*VIKNA-FLOW = $vf;
-                    # $.trace: "TERMINAL EVENT: ", $term-ev.^name;
+                    # self.trace: "TERMINAL EVENT: ", $term-ev.^name;
                     given $term-ev {
                         when PasteStart {
-                            $.post-event: Event::Screen::PasteStart;
+                            self.post-event: Event::Screen::PasteStart;
                         }
                         when PasteEnd {
-                            $.post-event: Event::Screen::PasteEnd;
+                            self.post-event: Event::Screen::PasteEnd;
                         }
                         when FocusIn {
-                            $.post-event: Event::Screen::FocusIn;
+                            self.post-event: Event::Screen::FocusIn;
                         }
                         when FocusOut {
-                            $.post-event: Event::Screen::FocusOut;
+                            self.post-event: Event::Screen::FocusOut;
                         }
                         when SpecialKey {
-                            # $.trace: "Special key into Event::Kbd::Control";
-                            $.post-event: Event::Kbd::Control, key => self!translate-special-key($_)
+                            # self.trace: "Special key into Event::Kbd::Control";
+                            self.post-event: Event::Kbd::Control, key => self!translate-special-key($_)
                         }
                         when Terminal::Print::DecodedInput::ModifiedSpecialKey {
-                            $.post-event: Event::Kbd::Control,
+                            self.post-event: Event::Kbd::Control,
                                             key         => self!translate-special-key(.key),
                                             modifiers   => self!make-modifiers($_)
                         }
@@ -142,23 +143,23 @@ my class Input {
                                     prev => $!last-mouse-pos,
                                     button => .button,
                                 ) -> \c {
-                                $.post-event: |c;
+                                self.post-event: |c;
                             }
                         }
                         when .ord == 13 {
-                            $.post-event: Event::Kbd::Control, key => K_Enter, char => $_;
+                            self.post-event: Event::Kbd::Control, key => K_Enter, char => $_;
                         }
                         when .ord == 9 {
-                            $.post-event: Event::Kbd::Control, key => K_Tab, char => $_;
+                            self.post-event: Event::Kbd::Control, key => K_Tab, char => $_;
                         }
                         when .ord < 32 {
                             my $char = $_;
                             my $key = (.ord + 64).chr;
-                            $.post-event: Event::Kbd::Control, :$key, :$char,
+                            self.post-event: Event::Kbd::Control, :$key, :$char,
                                             modifiers => set(K_Control);
                         }
                         default {
-                            $.post-event: Event::Kbd::Press, :char($_);
+                            self.post-event: Event::Kbd::Press, :char($_);
                         }
                     }
                 }
@@ -188,12 +189,12 @@ my class Input {
 }
 
 method build-screen {
-    $.create: Vikna::Screen::ANSI;
+    self.create: Vikna::Screen::ANSI;
 }
 
 method inputs {
     [
         $.screen,
-        $.create: Input
+        self.create: Input
     ]
 }

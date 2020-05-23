@@ -3,7 +3,7 @@ NAME
 
 
 
-`Vikna::Color::RGBA` - RGB with alpha representation of a color
+`Vikna::Color::RGBA` - a role for RGB with alpha representation of a color
 
 DESCRIPTION
 ===========

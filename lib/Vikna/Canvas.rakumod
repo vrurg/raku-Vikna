@@ -528,7 +528,7 @@ method get-planes(\cplane, \fgplane, \bgplane, \stplane) {
     stplane = nqp::atpos($!planes, 3);
 }
 
-#| With four parameters viewport is been set.
+# Four parameters candidate sets viewport.
 multi method viewport(UInt:D $x, UInt:D $y, Int:D $w where * > 0, Int:D $h where * > 0 --> Nil) {
     self.throw: X::Canvas::BadViewport, :$x, :$y, :$w, :$h unless $!geom.contains($x, $y, $w, $h);
     $!vp-geom = self.create: Vikna::Rect, :$x, :$y, :$w, :$h;

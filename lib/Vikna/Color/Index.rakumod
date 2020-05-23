@@ -3,7 +3,7 @@ use v6.e.PREVIEW;
 =begin pod
 =NAME
 
-C<Vikna::Color::Index> - represents indexed color
+C<Vikna::Color::Index> - a role representing indexed color
 
 =ATTRIBUTES
 

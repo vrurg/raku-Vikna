@@ -3,7 +3,7 @@ use v6.e.PREVIEW;
 =begin pod
 =NAME
 
-C<Vikna::Color::Named> - represents named colors
+C<Vikna::Color::Named> - a role representing named colors
 
 =DESCRIPTION
 

@@ -10,7 +10,9 @@ SYNOPSIS
 
 
 
-my $color = Vikna::Color.parse: '#abc'; # RGB 0xAA, 0xBB, 0xCC $color = Vikna::Color.parse: '42, 255, 13'; $color = Vikna::Color.parse: 'rgba: .1, .2, .3, .5';
+    my $color = Vikna::Color.parse: '#abc'; # RGB 0xAA, 0xBB, 0xCC
+    $color = Vikna::Color.parse: '42, 255, 13';
+    $color = Vikna::Color.parse: 'rgba: .1, .2, .3, .5';
 
 DESCRIPTION
 ===========

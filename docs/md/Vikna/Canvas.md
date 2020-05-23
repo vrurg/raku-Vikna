@@ -194,16 +194,3 @@ AUTHOR
 
 Vadim Belman <vrurg@cpan.org>
 
-### multi method viewport
-
-```perl6
-multi method viewport(
-    Int:D $x where { ... },
-    Int:D $y where { ... },
-    Int:D $w where { ... },
-    Int:D $h where { ... }
-) returns Nil
-```
-
-With four parameters viewport is been set.
-

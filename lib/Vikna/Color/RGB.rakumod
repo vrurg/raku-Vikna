@@ -3,7 +3,7 @@ use v6.e.PREVIEW;
 =begin pod
 =NAME
 
-C<Vikna::Color::RGB> - RGB representation of a color
+C<Vikna::Color::RGB> - a role for RGB representation of a color
 
 =DESCRIPTION
 
