@@ -9,6 +9,8 @@ use AttrX::Mooish;
 
 BEGIN $*SCHEDULER = ThreadPoolScheduler.new(:max_threads(2000));
 
+constant WAVES = 2;
+
 class Event::ColorRotate is Event::Informative { }
 
 class ColorLabel is Vikna::Label {
@@ -35,7 +37,7 @@ class Rainbow is Vikna::Widget {
 
     method l-color($x, $y, $shift) {
         my $R = sqrt($x² + $y²);
-        my \D = π × 4 * $R / $!max-dist;
+        my \D = π × WAVES × 2 × $R / $!max-dist;
         sub clr($phase --> UInt:D) {
             (255 * ((1 + sin(D + π × $phase / 3 + $shift)) / 2)).Int
         }
@@ -77,6 +79,7 @@ class Rainbow is Vikna::Widget {
         self.flatten-block;
         self.flow: :name('Fill the rainbow'), {
             my $xcount = $.w div 6;
+            my $ycount = $.h;
             my $reporter = $.app.reporter;
             for ^$xcount -> $x {
                 $reporter.say: "X: ", $x.fmt('%10d');
@@ -142,7 +145,11 @@ class ThreadApp is Vikna::App {
             :text('tick-tock'),
             :fg<white>, :bg(0x80, 0x80, 0x80);
         $.desktop.create-child:
-            Rainbow, :x(0), :y(0), :w($.desktop.w - 25), :h($.desktop.h);
+            Rainbow,
+            :x(0), :y(0),
+            :w($.desktop.w - 25), :h($.desktop.h),
+#            :w(48), :h(8),
+            ;
         for ^Inf -> $counter {
             sleep 1;
             $tt.set-text: "tick-tok " ~ $counter.fmt('%8d');
