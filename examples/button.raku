@@ -10,7 +10,7 @@ use AttrX::Mooish;
 
 class ButWin is Vikna::Window {
     multi method event(Event::Button::Press:D $ev) {
-        $.set-title: "Button " ~ $ev.origin.name ~ " press " ~ now.DateTime.local.hh-mm-ss;
+        self.set-title: "Button " ~ $ev.origin.name ~ " press " ~ now.DateTime.local.hh-mm-ss;
     }
 }
 
@@ -18,35 +18,21 @@ class JumpBut is Vikna::Button {
     # proto method event(::?CLASS:D: Event:D) {*}
     multi method event(Event::Button::Press:D $ev) {
         my $next-win = $.parent.group.next-sibling: :loop;
-        $.trace: "Switching to parent ", $next-win;
+        self.trace: "Switching to parent ", $next-win;
         my $vf = $*VIKNA-FLOW;
         $.detach.head.completed.then: {
             my $*VIKNA-FLOW = $vf;
-            $.trace: "Adding myself to widget ", $next-win;
+            self.trace: "Adding myself to widget ", $next-win;
             $next-win.add-child: self;
             $.target = $next-win;
         };
     }
-    # multi method event($ev) {
-    #     unless $ev ~~ Event::Mouse::Move | Event::Updated {
-    #         $.app.desktop<EvTrace>.say: self, ": ", $ev;
-    #     }
-    #     nextsame;
-    # }
 }
 
 class ButApp is Vikna::App {
     method main {
         my $w = ($.desktop.w / 2).Int;
         my $dx = ($.desktop.w / 2).ceiling;
-        # $.desktop.create-child: Vikna::TextScroll, StBack,
-        #                         x => 0,
-        #                         y => $.desktop.h - 20,
-        #                         w => ($.desktop.w / 2).Int,
-        #                         h => 20,
-        #                         name => "EvTrace",
-        #                         pattern => ' ',
-        #                         ;
         for ^2 -> $i {
             my $win = $.desktop.create-child: ButWin,
                                     :name("Win$i"), :title("Window $i"),
