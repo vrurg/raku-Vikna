@@ -149,7 +149,7 @@ method panic($cause, :$object?) {
         self.trace: "APP PANIC! ", $msg, :error;
         note "===APP PANIC!=== ", $msg;
         $.desktop.panic-shutdown($cause);
-        $!tracer.shutdown;
+        $!tracer.shutdown if $!debugging;
         exit 1;
     }
 }
