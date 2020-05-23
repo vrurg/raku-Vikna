@@ -568,7 +568,7 @@ method sync-events( :$transitive ) {
     self.trace: "LIST OF NOPS:\n", @p.map({ "  " ~ .<widget>.name ~ " p:" ~ .<promise>.^name }).join("\n");
     my $succeed = Any;
     await Promise.anyof(
-        Promise.in(30).then({ cas $succeed, Any, False; }),
+        Promise.in($.stuck-timeout).then({ cas $succeed, Any, False; }),
         self.flow: :name( 'SYNC EVENTS' ), {
             await eager @p.map({ $_<promise> });
             cas $succeed, Any, True;
