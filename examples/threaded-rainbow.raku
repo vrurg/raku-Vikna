@@ -1,4 +1,9 @@
 #!/usr/bin/env raku
+
+# NOTE! This example is pushing the limits of an all-native Raku application. It is not recommended to be ran in a
+# console with more than 90 columns and 30 lines. On slow systems event smaller window is recommended. In either case,
+# be patient, please!
+
 use v6.e.PREVIEW;
 use Vikna::Label;
 use Vikna::App;

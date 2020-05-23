@@ -199,7 +199,7 @@ Stringifies widget to `$.id ~ ":" ~ $.name`.
 Command Methods
 ---------------
 
-This is a group of methods which sends command events to the widget. Normally they're just shortcuts for [`Event::CommandHandling`](https://modules.raku.org/dist/Event::CommandHandling) `send-command` method.
+This is a group of methods which sends command events to the widget. Normally they're just shortcuts for [`Vikna::CommandHandling`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/CommandHandling.md) `send-command` method.
 
 Because command methods are what user must interact with, `cmd-*` methods are not documented as they're implementation detail. Where relevant, their behaviors will be elaborated on in description of command methods.
 

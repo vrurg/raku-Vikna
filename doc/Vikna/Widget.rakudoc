@@ -227,7 +227,7 @@ Stringifies widget to C<$.id ~ ":" ~ $.name>.
 =head2 Command Methods
 
 This is a group of methods which sends command events to the widget. Normally they're just shortcuts for
-L<C<Event::CommandHandling>|https://modules.raku.org/dist/Event::CommandHandling>
+L<C<Vikna::CommandHandling>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/CommandHandling.md>
 C<send-command> method.
 
 Because command methods are what user must interact with, C<cmd-*> methods are not documented as they're
