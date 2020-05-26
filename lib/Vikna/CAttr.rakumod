@@ -90,7 +90,7 @@ my sub normalize-profile(%profile is copy) {
     for <fg bg> -> $color {
         if %profile{$color}:exists {
             with %profile{$color} {
-                %profile{$color} = ($_ ~~ Int ?? $_ !! ~(Vikna::Color.parse(%profile{$color}) // $_));
+                %profile{$color} = ($_ ~~ Str ?? ~(Vikna::Color.parse(%profile{$color}) // $_) !! $_);
             }
         }
     }
