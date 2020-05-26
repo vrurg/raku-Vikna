@@ -23,9 +23,26 @@ use Vikna::WAttr;
 use AttrX::Mooish;
 
 my class CanvasRecord {
-    has Vikna::Rect:D $.geom is required;
-    has Vikna::Canvas:D $.canvas is required;
+    has Vikna::Rect:D $.geom is rw is required;
+    has Vikna::Canvas:D $.canvas is rw is required;
+}
+
+my class CanvasInventory {
+    has %.by-id;
     has @.invalidations;
+    method register(Vikna::Widget:D $child, Vikna::Canvas:D $canvas, Vikna::Rect:D $geom, @invalidations) {
+        with %!by-id{$child.id} {
+            .geom = $geom;
+            .canvas = $canvas;
+        }
+        else {
+            %!by-id{$child.id} = CanvasRecord.new: :$canvas, :$geom, :@invalidations;
+        }
+        @!invalidations.append: @invalidations;
+    }
+    method dup(*%p) {
+        self.clone: :invalidations[], |%p
+    }
 }
 
 my class AbsolutePosition {
@@ -82,6 +99,8 @@ has Lock:D $!inv4parent-lock .= new;
 has %!child-by-id;
 # Maps name into id
 has %!child-by-name;
+# Hash of child canvas mapped by ID.
+has CanvasInventory:D $!child-canvas .= new;
 
 has $.inv-mark-color is rw;
 # For test purposes only.
@@ -318,18 +337,29 @@ method flatten-canvas {
     # No paints were done yet.
     return unless $!canvas-geom;
     $!flatten-misses = 0;
+    my $c-inv;
+    cas $!child-canvas, {
+        $c-inv = $_;
+        .dup
+    }
     unless $!pcanvas && $!pcanvas.w == $!canvas-geom.w && $!pcanvas.h == $!canvas-geom.h {
         self.trace: "(Re)create pcanvas using ", $!canvas-geom;
         $!pcanvas = self.create:
             Vikna::Canvas, w => $!canvas-geom.w, h => $!canvas-geom.h, :from($!pcanvas // $!canvas);
     }
-    $!pcanvas.invalidate: $_ for @!invalidations;
+    $!inv-lock.protect: {
+        $!pcanvas.invalidate: $_ for @!invalidations;
+        @!invalidations = [];
+    }
+    for $c-inv.invalidations {
+        $!pcanvas.invalidate: $_;
+    }
 #    self.trace: "self invalidations:\n", $!pcanvas.invalidations.map("  " ~*).join("\n");
     $!pcanvas.imprint: 0, 0, $!canvas, :!skip-empty;
     self.for-children: -> $child {
         # Newly added children might not have drawn yet. It's ok to skip 'em.
         next unless $child.visible;
-        with %!child-by-id{$child.id}<canvas> {
+        with $!child-canvas.by-id{$child.id} {
             $!pcanvas.imprint: .geom.x, .geom.y, .canvas;
             $child.dispatch: Event::Updated, origin => self, geom => .geom;
         }
@@ -349,7 +379,6 @@ method flatten-canvas {
         self.dispatch: Event::Updated, geom => $!canvas-geom;
     }
     $!pcanvas.clear-inv-rects;
-    $.clear-invalidations;
     self.dispatch: Event::Flattened;
 }
 
@@ -387,8 +416,9 @@ method cmd-childcanvas( ::?CLASS:D $child, Vikna::Rect:D $canvas-geom, Vikna::Ca
     self.trace: "CHILD CANVAS FROM ", $child.name, " AT { $canvas-geom } WITH ", +@invalidations, " INVALIDATIONS:\n",
         @invalidations.map({ "  " ~ $_ }).join("\n"),
         "\nMY GEOM: " ~ $.geom;
-    %!child-by-id{$child.id}<canvas> = CanvasRecord.new: :$canvas, geom => $canvas-geom, :@invalidations;
-    self.invalidate: $_ for @invalidations;
+    $!child-canvas.register: $child, $canvas, $canvas-geom, @invalidations;
+#    %!child-by-id{$child.id}<canvas> = CanvasRecord.new: :$canvas, geom => $canvas-geom, :@invalidations;
+#    self.invalidate: $_ for @invalidations;
     $.flatten-canvas;
 }
 
