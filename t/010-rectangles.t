@@ -146,7 +146,7 @@ subtest "Rect interactions" => {
             my $r1 = Vikna::Rect.new: |%value<r1>;
             is ?$r1.overlap( |%value<r2> ), so %value<overlap>, "{ %value<overlap> ?? "" !! "do not " } overlap";
             is-deeply $r1.dissect( |%value<r2> ).map( *.List ), %value<dissect>, "dissected correctly";
-            is-deeply $r1.clip( |%value<r2> ).List, %value<clip>, "clipped rectangle";
+            is-deeply $r1.clip-by( |%value<r2> ).List, %value<clip>, "clipped rectangle";
         }
     }
 }

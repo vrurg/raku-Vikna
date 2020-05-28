@@ -18,6 +18,7 @@ class MyDesktop is Vikna::Desktop {
 
     multi method event(Event::Screen::Ready:D $ev) {
         if $!test-first-draw && $!drawn {
+            $!test-first-draw = False;
             pass "Printed to the screen";
             my $screen = $.app.screen;
             is-rect-filled

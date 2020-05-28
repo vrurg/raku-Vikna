@@ -41,11 +41,9 @@ multi method event(::?CLASS:D: Event::Screen::Geom:D $ev) {
 }
 
 multi method event(::?CLASS:D: Event::Screen::Ready:D $ev --> Nil) {
-    $.flatten-unblock;
     if $!print-needed {
         self.trace: "SCREEN READY, trying printing again";
-        # This would result in a call to the print method.
-        $.flatten-canvas;
+        self.print;
     }
 }
 
@@ -86,12 +84,25 @@ method quit {
 # Desktop doesn't allow resize unless through screen resize
 method resize(|) { }
 
-method print(::?CLASS:D: Vikna::Canvas:D $canvas?) {
-    self.trace: "DESKTOP REDRAW -> screen";
-    $!on-screen-canvas = $_ with $canvas;
-    if $.app.screen.print(0, 0, $!on-screen-canvas) {
-        $!print-needed = False;
-        $.flatten-block;
+has Lock:D $!print-lock .= new;
+method print(::?CLASS:D: Vikna::Canvas $canvas?) {
+    $!print-lock.protect: {
+        # If re-print requested but no $!on-screen-canvas defined it likely means a concurrent print invoked by
+        # flatten-canvas has succeed.
+        return unless $canvas || $!on-screen-canvas;
+        self.trace: "DESKTOP REDRAW -> screen";
+        if $!on-screen-canvas && $canvas {
+            $canvas.invalidate: $_ for $!on-screen-canvas.invalidations;
+        }
+        $!on-screen-canvas = $_ with $canvas;
+        if $.app.screen.print(0, 0, $!on-screen-canvas) {
+            self.dispatch: Event::Updated, geom => $!on-screen-canvas.geom;
+            $!on-screen-canvas = Nil;
+            $!print-needed = False;
+        }
+        else {
+            $!print-needed = True;
+        }
     }
 }
 
@@ -110,13 +121,6 @@ method hide-cursor {
             self.throw: X::OverUnblock, what => 'cursor hide', count => $_
         }
     }
-}
-
-method flatten-canvas {
-    # The print-needed flag will be reset if flattening is unblocked and screen print started successfully. Otherwise it
-    # will signal that when screen is ready again we must print again immediately.
-    $!print-needed = True;
-    nextsame;
 }
 
 method start-event-handling {

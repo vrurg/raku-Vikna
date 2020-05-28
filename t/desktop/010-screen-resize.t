@@ -49,6 +49,9 @@ class MyApp is Vikna::Test::App {
             if $passed {
                 self.test-resize: $test-suite;
             }
+            else {
+                $.desktop.quit;
+            }
         }
 
         is-event-sequence $desktop, [
@@ -66,12 +69,21 @@ class MyApp is Vikna::Test::App {
                 message => "first redraw",
             ),
             %(
-                type => Event::Updated,
+                type => Event::Flattened,
+                message => "first canvas flattening",
+            ),
+            %(
+                type => Vikna::Event::Updated,
+                message => "submitted to the screen",
+            ),
+            %(
+                type => Event::Screen::Ready,
                 checker => &post-redraw,
                 message => "screen updated with desktop",
                 on-status => &start-resize,
             )
-        ], "Desktop init sequence", :async, :timeout(10),
+        ], "Desktop init sequence", :async, :timeout(30),
+#            :trace-events,
             :defaults{ on-status => -> $passed, $ { $.desktop.quit unless $passed } };
 
         $desktop
@@ -116,7 +128,8 @@ class MyApp is Vikna::Test::App {
                 # We're done, quit
                 on-status => -> | { $.desktop.quit },
             ),
-        ], "Screen resized", :async, :timeout(10),
+        ], "Screen resized", :async, :timeout(30),
+#            :trace-events,
             :defaults{
                 on-status => -> $passed, $ { $.desktop.quit unless $passed }
             };

@@ -33,7 +33,8 @@ class Rainbow is Vikna::Widget {
     has $.color-shift = 0;
     has %!childp;
     has atomicint $!all-added = 0;
-    has $!awaiting = False;
+    has atomicint $!status-code = 0;
+    has $.loop;
 
     method build-max-dist {
         $.w min $.h
@@ -52,7 +53,7 @@ class Rainbow is Vikna::Widget {
     method cmd-refresh {
         $.app.reporter.say: "cmd refresh, ", $.flatten-blocked;
         callsame;
-        $.app.reporter.say: "refreshed";
+        $.app.reporter.say: " - refreshed ";
     }
 
     method cmd-childcanvas(Vikna::Widget:D $child, |) {
@@ -70,13 +71,13 @@ class Rainbow is Vikna::Widget {
     }
 
     method await-redraws {
-        $!awaiting = True;
+        $!status-code ⚛= 1;
         self.flow: :name('Await children'), {
             await %!childp.values;
             %!childp = ();
             self.flatten-unblock;
             $.app.reporter.say: "\nAll ", self.elems, " done, next, ", self.flatten-blocked;
-            self.dispatch: Event::ColorRotate;
+            $!status-code ⚛= 2;
         }
     }
 
@@ -109,8 +110,14 @@ class Rainbow is Vikna::Widget {
         $!color-shift += π / 3;
         my $reporter = $.app.reporter;
         $reporter.say: "SHIFT: ", $!color-shift.fmt('%.4f');
+        my $now = now;
+        if $!loop {
+            $reporter.say: "LOOP: ", ($now - $!loop).fmt('%.2f'), " sec.";
+        }
+        $!loop = $now;
         self.flatten-block;
         self.flow: :name('SHIFT'), {
+            self.invalidate;
             my @evp;
                 self.children.race(:batch(8), :degree($*KERNEL.cpu-cores)).map: -> $c {
                     if $c ~~ Vikna::Label {
@@ -127,7 +134,11 @@ class Rainbow is Vikna::Widget {
     }
 
     multi method event(Vikna::Event::Flattened:D $ev) {
-        $.app.reporter.say: "FLATTENED! ";
+        if $!status-code == 2 {
+            self.dispatch: Event::ColorRotate;
+            $.app.reporter.say: "FLATTENED! ";
+            $!status-code ⚛= 0;
+        }
     }
 }
 

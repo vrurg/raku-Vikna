@@ -260,7 +260,7 @@ class Event::Invisible    is Event::Informative { }
 
 # Focus::Take is about being potentially in focus.
 # Focus::In is about receiving focus and must result in focusing the last child which got Focus::Take
-class Event::Focus        is Event::Informative { }
+class Event::Focus        is Event::Informative { method default-priority { PrioReleased } }
 class Event::Focus::Take  is Event::Focus       { } # Child is focused on parent
 class Event::Focus::Lost  is Event::Focus       { } # Child lost focus on parent
 class Event::Focus::In    is Event::Focus       { } # Our parent widget is in focus

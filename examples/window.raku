@@ -196,7 +196,7 @@ class EventReporter is Vikna::TextScroll {
                 # :inv-mark-color<00,50,00>,
                 ;
             my $lbl = $mw.create-child: Vikna::Label,
-                :3x, :10y, :1h, :30w,
+                :3x, :7y, :1h, :30w,
                 :name<info-lbl>, :text('Info Label'),
                 :bg('0,80,150'),
                 :style('underline italic');
@@ -219,7 +219,7 @@ class EventReporter is Vikna::TextScroll {
                 focused-attr => {
                     style => VSTransparent,
                 },
-                # :inv-mark-color<00,50,00>,
+#                :inv-mark-color<80,80,00>,
                 :title('Static Window');
             $sw.create-child: Vikna::Label, :0x, :0y, :38w, :1h, :name<s-info-lbl>, :text('info lbl');
         }
@@ -262,7 +262,7 @@ class MovingApp is Vikna::App {
             x => $.desktop.w - 50,
             y => 0,
             :w(50), :h($.desktop.h),
-            :name<Reporter>, :pattern(' '), :bg<#444>, :fg<yellow>;
+            :name<Reporter>, :pattern(' '), :bg<#444>, :fg<green>;
         # $.desktop.sync-events;
     }
 }

@@ -15,7 +15,7 @@ use AttrX::Mooish;
 my ::?CLASS $app;
 
 # Named parameters to be passed to a screen driver constructor
-has %.screen-params;
+has %.screen-profile;
 has Vikna::Screen $.screen is mooish(:lazy);
 has Vikna::Desktop $.desktop is mooish(:lazy);
 has Vikna::Tracer $.tracer is mooish(:lazy);
@@ -31,15 +31,15 @@ method new(|) {
     $app //= callsame;
 }
 
-method profile-default {
+submethod profile-default {
     desktop-profile => %(
         :name<Desktop>,
         attr => {
             :pattern<.>,
         },
         :!auto-clear,
-        # :bg<black>,
-        # :inv-mark-color<00,00,50>,
+#        :bg<black>,
+#        :inv-mark-color<60,60,140>,
     )
 }
 
@@ -59,7 +59,7 @@ method build-os {
 }
 
 method build-screen {
-    $.os.screen.init: |%!screen-params;
+    $.os.screen.init: |%!screen-profile;
     $.os.screen
 }
 

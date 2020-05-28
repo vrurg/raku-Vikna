@@ -92,19 +92,28 @@ multi method screen-print(Int:D $x, Int:D $y, Vikna::Canvas:D $viewport, :$str! 
     $.ANSI-str($x, $y, $viewport, |%c)
 }
 
-multi method ANSI-str( ::?CLASS:D: Int:D $x, Int:D $y, Vikna::Canvas:D $viewport, :$default-fg?, :$default-bg?, :$default-style?)
+method ANSI-str( ::?CLASS:D: Int:D $x, Int:D $y, Vikna::Canvas:D $viewport, :$default-fg?, :$default-bg?, :$default-style?)
 {
     my $vlines := nqp::list();
     my $default-color := $.color2esc( $.ansi-color(fg => $default-fg, bg => $default-bg, style => to-style($default-style)) );
     my ($cplane, $fgplane, $bgplane, $stplane);
     $viewport.get-planes($cplane, $fgplane, $bgplane, $stplane);
-    my $vw = $viewport.w;
-    my $vh = $viewport.h;
-    my $vrow = -1;
+
+    # Limit the rectangle we update to the outer boundaries of viewport invalidations
+    my ($xshift, $yshift, $xmax, $ymax) = (.right, .bottom, 0, 0) with $.geom;
+    for $viewport.invalidations {
+        $xshift min= .x;
+        $yshift min= .y;
+        $xmax   max= .right;
+        $ymax   max= .bottom;
+    }
+
+    my $vrow = $yshift - 1;
+    my ($char, $fg, $bg, $style, $color, $skip);
     nqp::while(
-        ++$vrow < $vh,
+        ++$vrow <= $ymax,
         nqp::stmts(
-            nqp::push($vlines, nqp::decont(&!cursor-sub($x, $y + $vrow))),
+            nqp::push($vlines, nqp::decont(&!cursor-sub($x + $xshift, $y + $vrow))),
             nqp::push($vlines, RESET-COLOR),
             (my $last-color = ''),
             (my $need-col-change := 0),
@@ -112,16 +121,31 @@ multi method ANSI-str( ::?CLASS:D: Int:D $x, Int:D $y, Vikna::Canvas:D $viewport
             (my $fgrow := nqp::atpos(nqp::decont($fgplane), $vrow)),
             (my $bgrow := nqp::atpos(nqp::decont($bgplane), $vrow)),
             (my $strow := nqp::atpos(nqp::decont($stplane), $vrow)),
-            (my $vcol = -1),
+            (my $vcol = $xshift - 1),
+            ($fg := ''),
+            ($bg := ''),
+            ($style := VSTransparent),
+            ($skip := 1),
             nqp::while(
-                ++$vcol < $vw,
+                ++$vcol <= $xmax,
                 nqp::stmts(
-                    (my $char := nqp::defor(nqp::atpos($crow, $vcol), '')),
-                    (my $fg = nqp::atpos($fgrow, $vcol)),
-                    # (my $bg = nqp::if($viewport.is-paintable($vcol, $vrow), 'magenta', nqp::atpos($bgrow, $vcol))),
-                    (my $bg = nqp::atpos($bgrow, $vcol)),
-                    (my $style = nqp::atpos($strow, $vcol)),
-                    (my $color := nqp::decont($.ansi-color(:$fg, :$bg, :style($style.ord)))),
+                    nqp::if(
+                        $viewport.is-paintable($vcol, $vrow),
+                        nqp::stmts(
+                            ($char := nqp::defor(nqp::atpos($crow, $vcol), '')),
+                            ($fg := nqp::atpos($fgrow, $vcol)),
+                            ($bg := nqp::atpos($bgrow, $vcol)),
+#                            ($bg := nqp::if($viewport.is-paintable($vcol, $vrow), '0,100,60', nqp::atpos($bgrow, $vcol))),
+                            ($style := nqp::atpos($strow, $vcol)),
+                            ($color := nqp::decont($.ansi-color(:$fg, :$bg, :style($style.ord)))),
+                            ($skip := 0)
+                        ),
+                        nqp::stmts(
+                            ($char := ''),
+                            ($color := ''),
+                            ($skip := 1)
+                        ),
+                    ),
                     nqp::if(
                         nqp::isne_s($color, $last-color),
                         nqp::stmts(

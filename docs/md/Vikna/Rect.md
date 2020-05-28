@@ -67,9 +67,9 @@ An alias to `List` method.
 
 Returns *True* if two rectangles overlap.
 
-### `multi clip(Vikna::Rect:D $into, :$copy?)`
+### `multi clip-by(Vikna::Rect:D $into, :$copy?)`
 
-### `multi clip(Int:D $x, Int:D $y, UInt:D $w, UInt:D $h)`
+### `multi clip-by(Int:D $x, Int:D $y, UInt:D $w, UInt:D $h)`
 
 Clip a rectangle by `$into`.
 

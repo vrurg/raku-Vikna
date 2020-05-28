@@ -57,8 +57,8 @@ An alias to C<List> method.
 
 Returns I<True> if two rectangles overlap.
 
-=head3 C<multi clip(Vikna::Rect:D $into, :$copy?)>
-=head3 C<multi clip(Int:D $x, Int:D $y, UInt:D $w, UInt:D $h)>
+=head3 C<multi clip-by(Vikna::Rect:D $into, :$copy?)>
+=head3 C<multi clip-by(Int:D $x, Int:D $y, UInt:D $w, UInt:D $h)>
 
 Clip a rectangle by C<$into>.
 
@@ -205,10 +205,10 @@ my sub clip-coords(@r is copy, @into) {
     @r
 }
 
-proto method clip(::?CLASS:D: |) {*}
-multi method clip(::?CLASS:D: ::?CLASS:D $into, :$copy! where ?*) { self.clone.clip: .x, .y, .w, .h with $into }
-multi method clip(::?CLASS:D: ::?CLASS:D $into) { self.clip: .x, .y, .w, .h with $into }
-multi method clip(::?CLASS:D: Int:D $x, Int:D $y, UInt:D $w, UInt:D $h) {
+proto method clip-by(::?CLASS:D: |) {*}
+multi method clip-by(::?CLASS:D: ::?CLASS:D $into, :$copy! where ?*) { self.clone.clip: .x, .y, .w, .h with $into }
+multi method clip-by(::?CLASS:D: ::?CLASS:D $into) { self.clip-by: .x, .y, .w, .h with $into }
+multi method clip-by(::?CLASS:D: Int:D $x, Int:D $y, UInt:D $w, UInt:D $h) {
     if self.overlap($x, $y, $w, $h) {
         my $right = $x + $w - 1;
         my $bottom = $y + $h - 1;

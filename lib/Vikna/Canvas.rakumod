@@ -258,9 +258,9 @@ submethod TWEAK(*%c) {
 }
 
 method clone {
-    my $cloned = callsame;
-    my $p-idx = -1;
+    my $cloned := nqp::decont(callsame);
     my $planes := nqp::list();
+    my $p-idx = -1;
     nqp::while(
         (++$p-idx < PLANE-COUNT),
         nqp::stmts(
@@ -277,7 +277,13 @@ method clone {
             nqp::push($planes, $plane)
         )
     );
-    nqp::bindattr(nqp::decont($cloned), Vikna::Canvas, '$!planes', $planes);
+    # The following three lines are how it has to be done. But somehow it results in a bug making the screen flicker on
+    # intensive redraws.
+#    for ^PLANE-COUNT -> $p-idx {
+#        nqp::push($planes, nqp::clone(nqp::atpos($!planes, $p-idx)));
+#    }
+    nqp::bindattr($cloned, Vikna::Canvas, '$!planes', $planes);
+    nqp::bindattr($cloned, Vikna::Canvas, '$!paintable-expired', True);
     $cloned
 }
 
@@ -384,10 +390,10 @@ multi method imprint($x, $y, Str:D() $line, :$fg? is copy, :$bg? is copy, :$styl
                 nqp::if(
                     nqp::if(nqp::isge_i($cx, 0), nqp::atpos_i($prow, $cx)), # $cx >= 0 && printable
                     nqp::stmts(
-                        nqp::if($i < $char-count, nqp::bindpos($crow, $cx, nqp::atpos($chars, $i))),
-                        nqp::if($fg, nqp::bindpos($fgrow, $cx, $fg)),
-                        nqp::if($bg, nqp::bindpos($bgrow, $cx, $bg)),
-                        nqp::if($style, nqp::bindpos($strow, $cx, $style))
+                        nqp::if($i < $char-count, nqp::bindpos($crow, $cx, nqp::decont(nqp::atpos($chars, $i)))),
+                        nqp::if($fg, nqp::bindpos($fgrow, $cx, nqp::decont($fg))),
+                        nqp::if($bg, nqp::bindpos($bgrow, $cx, nqp::decont($bg))),
+                        nqp::if($style, nqp::bindpos($strow, $cx, nqp::decont($style)))
                     )
                 )
             )
@@ -424,9 +430,9 @@ multi method imprint($x, $y, $w, $h, :$fg? is copy, :$bg? is copy, :$style? is c
                     nqp::if(
                         nqp::atpos_i($prow, $cx),
                         nqp::stmts(
-                            nqp::if($fg,    nqp::bindpos($fgrow, $cx, $fg)),
-                            nqp::if($bg,    nqp::bindpos($bgrow, $cx, $bg)),
-                            nqp::if($style, nqp::bindpos($strow, $cx, $style)),
+                            nqp::if($fg,    nqp::bindpos($fgrow, $cx, nqp::decont($fg))),
+                            nqp::if($bg,    nqp::bindpos($bgrow, $cx, nqp::decont($bg))),
+                            nqp::if($style, nqp::bindpos($strow, $cx, nqp::decont($style))),
                         )
                     )
                 ),
@@ -477,13 +483,15 @@ multi method imprint($x, $y, ::?CLASS:D $from, :$skip-empty = True) {
                             nqp::stmts(
                                 nqp::if(
                                     nqp::unless((my $from-char := nqp::atpos($from-crow, $from-x)), $no-skip),
-                                    nqp::bindpos($crow, $to-x, $from-char)),
+                                    nqp::bindpos($crow, $to-x, nqp::decont($from-char))),
                                 nqp::if(
                                     nqp::unless((my $from-fg := nqp::atpos($from-fgrow, $from-x)), $no-skip),
                                     nqp::bindpos($fgrow, $to-x, $from-fg)),
-                                nqp::if(
-                                    nqp::unless((my $from-bg := nqp::atpos($from-bgrow, $from-x)), $no-skip),
-                                    nqp::bindpos($bgrow, $to-x, $from-bg)),
+                                nqp::if(nqp::defined($!inv-mark-color),
+                                    nqp::bindpos($bgrow, $to-x, $!inv-mark-color),
+                                    nqp::if(
+                                        nqp::unless((my $from-bg := nqp::atpos($from-bgrow, $from-x)), $no-skip),
+                                        nqp::bindpos($bgrow, $to-x, $from-bg))),
                                 nqp::if(
                                     nqp::unless((my $from-st := nqp::atpos($from-strow, $from-x)), $no-skip),
                                     nqp::bindpos($strow, $to-x, $from-st)),
@@ -541,7 +549,16 @@ multi method viewport(Vikna::Rect:D $rect) {
 
 multi method viewport(--> Vikna::Canvas:D) {
     return self if $!vp-geom == $!geom;
-    self.new: geom => $!vp-geom, :from(self), :viewport;
+    my $vp := self.new: geom => $!vp-geom, :from(self), :viewport;
+    my \iter = nqp::iterator($!inv-rects);
+    nqp::while(
+        iter,
+        nqp::stmts(
+            nqp::shift(iter),
+            (my $r := nqp::iterval(iter).relative-to($!vp-geom, :clip)),
+                nqp::if($r.w && $r.h,
+                    ($vp.invalidate: $r))));
+    $vp
 }
 
 multi method invalidate(::?CLASS:D:) {
@@ -619,14 +636,14 @@ method !build-paintable-mask {
                     nqp::if($!inv-mark-color,
                         nqp::if($paintable,
                             nqp::bindpos($bgrow, $x, $!inv-mark-color),
-                            nqp::bindpos($bgrow, $x, 'black')
+                            nqp::bindpos($bgrow, $x, '0,0,0')
                         )
                     ),
                 )
             )
         )
     );
-    $!paintable-expired = False;
+    $!paintable-expired := False;
 }
 
 # multi method add-inv-rect(UInt:D $x, UInt:D $y, UInt:D $w where * > 0, UInt:D $h where * > 0) {
@@ -636,12 +653,12 @@ method !build-paintable-mask {
 # XXX Switch over from Vikna::Rect list of invalidation to plain list of x,y,w,h – don't create extra objects.
 multi method add-inv-rect(+@rect where *.elems == 4) {
     nqp::push( $!inv-rects, Vikna::Rect.new: |@rect );
-    $!paintable-expired = True;
+    $!paintable-expired := True;
 }
 
 multi method add-inv-rect(Vikna::Rect:D $r) {
     nqp::push( $!inv-rects, $r );
-    $!paintable-expired = True;
+    $!paintable-expired := True;
 }
 
 method clear-inv-rects {

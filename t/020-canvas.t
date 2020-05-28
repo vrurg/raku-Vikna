@@ -2,9 +2,10 @@ use v6;
 use Test::Async;
 use Vikna::App;
 use Vikna::Canvas;
+use Vikna::Rect;
 use Vikna::Utils;
 
-plan 6, :random, :parallel;
+plan 7, :random, :parallel;
 
 class MyApp is Vikna::App {
 }
@@ -195,7 +196,9 @@ subtest "Coloring" => {
     test-colored-rect($c, 2, 1, 5, 3, 'o', '.', "Only background color", :bg('50,80,0'));
     test-colored-rect($c, 3, 1, 2, 2, 'm', '.', "Foreground and background", :fg<red>, :bg('50,80,0'));
 
-    is $app.screen.screen-print(30, 3, $c.viewport, :str).comb.map({ .ord == 27 ?? '<ESC>' !! $_ }).join,
+    my $vp = $c.viewport;
+    $vp.invalidate;
+    is $app.screen.screen-print(30, 3, $vp, :str).comb.map({ .ord == 27 ?? '<ESC>' !! $_ }).join,
         q{<ESC>[4;31H<ESC>[0mS<ESC>[0m<ESC>[48;2;50;80;0mo<ESC>[0m<ESC>[31;48;2;50;80;0mme<ESC>[0m<ESC>[48;2;50;80;0m t<ESC>[0mext....<ESC>[0m<ESC>[5;31H<ESC>[0m.<ESC>[0m<ESC>[48;2;50;80;0m.<ESC>[0m<ESC>[31;48;2;50;80;0m..<ESC>[0m<ESC>[48;2;50;80;0m..<ESC>[0m.......<ESC>[0m<ESC>[6;31H<ESC>[0m.<ESC>[0m<ESC>[48;2;50;80;0m.....<ESC>[0m.......<ESC>[0m<ESC>[7;31H<ESC>[0m.............<ESC>[0m},
         "resulting output string";
 }
@@ -208,7 +211,8 @@ subtest "Transparency" => {
     for ^10 {
         $c.imprint(0, $_, 'X' x 25);
     }
-    is $app.screen.screen-print(30, 3, $c.viewport, :str).comb.map({ .ord == 27 ?? '<ESC>' !! $_ }).join,
+    $c.invalidate;
+    is $app.screen.screen-print(30, 3, $c, :str).comb.map({ .ord == 27 ?? '<ESC>' !! $_ }).join,
         q{<ESC>[4;31H<ESC>[0mXXXXX<ESC>[4;41HXXXXX<ESC>[0m<ESC>[5;31H<ESC>[0m<ESC>[0m<ESC>[6;31H<ESC>[0m<ESC>[0m<ESC>[7;31H<ESC>[0m<ESC>[0m<ESC>[8;31H<ESC>[0m<ESC>[0m<ESC>[9;31H<ESC>[0m<ESC>[0m<ESC>[10;31H<ESC>[0m<ESC>[0m<ESC>[11;31H<ESC>[0m<ESC>[0m<ESC>[12;31H<ESC>[0m<ESC>[0m<ESC>[13;31H<ESC>[0m<ESC>[0m},
         "Transprent cells are not output";
 }
@@ -275,6 +279,22 @@ subtest "Canvas -> canvas imprinting" => {
     test-filled-rect $cdup, 10, 4, 15, 1, "*", "dup: imprint with transparent cells: transparent, bg from imprint", :bg<blue>;
     test-filled-rect $cdup, 8, 4, 2, 1, "×", "dup: imprint with transparent cells: transparent, fg from base, bg from imprint", :fg<yellow>, :bg<blue>;
     test-filled-rect $cdup, 5, 4, 3, 1, "×", "dup: imprint with transparent cells: outside unchanged", :fg<yellow>;
+}
+
+subtest "Viewport Invalidations" => {
+    plan 3;
+    my $c = Vikna::Canvas.new: :w<25>, :h<10>;
+    $c.viewport(3, 2, 10, 5);
+    $c.invalidate(4, 5, 3, 3);
+    $c.invalidate(14, 4, 5, 5);
+    $c.invalidate(10, 3, 10, 10);
+    my $vp = $c.viewport;
+    is $vp.invalidations.elems, 2, "one invalidation is outside of the viewport";
+    my @exp = (1, 3, 3, 2), (7, 1, 3, 4);
+    my @vp-invs = $vp.invalidations;
+    for ^2 -> $i {
+        ok @vp-invs[$i] == Vikna::Rect(|@exp[$i]), "invalidation " ~ ($i+1);
+    }
 }
 
 done-testing;

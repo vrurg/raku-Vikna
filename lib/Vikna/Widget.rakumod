@@ -27,7 +27,7 @@ my class CanvasRecord {
     has Vikna::Canvas:D $.canvas is rw is required;
 }
 
-my class CanvasInventory {
+my class CanvasRegistry {
     has %.by-id;
     has @.invalidations;
     method register(Vikna::Widget:D $child, Vikna::Canvas:D $canvas, Vikna::Rect:D $geom, @invalidations) {
@@ -39,6 +39,9 @@ my class CanvasInventory {
             %!by-id{$child.id} = CanvasRecord.new: :$canvas, :$geom, :@invalidations;
         }
         @!invalidations.append: @invalidations;
+    }
+    method deregister(Vikna::Widget:D $child) {
+        %!by-id{$child.id}:delete
     }
     method dup(*%p) {
         self.clone: :invalidations[], |%p
@@ -87,11 +90,7 @@ has atomicint $!flatten-misses = 0;
 has @.invalidations;
 has Lock $.inv-lock .= new;
 
-# Invalidations mapped into parent's coords. To be pulled out together with widget canvas for imprinting into parent's
-# canvas.
-# Invalidations for parent widget are to be stashed here first ...
-has $!stash-parent-invs = [];
-# ... and then added here when redraw finalizes
+# Invalidations mapped into parent's coords.
 has $!inv-for-parent = [];
 has Lock:D $!inv4parent-lock .= new;
 
@@ -100,7 +99,7 @@ has %!child-by-id;
 # Maps name into id
 has %!child-by-name;
 # Hash of child canvas mapped by ID.
-has CanvasInventory:D $!child-canvas .= new;
+has CanvasRegistry:D $!canvas-registry .= new;
 
 has $.inv-mark-color is rw;
 # For test purposes only.
@@ -242,6 +241,7 @@ method cmd-removechild( ::?CLASS:D: Vikna::Widget:D $child, :$unsubscribe = Fals
     # If a child is closing then we're its last parent and have to wait until it fully dismisses. Otherwise the child is
     # going to stick around for a while and somebody else must take care of it. Most likely it's re-parenting taking
     # place.
+    $!canvas-registry.deregister($child);
     %!child-by-id{$child.id}:delete;
     %!child-by-name{$child.name}:delete;
     my $is-topmost = $.is-topmost( $child );
@@ -280,8 +280,8 @@ method cmd-removechild( ::?CLASS:D: Vikna::Widget:D $child, :$unsubscribe = Fals
 
 method cmd-clear( ) {
     self.for-children: { .clear }, post => { self.clear-canvas };
-    $.invalidate;
-    $.cmd-redraw;
+    self.invalidate;
+    self.cmd-redraw;
 }
 
 method cmd-setbgpattern( Str $pattern ) {
@@ -299,8 +299,8 @@ method cmd-sethidden( $hidden ) {
         $!hidden = $hidden;
         self.dispatch: $!hidden ?? Event::Hide !! Event::Show;
         unless $!hidden {
-            $.invalidate;
-            $.redraw;
+            self.invalidate;
+            self.redraw;
         }
         if $was-visible ^^ $.visible {
             self.dispatch: $.visible ?? Event::Visible !! Event::Invisible;
@@ -330,56 +330,73 @@ method cmd-close {
 method flatten-canvas {
     self.trace: "Entering flatten-canvas, blocks count: ", $!flatten-blocks, "\ncanvas geom: ",
         ($!canvas-geom // '*no yet*'), "\npcanvas geom: ", ($!pcanvas ?? $!pcanvas.geom !! "*not yet*");
+    return unless $!canvas-geom;
     if $!flatten-blocks > 0 {
         ++$!flatten-misses;
         return;
     }
     # No paints were done yet.
-    return unless $!canvas-geom;
     $!flatten-misses = 0;
-    my $c-inv;
-    cas $!child-canvas, {
-        $c-inv = $_;
+    self.flatten-block;
+
+    # Time to pull together all the data we'd need inside the flow to complete the task. We can't use attributes
+    # directly because they're subject to change by any upcoming event.
+    my $c-reg;
+    cas $!canvas-registry, {
+        $c-reg = $_;
         .dup
     }
+
     unless $!pcanvas && $!pcanvas.w == $!canvas-geom.w && $!pcanvas.h == $!canvas-geom.h {
         self.trace: "(Re)create pcanvas using ", $!canvas-geom;
         $!pcanvas = self.create:
-            Vikna::Canvas, w => $!canvas-geom.w, h => $!canvas-geom.h, :from($!pcanvas // $!canvas);
+            Vikna::Canvas, w => $!canvas-geom.w, h => $!canvas-geom.h, :$!inv-mark-color, :from($!pcanvas // $!canvas);
     }
+
+    my $canvas-geom = $!canvas-geom;
+    my $canvas = $!canvas;
+    my $viewport = $!viewport;
+    my $geom = $!geom;
+
+    my $inv-for-parent;
+    $!inv4parent-lock.protect: {
+        $inv-for-parent = $!inv-for-parent;
+        $!inv-for-parent = [];
+    }
+
     $!inv-lock.protect: {
         $!pcanvas.invalidate: $_ for @!invalidations;
         @!invalidations = [];
     }
-    for $c-inv.invalidations {
-        $!pcanvas.invalidate: $_;
-    }
-#    self.trace: "self invalidations:\n", $!pcanvas.invalidations.map("  " ~*).join("\n");
-    $!pcanvas.imprint: 0, 0, $!canvas, :!skip-empty;
-    self.for-children: -> $child {
-        # Newly added children might not have drawn yet. It's ok to skip 'em.
-        next unless $child.visible;
-        with $!child-canvas.by-id{$child.id} {
-            $!pcanvas.imprint: .geom.x, .geom.y, .canvas;
-            $child.dispatch: Event::Updated, origin => self, geom => .geom;
+
+    # Batten down hatches and complete the flattening in a non-blocking way.
+    self.flow: :name("FLATTEN CANVAS"), {
+        LEAVE self.flatten-unblock;
+        for $c-reg.invalidations {
+            my $vrect = .clip-by($viewport);
+            $inv-for-parent.push: $vrect.absolute($geom);
+            $!pcanvas.invalidate: $vrect;
         }
+        $!pcanvas.imprint: 0, 0, $canvas, :!skip-empty;
+        for self.children -> $child {
+            # Newly added children might not have drawn yet. It's ok to skip 'em.
+            next unless $child.visible;
+            with $c-reg.by-id{$child.id} {
+                $!pcanvas.imprint: .geom.x, .geom.y, .canvas;
+                $child.dispatch: Event::Updated, origin => self, geom => .geom;
+            }
+        }
+        self.dispatch: Event::Flattened;
+        with $.parent {
+            self.trace: "Sending self canvas to ", .name;
+            .child-canvas(self, $!pcanvas.clone, $canvas-geom.clone, $inv-for-parent) if $inv-for-parent.elems > 0;
+        }
+        else {
+            # If no parent then try sending to screen.
+            self.?print($!pcanvas.clone);
+        }
+        $!pcanvas.clear-inv-rects;
     }
-    $!inv4parent-lock.protect: {
-        $!inv-for-parent = @$!stash-parent-invs;
-        $!stash-parent-invs = [];
-    }
-    # note self.name, " pick: ", $!pcanvas.pick(0,0) if self.name ~~ /Moveable/;
-    with $.parent {
-        self.trace: "Sending self canvas to ", .name;
-        .child-canvas(self, $!canvas-geom.clone, $!pcanvas.clone, $!inv-for-parent) if $!inv-for-parent.elems > 0;
-    }
-    else {
-        # If no parent then try sending to a screen.
-        self.?print($!pcanvas);
-        self.dispatch: Event::Updated, geom => $!canvas-geom;
-    }
-    $!pcanvas.clear-inv-rects;
-    self.dispatch: Event::Flattened;
 }
 
 method cmd-redraw( :$force? ) {
@@ -389,11 +406,10 @@ method cmd-redraw( :$force? ) {
         self.redraw;
     }
     else {
-        my Vikna::Canvas:D $canvas = $!canvas;
         self.trace: "CMD REDRAW: invalidations: ", @!invalidations.elems, "\n", @!invalidations.map("  . " ~ *.Str)
             .join("\n");
         if @!invalidations || $force {
-            $canvas = self.begin-draw;
+            my $canvas = self.begin-draw;
             self.draw(:$canvas);
             self.end-draw(:$canvas);
             $!canvas = $canvas;
@@ -412,13 +428,11 @@ method cmd-refresh {
     $.flatten-canvas;
 }
 
-method cmd-childcanvas( ::?CLASS:D $child, Vikna::Rect:D $canvas-geom, Vikna::Canvas:D $canvas, @invalidations ) {
+method cmd-childcanvas( ::?CLASS:D $child, Vikna::Canvas:D $canvas, Vikna::Rect:D $canvas-geom, @invalidations ) {
     self.trace: "CHILD CANVAS FROM ", $child.name, " AT { $canvas-geom } WITH ", +@invalidations, " INVALIDATIONS:\n",
         @invalidations.map({ "  " ~ $_ }).join("\n"),
         "\nMY GEOM: " ~ $.geom;
-    $!child-canvas.register: $child, $canvas, $canvas-geom, @invalidations;
-#    %!child-by-id{$child.id}<canvas> = CanvasRecord.new: :$canvas, geom => $canvas-geom, :@invalidations;
-#    self.invalidate: $_ for @invalidations;
+    $!canvas-registry.register: $child, $canvas, $canvas-geom, @invalidations;
     $.flatten-canvas;
 }
 
@@ -501,11 +515,9 @@ method remove-child( ::?CLASS:D $child ) {
     self.send-command: Event::Cmd::RemoveChild, $child;
 }
 
-method child-canvas( ::?CLASS:D $child, Vikna::Rect:D $canvas-geom, Vikna::Canvas:D $canvas, @invalidations ) {
+method child-canvas( ::?CLASS:D $child, Vikna::Canvas:D $canvas, Vikna::Rect:D $canvas-geom, @invalidations ) {
     self.trace: "COMMAND child-canvas for child ", $child.name, " with ", +@invalidations, " invalidations";
-    my $ev = self.send-command: Event::Cmd::ChildCanvas, $child, $canvas-geom, $canvas, @invalidations;
-    # self.trace: "{$ev} {$canvas.w} x {$canvas.h}, invalidations:", @invalidations.map({ "\n  $_" });
-    # $.redraw;
+    my $ev = self.send-command: Event::Cmd::ChildCanvas, $child, $canvas, $canvas-geom, @invalidations;
 }
 
 method redraw {
@@ -640,7 +652,7 @@ method update-positions( :$transitive? ) {
         my $parent-viewport = $.parent.viewport;
         my $parent-abs = $.parent.abs-geom;
         #my $gr = $!geom;
-        $!viewport = $!geom.clip($parent-viewport).relative-to($!geom);
+        $!viewport = $!geom.clip-by($parent-viewport).relative-to($!geom);
         $!abs-geom = $!geom.absolute($parent-abs);
         $!abs-viewport = $!viewport.absolute($!abs-geom);
         # self.trace: "PARENT GEOMS:",
@@ -670,13 +682,13 @@ method add-inv-parent-rect( Vikna::Rect:D $rect ) {
         self.trace: "ADD TO STASH OF PARENT INVS: ", ~$rect;
         # TODO Replace with Concurrent::Queue? Needs benchmarking.
         $!inv4parent-lock.protect: {
-            $!stash-parent-invs.push: $rect
+            $!inv-for-parent.push: $rect
         }
     }
 }
 
 method add-inv-rect( Vikna::Rect:D $rect ) {
-    my $vrect = $rect.clip($!viewport);
+    my $vrect = $rect.clip-by($!viewport);
     $!inv-lock.protect: {
         @!invalidations.push: $vrect;
     }
@@ -718,7 +730,6 @@ method begin-draw( Vikna::Canvas $canvas? is copy --> Vikna::Canvas ) {
     $canvas //= self.create:
         Vikna::Canvas,
         :$.w, :$.h,
-        :$!inv-mark-color,
         |( $!auto-clear ?? (  ) !! :from( $!canvas ) );
     self.invalidate if $!auto-clear;
     self.trace: "begin-draw canvas (auto-clear:{ $!auto-clear }): ", $canvas.WHICH, " ", $canvas.w, " x ", $canvas.h;
