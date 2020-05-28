@@ -41,7 +41,7 @@ This framework is an attempt to provide a full-fledged console UI for [Raku](htt
 
     * being a pure Raku, i.e. avoid use of any native libraries
 
-    * being OS-independent by encapsulating any OS-specific logic in a driver-like layer
+    * being OS-independent by incapsulating any OS-specific logic in a driver-like layer
 
   * Support fully asynchronous model of development
 
@@ -49,9 +49,9 @@ Any other implementation specifics of the framework are decisions taken to meet 
 
 More information can be found in the following sections:
 
-  * [`Vikna::Manual`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Manual.md)
+  * [`Vikna::Manual`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Manual.md)
 
-  * [`Vikna::Classes`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Classes.md)
+  * [`Vikna::Classes`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Classes.md)
 
 DISCLAIMER
 ==========

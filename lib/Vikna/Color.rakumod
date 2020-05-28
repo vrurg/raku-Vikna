@@ -31,10 +31,10 @@ following the key names supported by L<C<Color>|https://modules.raku.org/dist/Co
 The only method to mention is C<parse> which takes a string a returns either a C<Vikna::Color> instance or a Nil if
 the color string is invalid. To be more precise, the object returned will have with one of C<Vikna::Color> roles mixed
 in:
-L<C<Vikna::Color::Index>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Color/Index.md>,
-L<C<Vikna::Color::Named>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Color/Named.md>,
-L<C<Vikna::Color::RGB>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Color/RGB.md>,
-L<C<Vikna::Color::RGBA>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Color/RGBA.md>.
+L<C<Vikna::Color::Index>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Color/Index.md>,
+L<C<Vikna::Color::Named>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Color/Named.md>,
+L<C<Vikna::Color::RGB>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Color/RGB.md>,
+L<C<Vikna::Color::RGBA>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Color/RGBA.md>.
 The difference between the four is in the way they strigify by default and additional methods provided depending on the
 format.
 
@@ -48,14 +48,14 @@ limited cache size.
 
 =head1 SEE ALSO
 
-L<C<Vikna>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna.md>,
-L<C<Vikna::Manual>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Manual.md>,
+L<C<Vikna>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna.md>,
+L<C<Vikna::Manual>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Manual.md>,
 L<C<Color>|https://modules.raku.org/dist/Color>,
 L<C<Color::Names>|https://modules.raku.org/dist/Color::Names>,
-L<C<Vikna::Color::Index>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Color/Index.md>,
-L<C<Vikna::Color::Named>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Color/Named.md>,
-L<C<Vikna::Color::RGB>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Color/RGB.md>,
-L<C<Vikna::Color::RGBA>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Color/RGBA.md>
+L<C<Vikna::Color::Index>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Color/Index.md>,
+L<C<Vikna::Color::Named>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Color/Named.md>,
+L<C<Vikna::Color::RGB>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Color/RGB.md>,
+L<C<Vikna::Color::RGBA>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Color/RGBA.md>
 
 =AUTHOR
 

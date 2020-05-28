@@ -19,7 +19,7 @@ DESCRIPTION
 
 
 
-Does [`Vikna::Coord`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Coord.md).
+Does [`Vikna::Coord`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Coord.md).
 
 Represents a rectangle object.
 
@@ -143,7 +143,7 @@ Returns *True* if both rectangles have same origins and dimensions.
 SEE ALSO
 ========
 
-[`Vikna`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna.md), [`Vikna::Manual`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Manual.md), [`Vikna::Classes`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Classes.md), [`Vikna::Coord`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Coord.md), [`Vikna::Point`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Point.md)
+[`Vikna`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna.md), [`Vikna::Manual`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Manual.md), [`Vikna::Classes`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Classes.md), [`Vikna::Coord`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Coord.md), [`Vikna::Point`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Point.md)
 
 AUTHOR
 ======

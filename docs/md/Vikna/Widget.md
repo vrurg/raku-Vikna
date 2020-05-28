@@ -35,7 +35,7 @@ Once again, note that imprinting will only change the areas of the widget which 
     .. Label ......
     ...............
 
-The dots represent a parent widget with a [`Vikna::Label`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Label.md) child attached. Then, say, we change the label text. No other changes were done. Then the only area on `pcanvas` which will be affected by flattening will be the one-line rectangle at `(x:2, y:1, w:7, h:1)` granted that text change doesn't change label's dimentions. If the parent widget is really big this optimization would save us a whole lot copying over! Moreover, the invalidation will then be propagated further upstream resulting in the same little changes done in all parents up until the desktop and screen themselve.
+The dots represent a parent widget with a [`Vikna::Label`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Label.md) child attached. Then, say, we change the label text. No other changes were done. Then the only area on `pcanvas` which will be affected by flattening will be the one-line rectangle at `(x:2, y:1, w:7, h:1)` granted that text change doesn't change label's dimentions. If the parent widget is really big this optimization would save us a whole lot copying over! Moreover, the invalidation will then be propagated further upstream resulting in the same little changes done in all parents up until the desktop and screen themselve.
 
 At this point flattening down of canvas is almost done. If widget has a parent, it invokes `child-canvas` command method on it with `pcanvas` and mapped invalidations.
 
@@ -48,7 +48,7 @@ Redraw Hold
 
 Drawing is probably one of the slowest operations happening inside the framework. Thus, it's not so uncommon for a widget to receive a redraw request while another redraw is already in progress. Moreover, there could be few or even more than just few requests sent before the current redraw finishes. Without taking special care of such situation, there is high risk of redraws stacking up and blocking any other event activity on the widget.
 
-To prevent such bottlenecks, widgets installs an event filter for `Event::Cmd::Redraw` (see `send-event` in [`Vikna::EventHandling`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/EventHandling.md). The filter does two things depending on whether another redraw operation is currently active or now:
+To prevent such bottlenecks, widgets installs an event filter for `Event::Cmd::Redraw` (see `send-event` in [`Vikna::EventHandling`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/EventHandling.md). The filter does two things depending on whether another redraw operation is currently active or now:
 
   * if no active redraw, it is bypasses the event but installs a `then` hook on event's completion [`Promise`](https://docs.raku.org/type/Promise)
 
@@ -78,11 +78,11 @@ ATTRIBUTES
 
 
 
-### [`Vikna::Rect:D`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md) `$.geom`
+### [`Vikna::Rect:D`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Rect.md) `$.geom`
 
 Widget geometry in its parent coordinate system.
 
-### [`Vikna::Rect`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md) `$.viewport`
+### [`Vikna::Rect`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Rect.md) `$.viewport`
 
 Visible part of the widget in its parent coordinate system. To be more precise, this is widget's `$.geom` clipped by parent's viewport. In the scheme below 1 is our viewport area. It might be even smaller if the parent itself isn't fully visible.
 
@@ -92,15 +92,15 @@ Visible part of the widget in its parent coordinate system. To be more precise, 
         |          +-----|---+
         +----------------+
 
-### [`Vikna::Rect`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md) `$.abs-geom`
+### [`Vikna::Rect`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Rect.md) `$.abs-geom`
 
 Widget geometry in absolute coordinate system. By *absolute* we take the screen, but because the desktop object is assumed to occupy the whole screen, all absolute coordinates are taken relatively to desktop.
 
-### [`Vikna::Rect`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md) `$.abs-viewport`
+### [`Vikna::Rect`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Rect.md) `$.abs-viewport`
 
 Similar to `$.abs-geom`, but for `$.viewport`.
 
-### [`Vikna::WAttr:D`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/WAttr.md) `$.attr`
+### [`Vikna::WAttr:D`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/WAttr.md) `$.attr`
 
 Widget default attributes.
 
@@ -116,7 +116,7 @@ If *True* then widget is intentionally hidden on its parent.
 
 If *True* then widget is outside of parent's viewport and thus not visible on the screen. The difference with `$.hidden` attribute is that the latter is set intentionally, while this attribute is a result of calculations of widget position.
 
-### [`Vikna::Canvas`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Canvas.md) `$.canvas`
+### [`Vikna::Canvas`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Canvas.md) `$.canvas`
 
 Widget canvas after the last redraw operation.
 
@@ -144,9 +144,9 @@ General Purpose Methods
 
 The default widget profile checkin is responsible for the following operations:
 
-  * it converts `x`, `y`, `w`, `h` profile keys into `geom` by creating a new [`Vikna::Rect`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md) instance unless `geom` is defined explicitly
+  * it converts `x`, `y`, `w`, `h` profile keys into `geom` by creating a new [`Vikna::Rect`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Rect.md) instance unless `geom` is defined explicitly
 
-  * it converts `fg`, `bg`, `style`, and `pattern` profile keys into `attr` by creating a new [`Vikna::WAttr`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/WAttr.md) instance
+  * it converts `fg`, `bg`, `style`, and `pattern` profile keys into `attr` by creating a new [`Vikna::WAttr`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/WAttr.md) instance
 
 All mentioned above source keys are unconditionally deleted from `%profile`.
 
@@ -170,7 +170,7 @@ Proto defined to handle children events if subscribed to a child. By default doe
 
 ### `subscription-event(Event:D $ev)`
 
-Proto defined to handle any other subscription events. By default does nothing. See [`Vikna::EventHandling`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/EventHandling.md) role.
+Proto defined to handle any other subscription events. By default does nothing. See [`Vikna::EventHandling`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/EventHandling.md) role.
 
 ### `flatten-canvas()`
 
@@ -199,7 +199,7 @@ Stringifies widget to `$.id ~ ":" ~ $.name`.
 Command Methods
 ---------------
 
-This is a group of methods which sends command events to the widget. Normally they're just shortcuts for [`Vikna::CommandHandling`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/CommandHandling.md) `send-command` method.
+This is a group of methods which sends command events to the widget. Normally they're just shortcuts for [`Vikna::CommandHandling`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/CommandHandling.md) `send-command` method.
 
 Because command methods are what user must interact with, `cmd-*` methods are not documented as they're implementation detail. Where relevant, their behaviors will be elaborated on in description of command methods.
 
@@ -253,9 +253,9 @@ At the widget first ever redraw `$.initialized` is kept and `Event::InitDone` is
 
 ### `maybe-to-top()`
 
-Normally does nothing. It is used by [`Vikna::Elevatable`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Elevatable.md) role to signal to a widget it is applied to there is an event happened to which the widget can respond by elevating itself to the top of Z-order.
+Normally does nothing. It is used by [`Vikna::Elevatable`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Elevatable.md) role to signal to a widget it is applied to there is an event happened to which the widget can respond by elevating itself to the top of Z-order.
 
-For example see [`Vikna::Window`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Window.md).
+For example see [`Vikna::Window`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Window.md).
 
 ### `clear()`
 
@@ -293,7 +293,7 @@ Shortcut for `set-geom` method with preserved widget dimensions
 
 ### `set-style(|c)`
 
-`Event::Cmd::SetStyle`. Changes widget default style. Takes same arguments as `to-style` routine from [`Vikna::Utils`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Utils.md). Dispatches `Event::Changed::Style`.
+`Event::Cmd::SetStyle`. Changes widget default style. Takes same arguments as `to-style` routine from [`Vikna::Utils`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Utils.md). Dispatches `Event::Changed::Style`.
 
 ### `multi set-attr(Vikna::CAttr:D $attr)`
 
@@ -465,18 +465,18 @@ Hide or show the cursor.
 
 ### `event-filer(Event::Cmd::Redraw:D $ev)`
 
-Implements redraw hold. See [`Vikna::EventHandling`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/EventHandling.md) `send-event` method and [Redraw Hold](#Redraw Hold) section of this page.
+Implements redraw hold. See [`Vikna::EventHandling`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/EventHandling.md) `send-event` method and [Redraw Hold](#Redraw Hold) section of this page.
 
 ### `next-sibling(:$loop = False, :$on-strata = False)`
 
 ### `prev-sibling(:$loop = False, :$on-strata = False)`
 
-Returns our next or preceding sibling in Z-order on parent. See `:loop` and `:on-strata` parameters on `next-to` method of [`Vikna::Parent`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Parent.md).
+Returns our next or preceding sibling in Z-order on parent. See `:loop` and `:on-strata` parameters on `next-to` method of [`Vikna::Parent`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Parent.md).
 
 SEE ALSO
 ========
 
-[`Vikna`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna.md), [`Vikna::Manual`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Manual.md), [`Vikna::Classes`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Classes.md), [`Vikna::Object`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Object.md), [`Vikna::Parent`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Parent.md), [`Vikna::Child`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Child.md), [`Vikna::EventHandling`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/EventHandling.md), [`Vikna::CommandHandling`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/CommandHandling.md), [`Vikna::Coord`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Coord.md), [`Vikna::Rect`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md), [`Vikna::Events`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Events.md), [`Vikna::Color`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Coloe.md), [`Vikna::Canvas`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Canvas.md), [`Vikna::Utils`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Utils.md), [`Vikna::WAttr`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/WAttr.md), [`AttrX::Mooish`](https://modules.raku.org/dist/AttrX::Mooish)
+[`Vikna`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna.md), [`Vikna::Manual`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Manual.md), [`Vikna::Classes`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Classes.md), [`Vikna::Object`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Object.md), [`Vikna::Parent`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Parent.md), [`Vikna::Child`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Child.md), [`Vikna::EventHandling`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/EventHandling.md), [`Vikna::CommandHandling`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/CommandHandling.md), [`Vikna::Coord`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Coord.md), [`Vikna::Rect`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Rect.md), [`Vikna::Events`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Events.md), [`Vikna::Color`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Coloe.md), [`Vikna::Canvas`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Canvas.md), [`Vikna::Utils`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Utils.md), [`Vikna::WAttr`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/WAttr.md), [`AttrX::Mooish`](https://modules.raku.org/dist/AttrX::Mooish)
 
 AUTHOR
 ======

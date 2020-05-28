@@ -47,7 +47,7 @@ This method has to be used by any `Vikna::Object` descendant to create a new Vik
 `make-object-profile(%c)`
 -------------------------
 
-This method implements the magic of object profiles. But before getting into details, I recommend to read about RMRO in [`Vikna::Manual`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Manual.md) unless already done so.
+This method implements the magic of object profiles. But before getting into details, I recommend to read about RMRO in [`Vikna::Manual`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Manual.md) unless already done so.
 
 The argument is the profile as it is supplied to the constructor.
 
@@ -124,12 +124,12 @@ Similar to `throw` above, but invokes `fail` with the exception object.
 `trace(|)`
 ----------
 
-This method is a shortcur to [`Vikna::App`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/App.md) method `trace`. It passes the invoking object alongside with the arguments capture.
+This method is a shortcur to [`Vikna::App`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/App.md) method `trace`. It passes the invoking object alongside with the arguments capture.
 
 `flow(&code, Str :$name, :$sync = False, :$branch = False)`
 -----------------------------------------------------------
 
-Creates a new code flow (see [`Vikna::Manual`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Manual.md)). A flow can be created as:
+Creates a new code flow (see [`Vikna::Manual`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Manual.md)). A flow can be created as:
 
   * asynchronous, in it's own thread
 
@@ -161,7 +161,7 @@ Shortcuts to `name` method.
 SEE ALSO
 ========
 
-[`Vikna`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna.md), [`Vikna::Manual`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Manual.md)
+[`Vikna`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna.md), [`Vikna::Manual`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Manual.md)
 
 AUTHOR
 ======

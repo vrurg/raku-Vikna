@@ -16,7 +16,7 @@ Class represents default widget attributes.
 =head3 C<$.pattern>
 
 Background pattern of a widget. Interpretation of this attribute depends on a particular widget. But
-L<C<Vikna::Widget>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Widget.md>
+L<C<Vikna::Widget>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Widget.md>
 defines it as a string which fills the background. Say, if set to I<'.'> then the background will be filled with dots.
 
 =ROUTINES
@@ -28,8 +28,8 @@ Shortcut to create a C<Vikna::WAttr> instance.
 
 =head1 SEE ALSO
 
-L<C<Vikna>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna.md>,
-L<C<Vikna::Manual>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Manual.md>,
+L<C<Vikna>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna.md>,
+L<C<Vikna::Manual>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Manual.md>,
 
 =AUTHOR Vadim Belman <vrurg@cpan.org>
 

@@ -7,7 +7,7 @@ Sorry, but I didn't solve the problem of the first word. So, let me use this par
 
 This section is briefly describing the basic building blocks of the framework and the ideas moartaring them together.
 
-=head2 L<Vikna::Object|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Object.md>
+=head2 L<Vikna::Object|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Object.md>
 
 This is the root parent class of almost any other Vikna class except for a few basic data types. It implements the
 followin key functions:
@@ -37,21 +37,21 @@ can come from:
 Vikna provide a unified way to merge all sources into a final profile to be used. This is done by allowing any type object
 to have its own C<submethod> C<profile-default> which is expected to return a profile object coercable into a
 L<C<Hash>|https://docs.raku.org/type/Hash> which would contain what the type object conisders to be viable defaults.
-L<Vikna::Object|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Object.md>
+L<Vikna::Object|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Object.md>
 then iterates over the C<submethods> in reverse RMRO order (the same as for the construction time submethods, see
 L<RMRO|#RMRO> below), collects the profiles, and merges them into a final default one.
 
-When the default profile is built, L<Vikna::Object|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Object.md> then runs it alongside with profiles obtained from the constructor
+When the default profile is built, L<Vikna::Object|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Object.md> then runs it alongside with profiles obtained from the constructor
 method arguments and from a config file (not implemented yet) through another C<submethod> C<profile-checkin>. The job
 of C<profile-checkin> is to adjust the final profile so as to adjust some values according to demands of its owning
 type object. For example, C<Vikna::Object::profile-checkin>, which would be invoked first, simply merges default, config,
 and constructor profiles in the order mentioned into the destination hash. Any subsequent C<profile-checkin> would need
 to modify that final profile if necessary.
 
-An example of how it works can be found in L<Vikna::Widget|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Widget.md> class. It allows creating a new widget by either specifying
+An example of how it works can be found in L<Vikna::Widget|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Widget.md> class. It allows creating a new widget by either specifying
 widget's geometry explicitly, via an instance of
-L<Vikna::Rect|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md>,
-or by passing C<x>, C<y>, C<w>, C<h> keys. In the latter case L<Vikna::Widget|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Widget.md>
+L<Vikna::Rect|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Rect.md>,
+or by passing C<x>, C<y>, C<w>, C<h> keys. In the latter case L<Vikna::Widget|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Widget.md>
 implicitly create a new C<geom> key and removes redundant coordinate keys from the profile. Similarly it handles widget
 attribute parameters.
 
@@ -81,7 +81,7 @@ linked to each other. And in few cases I said myself: even though this method do
 considering it separately from the surrounding code!
 
 So, the I<code flows> were born. They turned out to be especially useful with code tracing sub-framework provided
-by L<Vikna::Tracer|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Tracer.md>
+by L<Vikna::Tracer|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Tracer.md>
 and revealed via C<Vikna::Object::trace> method. But they proved to be useful in exception reporting too.
 
 =head2 Canvas And Invalidating
@@ -111,7 +111,7 @@ Do I need to explain this one? Ok, dear visitor, it's time to move on to another
 =head2 Events And Event Handling
 
 An event is a class instance inheriting from
-L<Vikna::Event|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Event.md>.
+L<Vikna::Event|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Event.md>.
 Events are split into categories. But what's more important, events in Vikna also have priorities. But I'll get back to
 it a little later.
 
@@ -126,7 +126,7 @@ The advantage we get with this model is as fast widget response to an event as p
 Let me step aside here and tell you a bit of Vikna history. At some point I needed to develop a web scraper to assist
 my wife in her work. In the process I wished I could output reports from different scraper threads into individual
 windows. So, the scraper turned out to be unneeded after all, but the initial idea is currently implemented by Vikna.
-Say, an instance of L<Vikna::TextScroll|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/TextScroll.md>
+Say, an instance of L<Vikna::TextScroll|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/TextScroll.md>
 can be used like this:
 
     $!reporter = self.create: Vikna::TextScroll, ...;
@@ -162,7 +162,7 @@ object.
 I<dispatcher> has more influence over the event lifecycle as it is explicitly tells the even loop code which object is
 to handle the event. Commonly, both I<origin> and I<dispatcher> point to the same originating object. But, for example,
 events coming event sources (see
-L<Vikna::EventHandling|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/EventHandling.md>)
+L<Vikna::EventHandling|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/EventHandling.md>)
 would typically have their I<origin> set to the source while dispatcher will point to the widget the source is attached
 to.
 
@@ -201,8 +201,8 @@ a remote device of any kind producing them for me? One solution would be to simp
 but sometimes things are a bit more complicated than that. To provide a way for incapsulation of the code taking care
 of such case, event handling subsystem supports so called I<event sources>. A I<source> is an object which produces
 Vikna-capable events. Examples of such objects are
-L<Vikna::Screen::ANSI|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Screen/ANSI.md> and
-C<Input> defined in L<Vikna::OS::unix|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/OS/unix.md>.
+L<Vikna::Screen::ANSI|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Screen/ANSI.md> and
+C<Input> defined in L<Vikna::OS::unix|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/OS/unix.md>.
 
 An event source can be attached to any event handling object. For example, imagine one having a bunch of sensor reporting
 their status back to our application. We can have a window per sensor with an event source translating sensor data into
@@ -249,7 +249,7 @@ The framework is built upon a few principles enlisted in this chapter.
 While user code does its work, Vikna do the work for the user code. I.e. the best implementation of anything is when
 users can focus on solving their problems and only send as simple as possible commands to Vikna or receive simple and
 clear responses. One of the best example of the implemenation of this principle is
-L<C<Vikna::TextScroll>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/TextScroll.md>
+L<C<Vikna::TextScroll>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/TextScroll.md>
 widget which can be used as a kind of simple terminal object with C<say> and C<print> methods:
 
     $ts.say: "Put something\rSay\non the widget";
@@ -264,9 +264,9 @@ code run than the code must be forked into a separate async flow.
 
 =head1 SEE ALSO
 
-L<C<Vikna>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna.md>,
-L<C<Vikna::Classes>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Classes.md>,
-L<C<Vikna::Widget>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Widget.md>
+L<C<Vikna>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna.md>,
+L<C<Vikna::Classes>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Classes.md>,
+L<C<Vikna::Widget>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Widget.md>
 
 =AUTHOR
 

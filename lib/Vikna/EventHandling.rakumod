@@ -23,7 +23,7 @@ The second stage is the event loop itself where received event packet:
 =item passed into to method C<event>
 =item submitted to subsribers (see C<subscribe> method below)
 
-See also event-related sections in L<C<Vikna::Manual>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Manual.md>.
+See also event-related sections in L<C<Vikna::Manual>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Manual.md>.
 
 =ATTRIBUTES
 
@@ -90,7 +90,7 @@ interval is hardcoded at 15 seconds. The reason for the monitor to exists is to:
 =item prevent user code from accidental deadlocks
 =item prevent user code from doing too extensive operations within the event loop. This imposes the principle of code
 responsiveness to event processing code (see I<PRINCIPLES> chapter in
-L<C<Vikna::Manual>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Manual.md>).
+L<C<Vikna::Manual>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Manual.md>).
 
 =head2 C<send-event(Event:D $ev, EvenPriority :$priority?)>
 
@@ -98,8 +98,8 @@ Stage 1 method. The first thing it does it tries to invoke C<event-filter> metho
 returned by the method are used as replacement for C<$ev> argument. Then event(s) are send over the event queue into
 the event loop flow if the queue is defined. Otherwise the event is passed directly into C<$ev.dispatcher>
 C<handle-event> method. This last variant is used by widget groups (see
-L<C<Vikna::Widget::Group>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Widget/Group.md> and
-L<C<Vikna::Widget::GroupMember>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Widget/GroupMember.md>).
+L<C<Vikna::Widget::Group>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Widget/Group.md> and
+L<C<Vikna::Widget::GroupMember>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Widget/GroupMember.md>).
 
 Throws C<X::Event::Stopped> if event loop has been stopped already.
 
@@ -109,7 +109,7 @@ Returns event(s) that were actually pushed into the event queue.
 
 Stage 1 method. By default re-transmits C<$ev> to C<send-event>. But it allows some early re-routing of events before
 they're pushed into the queue. For example,
-L<C<Vikna::Focusable>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Focusable.md>
+L<C<Vikna::Focusable>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Focusable.md>
 is using this method to re-dispatch focus-dependent events directly to the widget in focus.
 
 =head2 C<multi drop-event(Event:D $ev)>
@@ -158,10 +158,10 @@ processing while we do something in a parallel thread:
 
 =head1 SEE ALSO
 
-L<C<Vikna>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna.md>,
-L<C<Vikna::Manual>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Manual.md>,
-L<C<Vikna::Events>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Events.md>,
-L<C<Vikna::CommandHandling>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/CommandHandling.md>
+L<C<Vikna>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna.md>,
+L<C<Vikna::Manual>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Manual.md>,
+L<C<Vikna::Events>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Events.md>,
+L<C<Vikna::CommandHandling>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/CommandHandling.md>
 
 =AUTHOR
 

@@ -15,7 +15,7 @@ $rect.contains($rect2);                 # False
 
 =DESCRIPTION
 
-Does L<C<Vikna::Coord>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Coord.md>.
+Does L<C<Vikna::Coord>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Coord.md>.
 
 Represents a rectangle object.
 
@@ -120,11 +120,11 @@ Returns I<True> if both rectangles have same origins and dimensions.
 
 =head1 SEE ALSO
 
-L<C<Vikna>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna.md>,
-L<C<Vikna::Manual>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Manual.md>,
-L<C<Vikna::Classes>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Classes.md>,
-L<C<Vikna::Coord>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Coord.md>,
-L<C<Vikna::Point>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Point.md>
+L<C<Vikna>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna.md>,
+L<C<Vikna::Manual>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Manual.md>,
+L<C<Vikna::Classes>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Classes.md>,
+L<C<Vikna::Coord>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Coord.md>,
+L<C<Vikna::Point>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Point.md>
 
 =AUTHOR Vadim Belman <vrurg@cpan.org>
 

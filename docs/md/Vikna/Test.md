@@ -66,7 +66,7 @@ TEST TOOLS
 
 ### `is-event-sequence(Vikna::Widget:D $widget, Iterable:D $task-list, Str:D $message, :$timeout, :$async=False, :$trace-events=False, :%defaults)`
 
-This test tool is checking if the events we're receiving on `$widget` are matching a pattern defined by `$task-list`. It is based on the idea that a widget (basically, a [`Vikna::EventHandler`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/EventHandler.md)) is a state machine. And thus sequencer is an observer which monitors widget state changes by pulling in and executing a task.
+This test tool is checking if the events we're receiving on `$widget` are matching a pattern defined by `$task-list`. It is based on the idea that a widget (basically, a [`Vikna::EventHandler`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/EventHandler.md)) is a state machine. And thus sequencer is an observer which monitors widget state changes by pulling in and executing a task.
 
 To implement sequencing over a `$widget` the tool is mixing in a `EvReporter` role into it (the role is internal implementation details and must not be relied upon).
 
@@ -148,7 +148,7 @@ Tests if a rectangle on `$canvas` is filled with a character, color, and style. 
 SEE ALSO
 ========
 
-[`Vikna`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna.md), [`Vikna::Manual`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Manual.md), [`Vikna::Canvas`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Canvas.md), [`Vikna::Rect`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Rect.md), [`Vikna::Widget`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Widget.md), [`Vikna::Events`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Events.md), [`Vikna::WAttr`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/WAttr.md), [`Vikna::Test::App`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Test/App.md), [`Vikna::Test::OS`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Test/OS.md), [`Vikna::Test::Screen`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Test/Screen.md), [`Test::Async`](https://modules.raku.org/dist/Test::Async)
+[`Vikna`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna.md), [`Vikna::Manual`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Manual.md), [`Vikna::Canvas`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Canvas.md), [`Vikna::Rect`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Rect.md), [`Vikna::Widget`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Widget.md), [`Vikna::Events`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Events.md), [`Vikna::WAttr`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/WAttr.md), [`Vikna::Test::App`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Test/App.md), [`Vikna::Test::OS`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Test/OS.md), [`Vikna::Test::Screen`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Test/Screen.md), [`Test::Async`](https://modules.raku.org/dist/Test::Async)
 
 AUTHOR
 ======

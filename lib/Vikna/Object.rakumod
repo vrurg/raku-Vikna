@@ -38,7 +38,7 @@ the application object will be propagated to all newly created instances.
 =head2 C<make-object-profile(%c)>
 
 This method implements the magic of object profiles. But before getting into details, I recommend to read about RMRO in
-L<C<Vikna::Manual>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Manual.md> unless already done so.
+L<C<Vikna::Manual>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Manual.md> unless already done so.
 
 The argument is the profile as it is supplied to the constructor.
 
@@ -113,12 +113,12 @@ Similar to C<throw> above, but invokes C<fail> with the exception object.
 
 =head2 C<trace(|)>
 
-This method is a shortcur to L<C<Vikna::App>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/App.md> method C<trace>. It passes the invoking object alongside with the
+This method is a shortcur to L<C<Vikna::App>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/App.md> method C<trace>. It passes the invoking object alongside with the
 arguments capture.
 
 =head2 C<flow(&code, Str :$name, :$sync = False, :$branch = False)>
 
-Creates a new code flow (see L<C<Vikna::Manual>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Manual.md>).
+Creates a new code flow (see L<C<Vikna::Manual>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Manual.md>).
 A flow can be created as:
 
 =item asynchronous, in it's own thread
@@ -148,8 +148,8 @@ Shortcuts to C<name> method.
 
 =head1 SEE ALSO
 
-L<C<Vikna>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna.md>,
-L<C<Vikna::Manual>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Manual.md>
+L<C<Vikna>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna.md>,
+L<C<Vikna::Manual>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Manual.md>
 
 =AUTHOR
 

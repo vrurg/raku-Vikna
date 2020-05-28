@@ -27,11 +27,11 @@ Bacground color
 
 ### `Int $.style`
 
-Style of the symbol. See `VS*` constants in [`Vikna::Utils`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Utils.md).
+Style of the symbol. See `VS*` constants in [`Vikna::Utils`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Utils.md).
 
 ### `%.Profile`
 
-Cached representation of the attribute suitable for passing into methods like [`Vikna::Canvas`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Canvas.md)`::imprint`.
+Cached representation of the attribute suitable for passing into methods like [`Vikna::Canvas`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Canvas.md)`::imprint`.
 
 METHODS
 =======
@@ -44,7 +44,7 @@ METHODS
 
 ### `dup(*%c)`
 
-All three methods preserve their usual meaning with one nuance: if `style` key is passed in `%c` profile then it gets normalized using `to-style` routine from [`Vikna::Utils`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Utils.md).
+All three methods preserve their usual meaning with one nuance: if `style` key is passed in `%c` profile then it gets normalized using `to-style` routine from [`Vikna::Utils`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Utils.md).
 
 ### `bold()`, `italic()`, `underline()`
 
@@ -76,7 +76,7 @@ A shortcut to create a new `Vikna::CAttr` instance.
 SEE ALSO
 ========
 
-[`Vikna`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna.md), [`Vikna::Manual`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Manual.md),
+[`Vikna`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna.md), [`Vikna::Manual`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Manual.md),
 
 AUTHOR
 ======

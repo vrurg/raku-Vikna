@@ -19,7 +19,7 @@ DESCRIPTION
 
 Implements basic point operations required by the framework.
 
-Does [`Vikna::Coord`](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Coord.md).
+Does [`Vikna::Coord`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Coord.md).
 
 METHODS
 =======
@@ -76,7 +76,7 @@ Vector addition and subtraction of two points.
 SEE ALSO
 ========
 
-[Vikna](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna.md), [Vikna::Manual](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Manual.md), [Vikna::Coord](https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Coord.md)
+[Vikna](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna.md), [Vikna::Manual](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Manual.md), [Vikna::Coord](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Coord.md)
 
 AUTHOR
 ======

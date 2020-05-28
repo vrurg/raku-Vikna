@@ -15,7 +15,7 @@ my $p3 = $p1 + $p2;
 
 Implements basic point operations required by the framework.
 
-Does L<C<Vikna::Coord>|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Coord.md>.
+Does L<C<Vikna::Coord>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Coord.md>.
 
 =METHODS
 
@@ -56,9 +56,9 @@ Vector addition and subtraction of two points.
 
 =head1 SEE ALSO
 
-L<Vikna|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna.md>,
-L<Vikna::Manual|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Manual.md>,
-L<Vikna::Coord|https://github.com/vrurg/raku-Vikna/blob/v0.0.1/docs/md/Vikna/Coord.md>
+L<Vikna|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna.md>,
+L<Vikna::Manual|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Manual.md>,
+L<Vikna::Coord|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Coord.md>
 
 =AUTHOR
 
