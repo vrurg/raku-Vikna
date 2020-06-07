@@ -5,6 +5,7 @@ use Vikna::Label;
 use Vikna::Events;
 use Vikna::TextScroll;
 use Vikna::Utils;
+use Vikna::Rect;
 use AttrX::Mooish;
 
 role EventDumper {
@@ -37,7 +38,16 @@ class Moveable is Vikna::Window {
         has Int:D $.stage is required;
         method default-priority { PrioImmediate }
     }
-    my class Event::Cmd::NextStep is Event::Command { }
+    my class Event::Cmd::NextStep is Event::Command {
+#        method default-priority { PrioDefault }
+    }
+
+#    method handle-event(Event:D $ev) {
+#        if $ev.tags {
+#            $.app.desktop<Reporter>.say: $ev.^name, " ", $ev.tags;
+#        }
+#        nextsame;
+#    }
 
     method !build-stages {
         my Int:D $stage = 0;
@@ -107,17 +117,16 @@ class Moveable is Vikna::Window {
         my $ttl-pfx = $lbl ?? $lbl.ttl-pfx !! "";
         my $desktop = $.app.desktop;
         my $sw = $desktop<Static>;
-        self.redraw-hold: {
-            self.set-geom: $stage.geom.clone;
-            self.set-color: fg => $stage.fg, bg => $stage.bg;
-            self.set-title: $ttl-pfx ~ "geom({$stage.stage}): " ~ $stage.geom;
-            if $sw {
-                $sw.set-title: "Stage " ~ $stage.stage;
-                .set-text: ~$stage.geom with $sw<s-info-lbl>;
-            }
-            .set-text: "Step " ~ $stage.step with $lbl;
+        self.set-geom: $stage.geom.clone;
+        self.set-color: fg => $stage.fg, bg => $stage.bg;
+        self.set-title: $ttl-pfx ~ "geom({$stage.stage}): " ~ $stage.geom;
+        if $sw {
+            $sw.set-title: "Stage " ~ $stage.stage;
+            .set-text: ~$stage.geom with $sw<s-info-lbl>;
         }
+        .set-text: "Step " ~ $stage.step with $lbl;
         $!ready4next = True;
+        self.next-step;
     }
 
     multi method event(Event::NextStage:D $ev) {
@@ -133,18 +142,18 @@ class Moveable is Vikna::Window {
         }
     }
 
-    multi method event(Event::Updated:D $ev) {
-        if !$!done
-            && $!ready4next
-            && $ev.origin === $.app.desktop
-            && $ev.dispatcher === self
-        {
-            self.trace: "Next step upon ", $ev;
-            $!ready4next = False;
-            $.next-step;
-        }
-        nextsame;
-    }
+#    multi method event(Event::Updated:D $ev) {
+#        if !$!done
+##            && $!ready4next
+##            && $ev.origin === $.app.desktop
+##            && $ev.dispatcher === self
+#        {
+#            self.trace: "Next step upon ", $ev;
+#            $!ready4next = False;
+#            $.next-step;
+#        }
+#        nextsame;
+#    }
 
     multi method event(Event::Attached:D $ev) {
         self.trace: "WINDOW ATTACHED, CLIENT CODE";
@@ -158,6 +167,9 @@ class Moveable is Vikna::Window {
 
     multi method event(Event::Idle:D $ev) {
         self.trace: "IDLED";
+        with $.app.desktop<Reporter> {
+            .say: "IDLE";
+        }
         self.dispatch: Event::Idle;
     }
 
@@ -193,7 +205,7 @@ class EventReporter is Vikna::TextScroll {
                 # :auto-clear,
                 :bg<blue>,
                 :style('underline'),
-                # :inv-mark-color<00,50,00>,
+#                 :inv-mark-color<00,50,00>,
                 ;
             my $lbl = $mw.create-child: Vikna::Label,
                 :3x, :7y, :1h, :30w,

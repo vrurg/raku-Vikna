@@ -118,7 +118,7 @@ class X::OverUnblock is X::Base {
     has Int:D $.count is required;
     has Str:D $.what is required;
     method message {
-        "Over-unblocked $!what: " ~ abs($!count) ~ " too many. Check your balance of block/unblock calls"
+        "Over-unblocked $!what on " ~ $.obj ~ ": " ~ abs($!count) ~ " too many. Check your balance of block/unblock calls"
     }
 }
 
@@ -179,3 +179,10 @@ class X::CAttr::UnknownStyle is Exception {
         "Unknown style name '$!style'"
     }
 }
+
+class X::Flow::NotInFlow is Exception is export {
+    method message {
+        "Operation attempted not in a flow context"
+    }
+}
+

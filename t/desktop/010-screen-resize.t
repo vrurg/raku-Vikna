@@ -6,6 +6,8 @@ use Vikna::Test::App;
 use Vikna::Utils;
 use Vikna::Rect;
 
+plan 3;
+
 class MyDesktop
     is Vikna::Desktop
 {
@@ -142,8 +144,6 @@ class MyApp is Vikna::Test::App {
 #        $.desktop.quit;
     }
 }
-
-plan 3;
 
 # MyApp.new.run;
 given MyApp.new(:!debugging) {

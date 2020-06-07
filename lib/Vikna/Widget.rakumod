@@ -82,10 +82,12 @@ has Promise:D $.dismissed .= new;
 has Event $!redraw-on-hold;
 has Semaphore:D $!redraws .= new( 1 );
 has atomicint $!redraw-blocks = 0;
-has atomicint $!flatten-blocks = 0;
 # Block canvas flattenning
-has atomicint $!flatten-misses = 0;
+has atomicint $!flatten-blocks = 0;
 # Count of requests missed while awaiting for unblock
+has atomicint $!flatten-misses = 0;
+# Current flattening status. Planned when in progress
+has Promise:D $.flattening .= kept;
 
 has @.invalidations;
 has Lock $.inv-lock .= new;
@@ -101,27 +103,15 @@ has %!child-by-name;
 # Hash of child canvas mapped by ID.
 has CanvasRegistry:D $!canvas-registry .= new;
 
-has $.inv-mark-color is rw;
 # For test purposes only.
-
-# multi method new(Int:D $x, Int:D $y, Dimension $w, Dimension $h, *%c) {
-#     self.new: geom => Vikna::Rect.new(:$x, :$y, :$w, :$h), |%c
-# }
-#
-# multi method new(Int:D :$x, Int:D :$y, Dimension :$w, Dimension :$h, *%c) {
-#     self.new: geom => Vikna::Rect.new(:$x, :$y, :$w, :$h), |%c
-# }
-#
-# multi method new(*%c where { $_<geom>:!exists }) {
-#     self.new: geom => Vikna::Rect.new(:0x, :0y, :20w, :10h), |%c
-# }
+has $.inv-mark-color is rw;
 
 submethod TWEAK {
     if self ~~ NeverTop {
         self.flatten-block;
         self.redraw-block: :local;
     }
-    self.update-positions;
+    self.cmd-update-positions;
 }
 
 submethod profile-default {
@@ -189,9 +179,9 @@ multi method event( ::?CLASS:D: Event::Attached:D $ev ) {
             self.redraw-unblock: :local;
             self.flatten-unblock;
         }
-        self.update-positions: :transitive;
+        self.cmd-update-positions: :transitive;
         self.invalidate;
-        self.redraw;
+        self.cmd-redraw;
         self.dispatch: Event::Ready;
     }
 }
@@ -327,17 +317,22 @@ method cmd-close {
     };
 }
 
-method flatten-canvas {
+method flatten-canvas(Bool :$sync = False) {
     self.trace: "Entering flatten-canvas, blocks count: ", $!flatten-blocks, "\ncanvas geom: ",
         ($!canvas-geom // '*no yet*'), "\npcanvas geom: ", ($!pcanvas ?? $!pcanvas.geom !! "*not yet*");
+    # No draws taken place yet
     return unless $!canvas-geom;
-    if $!flatten-blocks > 0 {
+
+    my $old-f = $!flattening;
+    if $!flatten-blocks > 0
+        || $!flattening.status == Planned
+        || cas($!flattening, $old-f, Promise.new) !=== $old-f
+    {
         ++$!flatten-misses;
-        return;
+        return Promise.kept(False);
     }
-    # No paints were done yet.
-    $!flatten-misses = 0;
     self.flatten-block;
+    $!flatten-misses = 0;
 
     # Time to pull together all the data we'd need inside the flow to complete the task. We can't use attributes
     # directly because they're subject to change by any upcoming event.
@@ -369,9 +364,12 @@ method flatten-canvas {
         @!invalidations = [];
     }
 
-    # Batten down hatches and complete the flattening in a non-blocking way.
-    self.flow: :name("FLATTEN CANVAS"), {
-        LEAVE self.flatten-unblock;
+    # Batten down hatches and complete the flattening in a non-blocking way, unless otherwise requested.
+    self.flow: :name("FLATTEN CANVAS"), :$sync, :in-context, {
+        LEAVE {
+            $!flattening.keep;
+            self.flatten-unblock;
+        }
         for $c-reg.invalidations {
             my $vrect = .clip-by($viewport);
             $inv-for-parent.push: $vrect.absolute($geom);
@@ -379,7 +377,6 @@ method flatten-canvas {
         }
         $!pcanvas.imprint: 0, 0, $canvas, :!skip-empty;
         for self.children -> $child {
-            # Newly added children might not have drawn yet. It's ok to skip 'em.
             next unless $child.visible;
             with $c-reg.by-id{$child.id} {
                 $!pcanvas.imprint: .geom.x, .geom.y, .canvas;
@@ -393,9 +390,10 @@ method flatten-canvas {
         }
         else {
             # If no parent then try sending to screen.
-            self.?print($!pcanvas.clone);
+            self.?print($!pcanvas.clone) unless self.closed;
         }
         $!pcanvas.clear-inv-rects;
+        True
     }
 }
 
@@ -443,17 +441,17 @@ method cmd-setgeom(Int:D $x, Int:D $y, Int:D $w, Int:D $h, :$no-draw? ) {
         Vikna::Rect.new: :$x, :$y, :$w, :$h
     };
     self.trace: "Changing geom to ", $!geom;
-    self.update-positions;
+    self.cmd-update-positions;
     self.trace: "Setgeom invalidations";
     self.add-inv-parent-rect: $from;
     self.invalidate;
     self.trace: "Setgeom children visibility";
     self.for-children: {
-        .update-positions;
+        .send-command: Vikna::Event::Cmd::Update::Positions, :transitive;
     }
     unless $no-draw {
         self.trace: "Setgeom redraw";
-        $.redraw;
+        $.cmd-redraw;
     }
     self.dispatch: Event::Changed::Geom, :$from, to => $!geom
     if    $from.x != $!geom.x || $from.y != $!geom.y
@@ -503,6 +501,37 @@ multi method cmd-contains( $obj, :$absolute! where *.so ) {
 }
 multi method cmd-contains( $obj ) {
     $!geom.contains($obj)
+}
+
+method cmd-update-positions( :$transitive? ) {
+    if $.parent {
+        my $parent-geom = $.parent.geom;
+        my $parent-viewport = $.parent.viewport;
+        my $parent-abs = $.parent.abs-geom;
+        #my $gr = $!geom;
+        $!viewport = $!geom.clip-by($parent-viewport).relative-to($!geom);
+        $!abs-geom = $!geom.absolute($parent-abs);
+        $!abs-viewport = $!viewport.absolute($!abs-geom);
+        # self.trace: "PARENT GEOMS:",
+        #          "\n  geom    : ", $parent-geom,
+        #          "\n  abs     : ", $parent-abs,
+        #          "\n  viewport: ", $parent-viewport,
+        #          "\nOWN GEOMS:",
+        #          "\n  geom    : ", $!geom,
+        #          "\n  abs     : ", $!abs-geom,
+        #          "\n  viewport: ", $!viewport,
+        #          ;
+    }
+    else {
+        $!abs-geom = $!abs-viewport = $!geom;
+        $!viewport = Vikna::Rect.new: 0, 0, $!geom.w, $!geom.h;
+    }
+    if $transitive {
+        self.for-children: {
+            .send-command: Vikna::Event::Cmd::Update::Positions, :transitive;
+        }
+    }
+    self.set-invisible: not ( $!viewport.w && $!viewport.h );
 }
 
 ### Command senders ###
@@ -646,37 +675,6 @@ method closed {
 
 ### Utility methods ###
 
-method update-positions( :$transitive? ) {
-    if $.parent {
-        my $parent-geom = $.parent.geom;
-        my $parent-viewport = $.parent.viewport;
-        my $parent-abs = $.parent.abs-geom;
-        #my $gr = $!geom;
-        $!viewport = $!geom.clip-by($parent-viewport).relative-to($!geom);
-        $!abs-geom = $!geom.absolute($parent-abs);
-        $!abs-viewport = $!viewport.absolute($!abs-geom);
-        # self.trace: "PARENT GEOMS:",
-        #          "\n  geom    : ", $parent-geom,
-        #          "\n  abs     : ", $parent-abs,
-        #          "\n  viewport: ", $parent-viewport,
-        #          "\nOWN GEOMS:",
-        #          "\n  geom    : ", $!geom,
-        #          "\n  abs     : ", $!abs-geom,
-        #          "\n  viewport: ", $!viewport,
-        #          ;
-    }
-    else {
-        $!abs-geom = $!abs-viewport = $!geom;
-        $!viewport = Vikna::Rect.new: 0, 0, $!geom.w, $!geom.h;
-    }
-    if $transitive {
-        self.for-children: {
-            .update-positions(:transitive)
-        }
-    }
-    self.set-invisible: not ( $!viewport.w && $!viewport.h );
-}
-
 method add-inv-parent-rect( Vikna::Rect:D $rect ) {
     if $.parent {
         self.trace: "ADD TO STASH OF PARENT INVS: ", ~$rect;
@@ -787,7 +785,7 @@ method redraw-unblock(:$local = False) {
 }
 
 method redraw-blocked {
-    ?$!redraw-blocks
+    $!redraw-blocks
 }
 
 method redraw-hold( &code, |c ) {
@@ -798,18 +796,18 @@ method redraw-hold( &code, |c ) {
 
 # Contrary to redraw, flattenning must not be auto-blocked on children.
 method flatten-block {
-    ++⚛$!flatten-blocks;
     self.trace: "Flattening block: ", $!flatten-blocks;
+    ++⚛$!flatten-blocks;
 }
 
 # Don't auto-flatten when counter is zeroed.
-method flatten-unblock {
+method flatten-unblock(Bool:D :$passive = False) {
     with --⚛$!flatten-blocks {
         if $_ < 0 {
             self.throw: X::OverUnblock, :count( $!flatten-blocks ), :what( 'canvas flattenning' )
         }
-        elsif $_ == 0 && $!flatten-misses {
-            if $*VIKNA-EVQ-OWNER && $*VIKNA-EVQ-OWNER === self {
+        elsif $_ == 0 && !$passive && $!flatten-misses {
+            if self.is-event-queue-flow {
                 $.flatten-canvas;
             }
             else {
@@ -870,6 +868,8 @@ method !hold-redraw-event( $ev ) {
         if $_ {
             self.trace: "ALREADY HOLDING ", $_;
             $drop = True;
+            # Join tags from the event we're about to drop because it is basically about joining of the events at this point.
+            .tag($ev.tags);
             $_
         }
         else {
@@ -886,12 +886,10 @@ multi method event-filter( Event::Cmd::Redraw:D $ev ) {
     self.trace: "WIDGET EV FILTER: ", $ev, ", redraw blocks: $!redraw-blocks";
     if $!redraw-blocks == 0 && $!redraws.try_acquire {
         # There is no current redraws, we just proceed further but first make sure we release the resource when done.
-        $ev.completed.then: {
-            self.flow: :name( 'REDRAW RELEASE' ), :sync, {
-                self.trace: "RELEASING REDRAW SEMAPHORE";
-                $!redraws.release;
-                self!release-redraw-event;
-            }
+        $ev.completed.then: flow-branch {
+            self.trace: "RELEASING REDRAW SEMAPHORE";
+            $!redraws.release;
+            self!release-redraw-event;
         };
         [$ev]
     }

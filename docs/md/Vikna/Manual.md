@@ -190,7 +190,7 @@ That's it. We *kick* a `Vikna::TextScroll` object in `$ts` with `say` command an
 Responsive Event Handling
 -------------------------
 
-No event should be processed longer than it takes to irritate the end user. If an event results in a unavoidably long code run than the code must be forked into a separate async flow.
+No event should be processed longer than it takes to irritate the end user. If an event results in an unavoidably long code run then the code must be forked into a separate async flow.
 
 SEE ALSO
 ========

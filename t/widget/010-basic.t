@@ -51,7 +51,7 @@ class MyWidget is Vikna::Widget {
             [
                 evs-task( Event::Init, "initialized",
                     :on-status( -> $passed, $ { evs-syncer('widget ready').signal($passed); } )),
-                evs-task( Event::Cmd::Redraw, "widget redrawn",
+                evs-task( Vikna::Event::Flattened, "widget redrawn and canvas flattened",
                     on-status => -> $passed, $, {
                         evs-syncer('widget redrawn').signal($passed);
                     },
@@ -98,7 +98,7 @@ class MyWidget is Vikna::Widget {
                         $.app.desktop.flatten-block;
                         evs-syncer('widget set geom command').signal($passed);
                     } )),
-                evs-task( Event::Cmd::Redraw, "post-geom change redraw" ),
+#                evs-task( Event::Cmd::Redraw, "post-geom change redraw" ),
                 evs-task( Event::Flattened, "widget submitted to parent",
                     :on-status( -> $passed, $ {
                         evs-syncer('widget post-geom').signal($passed);

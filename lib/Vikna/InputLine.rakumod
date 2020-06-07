@@ -9,8 +9,7 @@ use Vikna::PointerTarget;
 use Vikna::Dev::Kbd;
 use AttrX::Mooish;
 
-also is Vikna::Widget;
-also does Vikna::Focusable;
+also is Vikna::Focusable;
 also does Vikna::PointerTarget;
 
 has Str:D $.text = "";

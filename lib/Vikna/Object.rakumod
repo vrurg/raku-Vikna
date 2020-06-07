@@ -167,6 +167,24 @@ my class CodeFlow {
     has UInt $.id;
     has Str:D $.name is rw = "*anon*";
     has Promise $.promise is rw;
+    has PseudoStash $!ctx is built(True);
+    has Vikna::Object:D $.owner is required;
+
+    method EXISTS-KEY(Str:D $var) {
+        DYNAMIC::{$var}:exists || ($!ctx andthen (.{$var}:exists || (.<$*VIKNA-FLOW>:exists && .<$*VIKNA-FLOW>.EXISTS-KEY($var))))
+    }
+    method AT-KEY(Str:D $var --> Mu) is raw {
+        fail X::Dynamic::NotFound.new(:name($var)) unless self.EXISTS-KEY($var);
+        if DYNAMIC::{$var}:exists {
+            DYNAMIC::{$var}
+        }
+        elsif $!ctx.{$var}:exists {
+            $!ctx.{$var}
+        }
+        else {
+            $!ctx.<$*VIKNA-FLOW>.AT-KEY($var)
+        }
+    }
 }
 
 has $.app;
@@ -183,8 +201,7 @@ method make-object-profile(%c) {
         %config = .profile-config(self.^name, %c<name>)
     }
     my %default;
-    self.WALK(:name<profile-default>, :!methods, :roles).reverse.()
-        .map({ merge-hash %default, %$_, :no-append-array });
+    self.WALK(:name<profile-default>, :!methods, :roles).reverse.().map({ merge-hash %default, %$_, :no-append-array });
     # .trace: "Default profile for ", self.^name, "::new\n", %default.map({ .key ~ " => " ~ (.value ~~ Vikna::Object ?? .value.WHICH !! .value.raku) }).join("\n")
     #     with %c<app>;
     my %profile;
@@ -202,8 +219,8 @@ submethod profile-checkin(%profile, %constructor, %default, %config) {
     #     "- default:\n",
     #     %default.map({ "  . " ~ .key ~ " => " ~ (.value ~~ Vikna::Object ?? .value.WHICH !! .value.raku) ~ "\n" })
     #     with %constructor<app>;
-    merge-hash(%profile, %default,     :no-append-array);
-    merge-hash(%profile, %config,      :no-append-array);
+    merge-hash(%profile, %default, :no-append-array);
+    merge-hash(%profile, %config, :no-append-array);
     merge-hash(%profile, %constructor, :no-append-array);
 }
 
@@ -216,23 +233,27 @@ method !build-name {
     self.^name ~ "<" ~ $.id ~ ">"
 }
 
-multi method name(::?CLASS:D:) { $!name }
-multi method name(::?CLASS:U:) { self.^name }
+multi method name(::?CLASS:D:) {
+    $!name
+}
+multi method name(::?CLASS:U:) {
+    self.^name
+}
 
 multi method throw(X::Base:D $ex) {
     $ex.rethrow
 }
 
-multi method throw( X::Base:U \exception, *%args ) {
-    exception.new( :obj(self), |%args ).throw
+multi method throw(X::Base:U \exception, *%args) {
+    exception.new(:obj(self), |%args).throw
 }
 
-multi method fail( X::Base:D $ex ) {
+multi method fail(X::Base:D $ex) {
     fail $ex
 }
 
-multi method fail( X::Base:U \exception, *%args ) {
-    fail exception.new( :obj(self), |%args )
+multi method fail(X::Base:U \exception, *%args) {
+    fail exception.new(:obj(self), |%args)
 }
 
 multi method create(Mu \type, |c) {
@@ -250,19 +271,23 @@ method trace(|c) {
     }
 }
 
-my @flows;
+my @flows is default(0);
 my Lock:D $flow-lock .= new;
-method allocate-flow(Str :$name?) {
-    $flow-lock.protect: {
-        my $id;
-        for ^Inf {
-            unless @flows[$_].defined {
-                $id = $_;
-                last
-            }
+method allocate-flow(Str :$name? is copy, :$in-context) {
+    $flow-lock.lock;
+    LEAVE $flow-lock.unlock;
+    my $id;
+    for ^Inf {
+        unless @flows[$_] {
+            $id = $_;
+            last
         }
-        @flows[$id] = CodeFlow.new: :$id, :$name;
     }
+    $name //= "<anon" ~ $id ~ ">";
+    @flows[$id] =
+        CodeFlow.new:
+            :$id, :$name, :owner(self),
+            |(:ctx(CLIENT::DYNAMIC::) if $in-context);
 }
 
 method free-flow(CodeFlow:D $flow) {
@@ -271,34 +296,40 @@ method free-flow(CodeFlow:D $flow) {
     }
 }
 
-method flow(&code, Str :$name?, :$sync = False, :$branch = False) {
-    my $flow = $branch ?? $*VIKNA-FLOW !! $.allocate-flow(:$name);
+method flow(&code, Str :$name?, :$sync = False, :$branch = False, :$in-context = False, Capture:D :$args = \()) {
+    my $cur-flow = DYNAMIC::<$*VIKNA-FLOW>:exists ?? $*VIKNA-FLOW !! Nil;
+    my $flow = $branch && $cur-flow
+            ?? self.allocate-flow(:name($cur-flow.name), :in-context)
+            !! self.allocate-flow(:$name, :$in-context);
 
     my sub flow-start {
         my $*VIKNA-FLOW = $flow;
-        LEAVE { $.free-flow($flow) unless $branch };
-        &code();
+        LEAVE self.free-flow($flow);
+        &code(|$args);
     }
 
     if $sync {
         Promise.kept(flow-start);
     }
     else {
-        ( $flow.promise = Promise.start(&flow-start) ).then: {
+        ($flow.promise = (Promise.start(&flow-start))).then: {
             my $*VIKNA-FLOW = $flow;
             if .status ~~ Broken {
                 self.trace: "FLOW BROKEN: " ~ .cause, ~.cause.backtrace, :error;
-                note "===FLOW `{$name}` PANIC!=== ", .cause.message, .cause.backtrace.Str;
+                note "===FLOW `{ $flow.name }` on { self } PANIC!=== ", .cause.message, "\n", .cause.backtrace.Str;
                 self.panic(.cause);
                 .cause.rethrow;
             }
+            .result
         };
     }
 }
 
 method panic(Exception:D $cause) {
-    note "===PANIC!=== On object ", self.?name // self.WHICH, "\n", $cause.message, ~$cause.backtrace;
+    note "===PANIC!=== On object ", self.?name // self.WHICH, "\n", $cause.message, "\n", ~$cause.backtrace;
     exit 1;
 }
 
-multi method Str { self.name }
+multi method Str {
+    self.name
+}

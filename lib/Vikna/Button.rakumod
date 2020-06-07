@@ -9,9 +9,8 @@ use Vikna::Widget;
 use Vikna::Utils;
 use AttrX::Mooish;
 
-also does Vikna::Focusable;
+also is Vikna::Focusable;
 also does Vikna::PointerTarget;
-also is Vikna::Widget;
 
 has Bool $.is-unicode is mooish(:lazy);
 has Bool $.use3d is mooish(:lazy);
@@ -93,11 +92,11 @@ multi method event(Event::Kbd:D $ev) {
 
 method !set-pressed($pressed, :$report?) {
     if $!pressed xor $pressed {
-        $.trace: "pressed state change from $!pressed into $pressed";
+        self.trace: "pressed state change from $!pressed into $pressed";
         $!pressed = ? $pressed;
-        $.dispatch: $!pressed ?? Event::Button::Down !! Event::Button::Up;
+        self.dispatch: $!pressed ?? Event::Button::Down !! Event::Button::Up;
         if $report && $!target && ! $!pressed {
-            $.dispatch: Event::Button::Press;
+            self.dispatch: Event::Button::Press;
             if $!event.defined {
                 $!target.dispatch: $!event.dup(:origin(self));
             }
@@ -115,20 +114,20 @@ method !set-pressed($pressed, :$report?) {
 # }
 
 method draw3d(:$canvas) {
-    $.trace: "3D button\n - size: ", $.geom, "\n - viewport: ", $.viewport, "\n - pressed: ", $!pressed;
+    self.trace: "3D button\n - size: ", $.geom, "\n - viewport: ", $.viewport, "\n - pressed: ", $!pressed;
     my $bw = $.w - 1;
     # $canvas.invalidate: $.invalidate;
     $canvas.clear;
-    $canvas.invalidate: $.invalidate: 0, 0, $bw, 1;
-    $canvas.invalidate: $.invalidate: 1, 1, $bw, 1;
+    $canvas.invalidate: self.invalidate: 0, 0, $bw, 1;
+    $canvas.invalidate: self.invalidate: 1, 1, $bw, 1;
     my $outtext = $!text.substr(0, $bw);
     my $y = $!pressed ?? 1 !! 0;
     my $x = $y + (($bw - $outtext.chars) / 2).truncate;
     unless $!pressed {
-        $.trace: "Unpressed button";
+        self.trace: "Unpressed button";
         $canvas.imprint: 1, 1, ' ' x $bw, bg => $!shadow-color, fg => $!shadow-color;
     }
-    $.trace: "Imprinting ‘$outtext’ into $x, $y";
+    self.trace: "Imprinting ‘$outtext’ into $x, $y";
     $canvas.imprint: $y, $y, $.attr.pattern x $bw, bg => $.attr.bg, fg => $.attr.fg;
     $canvas.imprint: $x, $y, $outtext, bg => $.attr.bg, fg => $.attr.fg;
 }
@@ -146,9 +145,9 @@ method draw2d(:$canvas) {
 method draw(:$canvas) {
     # self!still-pressed;
     if $!use3d {
-        $.draw3d: :$canvas
+        self.draw3d: :$canvas
     }
     else {
-        $.draw2d: :$canvas
+        self.draw2d: :$canvas
     }
 }

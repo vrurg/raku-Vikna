@@ -12,8 +12,7 @@ use Vikna::Utils;
 use Vikna::Dev::Kbd;
 
 also does Vikna::PointerTarget;
-also does Vikna::Focusable;
-also is Vikna::Widget;
+also is Vikna::Focusable;
 
 has Bool:D $!print-needed = False;
 has Vikna::Canvas $!on-screen-canvas;

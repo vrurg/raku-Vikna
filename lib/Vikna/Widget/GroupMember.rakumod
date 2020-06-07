@@ -7,6 +7,12 @@ use Vikna::Events;
 
 has Vikna::Widget:D $.group is required;
 
+submethod profile-checking(%profile, %, %, %) {
+    %profile<geom> = %profile<group>.member-geom(self, %profile<geom>);
+}
+
+### Event handlers ###
+
 # We don't do own event queue. Everything is managed by the Group widget we belong to.
 method start-event-handling { }
 
@@ -26,11 +32,13 @@ multi method route-event(::?CLASS:D: Event:D $ev, *%c) {
     $.group.re-dispatch: $ev, |%c
 }
 
-### Command senders ###
+### Command handlers ###
 
-method redraw {
-    $.group.redraw;
+method cmd-setgeom(Int:D $x, Int:D $y, Int:D $w, Int:D $h, |c) {
+    nextwith |self.group.member-geom(self, $x, $y, $w, $h), |c;
 }
+
+### Command senders ###
 
 proto method send-command(Event::Command $, |) {*}
 multi method send-command(::?CLASS:D: Event::Command:U \evType, |args) {
@@ -51,4 +59,8 @@ method detach {
     else {
         self.throw: X::Detach::NoParent;
     }
+}
+
+method is-event-queue-flow {
+    self.group.is-event-queue-flow
 }

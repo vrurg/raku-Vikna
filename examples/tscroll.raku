@@ -38,16 +38,16 @@ class MyScroll is Vikna::TextScroll {
             when * < $count {
                 my $c = 10.rand.Int;
                 my $s = $c x $c;
-                $.say: "Line [{$line.fmt: '%4d'}], {$.buffer.elems.fmt: '%4d'} in buf, $s";
+                self.say: "Line [{$line.fmt: '%4d'}], {$.buffer.elems.fmt: '%4d'} in buf, $s";
             }
             when $count {
-                $.print: "Line A\c[FORM FEED]Line B";
+                self.print: "Line A\c[FORM FEED]Line B";
             }
             when ($count + 1) {
-                $.print: "\rLB";
+                self.print: "\rLB";
             }
             when ($count + 2) {
-                $.say: "\n+++";
+                self.say: "\n+++";
             }
             default {
                 $do-next = False;
@@ -59,14 +59,14 @@ class MyScroll is Vikna::TextScroll {
     }
 
     method next-line(UInt:D $line) {
-        $.send-command: Event::Cmd::NextLine, $line;
+        self.send-command: Event::Cmd::NextLine, $line;
     }
 }
 
 class ScrollApp is Vikna::App {
     has $.ts is rw;
     method main {
-        $!ts = $.desktop.create-child: MyScroll, :w(80), :h(30), :x(20), :y(3), :bg-pattern(' '), :auto-clear;
+        $!ts = $.desktop.create-child: MyScroll, :w(80), :h($.desktop.h - 5), :x(20), :y(3), :bg-pattern(' '), :auto-clear;
     }
 }
 

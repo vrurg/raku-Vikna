@@ -21,11 +21,23 @@ class Event is export {
     has $.dispatcher is required;   # Dispatching object. Changes on re-dispatch.
     has Bool:D $.cleared = False;
     has EventPriority $.priority is mooish(:lazy<default-priority>);
+    has Set $.tags;
 
     method default-priority { PrioDefault }
 
     submethod TWEAK {
         self!set-id;
+        without $!tags {
+            my $cur-event = $*VIKNA-CURRENT-EVENT;
+            my $event-tag = $*VIKNA-EVENT-TAG;
+            with $*VIKNA-FLOW {
+                $cur-event //= .<$*VIKNA-CURRENT-EVENT>;
+                $event-tag //= .<$*VIKNA-EVENT-TAG>;
+            }
+            $!tags =
+                set |(($cur-event && $cur-event.tags.keys) // Empty),
+                    |($event-tag // Empty);
+        }
     }
 
     method !set-id {
@@ -44,6 +56,16 @@ class Event is export {
 
     method build-origin { $!dispatcher }
 
+    method last-id { ⚛$sequence }
+
+    proto method tag(|) {*}
+    multi method tag(Set:D $tags) { $!tags ∪= $tags; }
+    multi method tag(+@tags)      { $!tags ∪= @tags; }
+
+    proto method untag(|) {*}
+    multi method untag(Set:D $tags) { $!tags (-)= $tags; }
+    multi method untag(@tags)       { $!tags (-)= @tags }
+
     # Make a method name from event class name.
     method to-method-name(Str:D $prefix is copy = "" --> Str) {
         $prefix ~= "-" if $prefix && $prefix.substr(* - 1) ne '-';
@@ -58,6 +80,7 @@ class Event is export {
     multi method Str(::?CLASS:U:) { nextsame }
     multi method Str(::?CLASS:D:) {
         self.^name ~ " #{$!id}:"
+                   ~ ($!tags ?? " [" ~ $!tags.keys.join(",") ~ "]" !! "")
                    ~ " orig={$!origin.?name // $!origin.WHICH}"
                    ~ " disp={$!dispatcher.?name // $!dispatcher.WHICH}"
                    ~ ($!cleared ?? " clear" !! "")
@@ -219,6 +242,7 @@ class Event::Cmd::SetTitle            is Event::Command { }
 class Event::Cmd::SetInvisible        is Event::Command { }
 class Event::Cmd::TextScroll::AddText is Event::Command { }
 class Event::Cmd::To::Top             is Event::Command { }
+class Event::Cmd::Update::Positions   is Event::Command { method default-priority { PrioImmediate } }
 
 # Inquiring commands
 class Event::Cmd::Inquiry is Event::Command {
@@ -280,6 +304,8 @@ class Event::Updated is Event::Informative {
     # Widget canvas geometry
     has $.geom          is required;
 }
+# Dispatched when synchronized flattening of a group is about to happen.
+class Event::ClockSignal is Event::Informative { }
 
 class Event::Scroll::Position is Event::Informative does Event::Vectorish { }
 class Event::Scroll::Area     is Event::Informative does Event::Transformish { }

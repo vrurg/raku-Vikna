@@ -259,8 +259,8 @@ Vikna will do the rest transparently.
 
 =head2 Responsive Event Handling
 
-No event should be processed longer than it takes to irritate the end user. If an event results in a unavoidably long
-code run than the code must be forked into a separate async flow.
+No event should be processed longer than it takes to irritate the end user. If an event results in an unavoidably long
+code run then the code must be forked into a separate async flow.
 
 =head1 SEE ALSO
 

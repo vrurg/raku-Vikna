@@ -11,7 +11,7 @@ use Vikna::PointerTarget;
 class MRep
     is Vikna::TextScroll
     does Vikna::PointerTarget
-    does Vikna::Focusable {
+    is Vikna::Focusable {
     submethod profile-default {
         attr => {
             :fg(''), :bg(''), :pattern(' '),
@@ -88,7 +88,7 @@ class MApp is Vikna::App {
             my $dx = ($.desktop.w / 10).Int;
             if $_ == 0 {
                 $w = ($.desktop.w * 7 / 8 ).Int;
-                $h = 20;
+                $h = ($.desktop.h / 2).Int;
             }
             @!w.push: $.desktop.create-child:
                 MWin, :x($_ * $dx), :y($_ * $dy), :$w, :$h, :name('Window' ~ $_), :title('Window #' ~ $_), :pattern(~$_);

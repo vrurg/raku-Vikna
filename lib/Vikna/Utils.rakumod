@@ -87,6 +87,23 @@ sub to-styles(|c) is export {
 
 # Bypass $*VIKNA-FLOW to a code possibly be ran in a different thread like with Promise::then, etc.
 sub flow-branch(&code) is export {
-    my $vf = $*VIKNA-FLOW;
-    -> |c { my $*VIKNA-FLOW = $vf; &code(|c) }
+    unless $*VIKNA-FLOW {
+        X::Flow::NotInFlow.new.throw
+    }
+    my $obj = CALLER::LEXICAL::<self> // $*VIKNA-FLOW.owner;
+    my $vf = $obj.allocate-flow(:name($*VIKNA-FLOW.name), :in-context);
+    -> |c {
+        my $*VIKNA-FLOW = $vf;
+        LEAVE $vf.owner.free-flow($vf);
+        &code(|c)
+    }
+}
+
+proto tag-event(|) is export {*}
+multi tag-event(Any:D $id, &code) {
+    my $*VIKNA-EVENT-TAG = $id;
+    &code()
+}
+multi tag-event(Pair:D $trace) {
+    tag-event $trace.key, $trace.value
 }

@@ -213,7 +213,8 @@ method !run-ev-loop {
                 }
             }
         }
-        my $ev = $!ev-queue.receive;
+        my $*VIKNA-CURRENT-EVENT =
+            my $ev = $!ev-queue.receive;
         if $ev ~~ Failure {
             if $ev.exception ~~ X::PChannel::OpOnClosed {
                 $ev.so;
@@ -228,7 +229,7 @@ method !run-ev-loop {
                 self.?drop-event($ev);
             }
             else {
-                $ev.dispatcher.handle-event($ev);
+                self.handle-event($ev);
             }
         }
     }
@@ -405,6 +406,13 @@ method queue-protect( &code ) {
     $!ev-lock.protect: {
         &code( )
     }
+}
+
+method is-event-queue-flow {
+    with $*VIKNA-EVQ-OWNER {
+        return $*VIKNA-EVQ-OWNER === self
+    }
+    False
 }
 
 submethod DESTROY {

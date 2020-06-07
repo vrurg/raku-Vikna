@@ -1,13 +1,15 @@
 use v6.e.PREVIEW;
 
-unit role Vikna::Focusable;
+unit class Vikna::Focusable;
 
 use Vikna::Widget;
 use Vikna::Events;
 use Vikna::WAttr;
 use Hash::Merge;
 
-has ::?ROLE $.focus;
+also is Vikna::Widget;
+
+has ::?CLASS $.focus;
 has Bool:D $.in-focus = False;
 
 # Shall we auto-focus the topmost child?
@@ -26,7 +28,7 @@ submethod profile-checkin(%profile, %, %, %) {
     %profile{@focused-keys}:delete;
 }
 
-multi method route-event(::?ROLE:D: Event::Focusish:D $ev) is default {
+multi method route-event(::?CLASS:D: Event::Focusish:D $ev) is default {
     if $!in-focus && $!focus && $!focus !=== self {
         $!focus.dispatch: $ev
     }
@@ -35,17 +37,17 @@ multi method route-event(::?ROLE:D: Event::Focusish:D $ev) is default {
     }
 }
 
-multi method handle-event(::?ROLE:D: Event::ZOrder::Child:D $ev) {
+multi method handle-event(::?CLASS:D: Event::ZOrder::Child:D $ev) {
     my $child = $ev.child;
     self.trace: "Focusable Child ZOrder on ", $child, :event;
-    if $!focus-topmost && $child ~~ ::?ROLE {
+    if $!focus-topmost && $child ~~ ::?CLASS {
         self.trace: "Updating focus";
         self.cmd-focus-update;
     }
     nextsame
 }
 
-multi method handle-event(::?ROLE:D: Event::Focus::In:D $ev) {
+multi method handle-event(::?CLASS:D: Event::Focus::In:D $ev) {
     self.trace: "set myself into focus by ", $ev;
     $!in-focus = True;
     .dispatch: Event::Focus::In with $!focus;
@@ -54,7 +56,7 @@ multi method handle-event(::?ROLE:D: Event::Focus::In:D $ev) {
     nextsame
 }
 
-multi method handle-event(::?ROLE:D: Event::Focus::Out:D $ev) {
+multi method handle-event(::?CLASS:D: Event::Focus::Out:D $ev) {
     # Desktop doesn't lose focus
     self.trace: "Focus out event: ", $ev;
     with $.parent {
@@ -71,10 +73,10 @@ multi method handle-event(::?ROLE:D: Event::Focus::Out:D $ev) {
 
 ### Command handlers ###
 
-method cmd-addchild(::?ROLE:D: $child, |) {
+method cmd-addchild(::?CLASS:D: $child, |) {
     callsame;
     self.trace: "Focusable handles attach of ", $child;
-    if $child ~~ ::?ROLE {
+    if $child ~~ ::?CLASS {
         # If child has reparented it might still preserve its focused status. Reset it.
         if $child.in-focus {
             # By default a child is added unfocused. $.focus-topmost controls if it will gain the focus later.
@@ -84,7 +86,7 @@ method cmd-addchild(::?ROLE:D: $child, |) {
     }
 }
 
-method cmd-removechild(::?ROLE:D: $child, |) {
+method cmd-removechild(::?CLASS:D: $child, |) {
     callsame;
     if $child === $!focus {
         $!focus = Nil;
@@ -109,11 +111,11 @@ method !focus-to($child) {
     }
 }
 
-method cmd-focus-update(::?ROLE:D:) {
+method cmd-focus-update(::?CLASS:D:) {
     return if self.closed;
     my $topmost;
     self.for-children: :reverse, -> $child {
-        if $child ~~ ::?ROLE && !$child.closed {
+        if $child ~~ ::?CLASS && !$child.closed {
             $topmost = $child;
             last
         }
@@ -123,7 +125,7 @@ method cmd-focus-update(::?ROLE:D:) {
     self!focus-to($topmost);
 }
 
-method cmd-focus-request(::?ROLE:D $child) {
+method cmd-focus-request(::?CLASS:D $child) {
     self.trace: "Requested focus for ", $child;
     self.is-my-child: $child;
     self!focus-to($child);
@@ -132,7 +134,7 @@ method cmd-focus-request(::?ROLE:D $child) {
 ### Command senders ###
 
 # Set $child as focused on parent.
-method update-focus(::?ROLE:D:) {
+method update-focus(::?CLASS:D:) {
     self.send-command: Event::Cmd::Focus::Update
 }
 

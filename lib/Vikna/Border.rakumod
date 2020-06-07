@@ -34,11 +34,11 @@ proto method event(Event:D $) {*}
 
 multi method event(Event::Attached:D $ev) {
     if $ev.child === self {
-        $.subscribe: $.parent, -> $pev {
+        self.subscribe: $.parent, -> $pev {
             if $pev ~~ Event::Focus::In | Event::Focus::Out {
-                $.trace: "Parent focus in/out event, redraw self";
-                $.invalidate;
-                $.redraw;
+                self.trace: "Parent focus in/out event, redraw self";
+                self.invalidate;
+                self.redraw;
             }
         }
     }
@@ -56,7 +56,7 @@ method set-geom(|) { }
 
 method draw( :$canvas ) {
     my %b = %borders{ $!type }{ $.group.in-focus ?? 'active' !! 'passive' };
-    $.trace: "### BORDER DRAW, group focused: ", ?$.group.in-focus;
+    self.trace: "### BORDER DRAW, group focused: ", ?$.group.in-focus;
     my $r = $.w - 1;
     my $b = $.h - 1;
     $canvas.imprint(0,   0, %b<ul>);
@@ -69,7 +69,7 @@ method draw( :$canvas ) {
     my $top;
     if $.parent.?title && $.w > 6 {
         my $title = " " ~ $.parent.title.substr(0, $.w - 6) ~ " ";
-        $.trace: "Using title ‘$title’";
+        self.trace: "Using title ‘$title’";
         my $tlen = $.w - 2 - $title.chars;
         my $l-len = $tlen div 2;
         my $r-len = $tlen - $l-len;
