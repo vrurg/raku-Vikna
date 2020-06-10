@@ -54,8 +54,10 @@ method shutdown {
 
 method cmd-screenprint(::?CLASS:D: Int:D $x, Int:D $y, Vikna::Canvas:D $viewport, *%c ) {
     self.screen-print($x, $y, $viewport, |%c);
-    self.post-event: Event::Screen::Ready;
-    $!availability_promise.keep(True);
+    $!print-lock.protect: {
+        $!availability_promise.keep(True);
+        self.post-event: Event::Screen::Ready;
+    }
 }
 
 proto method print(::?CLASS:D: |) {*}
