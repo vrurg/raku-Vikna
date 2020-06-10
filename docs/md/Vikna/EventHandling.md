@@ -30,7 +30,7 @@ The second stage is the event loop itself where received event packet:
 
   * submitted to subsribers (see `subscribe` method below)
 
-See also event-related sections in [`Vikna::Manual`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Manual.md).
+See also event-related sections in [`Vikna::Manual`](https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Manual.md).
 
 ATTRIBUTES
 ==========
@@ -105,12 +105,12 @@ The event monitor is responsible for not letting an event to be processed for lo
 
   * prevent user code from accidental deadlocks
 
-  * prevent user code from doing too extensive operations within the event loop. This imposes the principle of code responsiveness to event processing code (see *PRINCIPLES* chapter in [`Vikna::Manual`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Manual.md)).
+  * prevent user code from doing too extensive operations within the event loop. This imposes the principle of code responsiveness to event processing code (see *PRINCIPLES* chapter in [`Vikna::Manual`](https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Manual.md)).
 
 `send-event(Event:D $ev, EvenPriority :$priority?)`
 ---------------------------------------------------
 
-Stage 1 method. The first thing it does it tries to invoke `event-filter` method on self. If succeeds then event(s) returned by the method are used as replacement for `$ev` argument. Then event(s) are send over the event queue into the event loop flow if the queue is defined. Otherwise the event is passed directly into `$ev.dispatcher` `handle-event` method. This last variant is used by widget groups (see [`Vikna::Widget::Group`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Widget/Group.md) and [`Vikna::Widget::GroupMember`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Widget/GroupMember.md)).
+Stage 1 method. The first thing it does it tries to invoke `event-filter` method on self. If succeeds then event(s) returned by the method are used as replacement for `$ev` argument. Then event(s) are send over the event queue into the event loop flow if the queue is defined. Otherwise the event is passed directly into `$ev.dispatcher` `handle-event` method. This last variant is used by widget groups (see [`Vikna::Widget::Group`](https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Widget/Group.md) and [`Vikna::Widget::GroupMember`](https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Widget/GroupMember.md)).
 
 Throws `X::Event::Stopped` if event loop has been stopped already.
 
@@ -119,7 +119,7 @@ Returns event(s) that were actually pushed into the event queue.
 `multi route-event(Event:D $ev, *%c)`
 -------------------------------------
 
-Stage 1 method. By default re-transmits `$ev` to `send-event`. But it allows some early re-routing of events before they're pushed into the queue. For example, [`Vikna::Focusable`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Focusable.md) is using this method to re-dispatch focus-dependent events directly to the widget in focus.
+Stage 1 method. By default re-transmits `$ev` to `send-event`. But it allows some early re-routing of events before they're pushed into the queue. For example, [`Vikna::Focusable`](https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Focusable.md) is using this method to re-dispatch focus-dependent events directly to the widget in focus.
 
 `multi drop-event(Event:D $ev)`
 -------------------------------
@@ -175,7 +175,7 @@ Returns *True* if the invoking context belongs to an event handling flow of `sel
 SEE ALSO
 ========
 
-[`Vikna`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna.md), [`Vikna::Manual`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Manual.md), [`Vikna::Events`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Events.md), [`Vikna::CommandHandling`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/CommandHandling.md)
+[`Vikna`](https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna.md), [`Vikna::Manual`](https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Manual.md), [`Vikna::Events`](https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Events.md), [`Vikna::CommandHandling`](https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/CommandHandling.md)
 
 AUTHOR
 ======

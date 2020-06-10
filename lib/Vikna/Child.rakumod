@@ -13,8 +13,8 @@ Requires C<id> method from the consuming class.
 
 =head1 SEE ALSO
 
-L<C<Vikna>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna.md>,
-L<C<Vikna::Manual>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Manual.md>
+L<C<Vikna>|https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna.md>,
+L<C<Vikna::Manual>|https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Manual.md>
 
 =AUTHOR
 

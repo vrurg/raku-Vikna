@@ -20,9 +20,9 @@ C<Vikna::Canvas> - here we draw
 
 =DESCRIPTION
 
-Inherits from L<C<Vikna::Object>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Object.md>.
+Inherits from L<C<Vikna::Object>|https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Object.md>.
 
-General information about canvas can be found in L<C<Vikna::Manual>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Manual.md>.
+General information about canvas can be found in L<C<Vikna::Manual>|https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Manual.md>.
 
 =head2 Technical Details
 
@@ -34,7 +34,7 @@ properties of the symbol:
 =item the character itself
 =item foreground color
 =item background color
-=item style (see C<VS*> constants in L<C<Vikna::Utils>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Utils.md>)
+=item style (see C<VS*> constants in L<C<Vikna::Utils>|https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Utils.md>)
 
 Each of the four values can either be set or be transparent. This information is important to keep in mind when one
 canvas is imprinted into another. In this case, say, if a cell of the imprinted canvas has a character defined but three
@@ -67,11 +67,11 @@ easy introspection of canvas content.
 The class defined two attributes:
 
 =item C<Str $.char>
-=item C<L<Vikna::CAttr|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/CAttr.md>:D $.attr>
+=item C<L<Vikna::CAttr|https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/CAttr.md>:D $.attr>
 
 =ATTRIBUTES
 
-=head3 C<L<Vikna::Rect|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Rect.md>:D $.geom>
+=head3 C<L<Vikna::Rect|https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Rect.md>:D $.geom>
 
 Canvas geometry. Handles methods C<x>, C<y>, C<w>, C<h>.
 
@@ -101,13 +101,13 @@ Create a new canvas which would inherit content from the canvas creating it.
 
 Resets content to the all-transparent state.
 
-=head3 C<multi imprint($x, $y, Str:D $line, L<C<Vikna::CAttr>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/CAttr.md>:D $attr, Int :$span?)>
+=head3 C<multi imprint($x, $y, Str:D $line, L<C<Vikna::CAttr>|https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/CAttr.md>:D $attr, Int :$span?)>
 =head3 C<multi imprint($x, $y, Str:D $line, :$fg, :$bg, :$style, Int :$span?)>
 
 Imprints a C<$line> into canvas at (C<$x>,C<$y>) position using the attributes provided. No more symbols will be
 imprinted than defined by C<$span>.
 
-=head3 C<imprint($x, $y, $w, $h, L<C<Vikna::CAttr>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/CAttr.md>:D $attr)>
+=head3 C<imprint($x, $y, $w, $h, L<C<Vikna::CAttr>|https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/CAttr.md>:D $attr)>
 =head3 C<imprint($x, $y, $w, $h, :$fg?, :$bg?, :$style?)>
 
 Color and/or style fill of a rectangle.
@@ -130,7 +130,7 @@ driver implementations. Otherwise must be strictly avoided.
 Plane content is implementation dependent.
 
 =head3 C<multi viewport($x, $y, $w, $h)>
-=head3 C<multi viewport(L<C<Vikna::Rect>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Rect.md>:D $rect)>
+=head3 C<multi viewport(L<C<Vikna::Rect>|https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Rect.md>:D $rect)>
 
 Sets canvas viewport rectangle.
 
@@ -143,7 +143,7 @@ canvas object is returned.
 
 Invalidates the canvas entirely.
 
-=head3 C<multi invalidate(L<C<Vikna::Rect>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Rect.md>:D $inv-rect)>
+=head3 C<multi invalidate(L<C<Vikna::Rect>|https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Rect.md>:D $inv-rect)>
 =head3 C<multi invalidate($x, $y, $w, $h)>
 
 Invalidates a rectange on canvas.
@@ -153,12 +153,12 @@ Invalidates a rectange on canvas.
 Returns true if cell at the specified position falls into invalidated area.
 
 =head3 C<multi is-paintable-rect($x, $y, $w, $h)>
-=head3 C<multi is-paintable-rect(L<C<Vikna::Rect>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Rect.md>:D $rect)>
+=head3 C<multi is-paintable-rect(L<C<Vikna::Rect>|https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Rect.md>:D $rect)>
 
 Returns C<True> if the specified rectangle is fully covered by invalidations.
 
 =head3 C<multi add-inv-rect($x, $y, $w, $h)>
-=head3 C<multi add-inv-rect(L<C<Vikna::Rect>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Rect.md>:D $rect>
+=head3 C<multi add-inv-rect(L<C<Vikna::Rect>|https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Rect.md>:D $rect>
 
 Adds a rectangle to the list of invalidations
 
@@ -180,14 +180,14 @@ Viewport position and dimenstions.
 
 =head1 SEE ALSO
 
-L<C<Vikna>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna.md>,
-L<C<Vikna::Manual>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Manual.md>,
-L<C<Vikna::Object>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Object.md>,
-L<C<Vikna::CAttr>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/CAttr.md>,
-L<C<Vikna::Color>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Color.md>,
-L<C<Vikna::Point>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Point.md>,
-L<C<Vikna::Rect>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Rect.md>,
-L<C<Vikna::Utils>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Utils.md>
+L<C<Vikna>|https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna.md>,
+L<C<Vikna::Manual>|https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Manual.md>,
+L<C<Vikna::Object>|https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Object.md>,
+L<C<Vikna::CAttr>|https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/CAttr.md>,
+L<C<Vikna::Color>|https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Color.md>,
+L<C<Vikna::Point>|https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Point.md>,
+L<C<Vikna::Rect>|https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Rect.md>,
+L<C<Vikna::Utils>|https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Utils.md>
 
 =AUTHOR
 

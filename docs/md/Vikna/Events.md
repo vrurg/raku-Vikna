@@ -66,7 +66,7 @@ Priorities are defined by `EventPriority` enum with the following values:
 
 While there is hope that priority names are self-explanatory, *released* is likely needing a few words about.
 
-There is a situation possible where an event is considered to be not on time and gets postponed for later. An example of such situation is described in *Redraw Hold* section of [`Vikna::Widget`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Widget.md). In this situation it might be considered useful to dispatched the event with slightly higher priority to handle it as soon as possible. This is what `PrioReleased` is useful for. In the case of *redraw holding* it allows the redraw command to be processed before any other command queued making it very likely for the redraw to happen almost right away after the previos one is finished.
+There is a situation possible where an event is considered to be not on time and gets postponed for later. An example of such situation is described in *Redraw Hold* section of [`Vikna::Widget`](https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Widget.md). In this situation it might be considered useful to dispatched the event with slightly higher priority to handle it as soon as possible. This is what `PrioReleased` is useful for. In the case of *redraw holding* it allows the redraw command to be processed before any other command queued making it very likely for the redraw to happen almost right away after the previos one is finished.
 
 Next sections are descriptions of classes and roles.
 
@@ -100,7 +100,7 @@ Event default priority. To set it a sub-class can defined a method `default-prio
 
 ### [`Set`](https://docs.raku.org/type/Set) `$.tags`
 
-Tags attached to the current event. See *Event Tagging* in [`Vikna::Manual`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Manual.md).
+Tags attached to the current event. See *Event Tagging* in [`Vikna::Manual`](https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Manual.md).
 
 Methods
 -------
@@ -146,7 +146,7 @@ The role define a subcategory of events reporting about a state change. It defin
 Role `Event::Focusing`
 ======================
 
-Events consuming this role are routed using the rules of focused dispatching, as implemented by [`Vikna::Focusable`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Focusable.md).
+Events consuming this role are routed using the rules of focused dispatching, as implemented by [`Vikna::Focusable`](https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Focusable.md).
 
 Role `Event::ZOrderish`
 =======================
@@ -166,17 +166,17 @@ Subcategory of events bearing information about a rectangle. Defines single attr
 Role `Event::Transformish`
 ==========================
 
-Does `Event::Geomish`. Subcategory of geomish events containing information about a transformation of some kind where state is changing *from* one rectangle *to* another. Adds `$.from` attribute of [`Vikna::Rect:D`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Rect.md).
+Does `Event::Geomish`. Subcategory of geomish events containing information about a transformation of some kind where state is changing *from* one rectangle *to* another. Adds `$.from` attribute of [`Vikna::Rect:D`](https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Rect.md).
 
 Role `Event::Positionish`
 =========================
 
-Subcategory of events bearing information about some 2D position. Defines attribute `$.at` of [`Vikna::Point:D`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Point.md) and handling methods ro-accessors `x` and `y`.
+Subcategory of events bearing information about some 2D position. Defines attribute `$.at` of [`Vikna::Point:D`](https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Point.md) and handling methods ro-accessors `x` and `y`.
 
 Role `Event::Vectorish`
 =======================
 
-Subcategory of events defining a vector-like information with *from* and *to* positions. Correspondingly, defines attributes `$.from` and `$.to` of [`Vikna::Point`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Point.md).
+Subcategory of events defining a vector-like information with *from* and *to* positions. Correspondingly, defines attributes `$.from` and `$.to` of [`Vikna::Point`](https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Point.md).
 
 Role `Event::Pointer::Elevatish`
 ================================
@@ -186,12 +186,12 @@ Subcategory of events which might move a widget to the top of Z-order.
 Role `Event::Childing`
 ======================
 
-Subcategory of events bearing information about a [`Vikna::Child`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Child.md). Defines attribute `$.child`.
+Subcategory of events bearing information about a [`Vikna::Child`](https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Child.md). Defines attribute `$.child`.
 
 Role `Event::Parentish`
 =======================
 
-Subcategory of events bearing information about a [`Vikna::Parent`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Parent.md). Defines attribute `$.parent`.
+Subcategory of events bearing information about a [`Vikna::Parent`](https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Parent.md). Defines attribute `$.parent`.
 
 Role `Event::Relational`
 ========================
@@ -208,7 +208,7 @@ Is `Event`, does `Event::Prio::Default`. Events of this class are only informing
 
 Is `Event`, does `Event::Prio::Command`.
 
-Pass a command to an event handler. Support provided by [`Vikna::CommandHandling`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/CommandHandling.md).
+Pass a command to an event handler. Support provided by [`Vikna::CommandHandling`](https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/CommandHandling.md).
 
 Attributes
 ----------
@@ -230,7 +230,7 @@ Arguments to invoke the command method with. For example:
     }
     method cmd-resize($w, $h) { ... }
 
-There is a shortcut method `send-command` defined in [`Vikna::CommandHandling`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/CommandHandling.md).
+There is a shortcut method `send-command` defined in [`Vikna::CommandHandling`](https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/CommandHandling.md).
 
 Methods
 -------
@@ -267,7 +267,7 @@ A character representing the key
 
 ### [`Set:D`](https://docs.raku.org/type/Set) `$.modifiers`
 
-Modifier keys. See `ModifierKeys` enum in [`Vikna::Dev::Kbd`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Dev/Kbd.md).
+Modifier keys. See `ModifierKeys` enum in [`Vikna::Dev::Kbd`](https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Dev/Kbd.md).
 
 Role `Event::Rbd::Partial`
 ==========================
@@ -304,7 +304,7 @@ All buttons presses at the time of event happened.
 
 Keyboard modifier keys active at the time of event. See `$.modifiers` of `Event::Kbd` above.
 
-### [`Vikna::Point`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Point.md) `$.prev`
+### [`Vikna::Point`](https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Point.md) `$.prev`
 
 Previous mouse position. The first ever mouse event will have it undefined.
 
@@ -335,14 +335,14 @@ Is `Event::Command`. Command events are strictly bound to the command methods an
 `Event::Cmd::Inquiry`
 =====================
 
-This is a subcategory of commands for implementing state-safe requests to widgets. For now the only example of such inquiry command is [`Vikna::Widget`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Widget.md) method `contains`.
+This is a subcategory of commands for implementing state-safe requests to widgets. For now the only example of such inquiry command is [`Vikna::Widget`](https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Widget.md) method `contains`.
 
 This feature is even more experimental than Vikna itself and might be gone in the future.
 
 `Event::Init`
 =============
 
-Is `Event::Informative`, *immediate* priority. This is the first event a widget receives right after object creation. Dispatched by [`Vikna::Widget`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Widget.md) `create-child` method.
+Is `Event::Informative`, *immediate* priority. This is the first event a widget receives right after object creation. Dispatched by [`Vikna::Widget`](https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Widget.md) `create-child` method.
 
 `Event::Ready`
 ==============
@@ -382,12 +382,12 @@ Is `Event::Changed::Attr`. Only style has changed.
 `Event::Changed::Title`
 =======================
 
-Is `Event::Informative`, does `Event::Changish[Str]`. [`Vikna::Window`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Window.md) title changed.
+Is `Event::Informative`, does `Event::Changish[Str]`. [`Vikna::Window`](https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Window.md) title changed.
 
 `Event::Changed::Text`
 ======================
 
-Is `Event::Informative`, does `Event::Changish[Str]`. Text has changed. Currently is only used by [`Vikna::Label`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Label.md).
+Is `Event::Informative`, does `Event::Changish[Str]`. Text has changed. Currently is only used by [`Vikna::Label`](https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Label.md).
 
 `Event::Changed::BgPattern`
 ===========================
@@ -427,7 +427,7 @@ Is `Event::Informative`. Dispatched only if widget visibility status changed eit
 `Event::Focus::Take`, `Event::Focus::Lost`, `Event::Focus::In`, `Event::Focus::Out`
 ===================================================================================
 
-Is `Event::Informative`. See [`Vikna::Focusable`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Focusable.md) for more details.
+Is `Event::Informative`. See [`Vikna::Focusable`](https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Focusable.md) for more details.
 
 `Event::Closing`
 ================
@@ -452,17 +452,17 @@ Is `Event::Informative`. Dispatched by parent to a child when child canvas are a
 `Event::Scroll::Position`
 =========================
 
-Is `Event::Informative`, does `Event::Vectorish`. See [`Vikna::Scrollable`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Scrollable.md).
+Is `Event::Informative`, does `Event::Vectorish`. See [`Vikna::Scrollable`](https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Scrollable.md).
 
 `Event::Scroll::Area`
 =====================
 
-Is `Event::Informative`, does `Event::Transformish`. See [`Vikna::TextScroll`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/TextScroll.md).
+Is `Event::Informative`, does `Event::Transformish`. See [`Vikna::TextScroll`](https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/TextScroll.md).
 
 `Event::TextScroll::BufChange`
 ==============================
 
-Is `Event::Informative`, does `Event::Changish[Int:D]`. See [`Vikna::TextScroll`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/TextScroll.md).
+Is `Event::Informative`, does `Event::Changish[Int:D]`. See [`Vikna::TextScroll`](https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/TextScroll.md).
 
 `Event::Kbd::Dow`, `Event::Kbd::Up`
 ===================================
@@ -477,7 +477,7 @@ Is `Event::Kbd`, does `Event::Kbd::Complete`. Single key press event.
 `Event::Kbd::Control`
 =====================
 
-Is `Event::Kbd`, does `Event::Kbd::Complete`. A control key press. See `ControlKeys` in [`Vikna::Dev::Kbd`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Dev/Kbd.md).
+Is `Event::Kbd`, does `Event::Kbd::Complete`. A control key press. See `ControlKeys` in [`Vikna::Dev::Kbd`](https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Dev/Kbd.md).
 
 `Event::Mouse::Move`
 ====================
@@ -507,12 +507,12 @@ Is `Event::Input`, does `Event::Mouse::Transition`. Mouse entered or left widget
 `Event::Pointer::OwnerChange`
 =============================
 
-Is `Event::Input`, does `Event::Changish`, `Event::Positionish`. Reports a parent about mouse pointer leaving one of its children. See [`Vikna::PointerTarget`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/PointerTarget.md).
+Is `Event::Input`, does `Event::Changish`, `Event::Positionish`. Reports a parent about mouse pointer leaving one of its children. See [`Vikna::PointerTarget`](https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/PointerTarget.md).
 
 `Event::Button`
 ===============
 
-Is `Event::Informative`. A subcategory of events used by [`Vikna::Button`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Button.md) widget.
+Is `Event::Informative`. A subcategory of events used by [`Vikna::Button`](https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Button.md) widget.
 
 `Event::Button::Down`, `Event::Button::Up`, `Event::Button::Press`
 ==================================================================
@@ -542,7 +542,7 @@ Is `Event::Informative`, does `Event::Transofrmish`, `Event::Spreadable`. Report
 SEE ALSO
 ========
 
-[`Vikna`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna.md), [`Vikna::Manual`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Manual.md), [`Vikna::Rect`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Rect.md), [`Vikna::Point`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Point.md), [`Vikna::Child`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Child.md), [`Vikna::Parent`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Parent.md), [`Vikna::Dev::Kbd`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Dev/Kbd.md), [`Vikna::CAttr`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/CAttr.md), [`Vikna::X`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/X.md), [`Vikna::Classes`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Classes.md)
+[`Vikna`](https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna.md), [`Vikna::Manual`](https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Manual.md), [`Vikna::Rect`](https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Rect.md), [`Vikna::Point`](https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Point.md), [`Vikna::Child`](https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Child.md), [`Vikna::Parent`](https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Parent.md), [`Vikna::Dev::Kbd`](https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Dev/Kbd.md), [`Vikna::CAttr`](https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/CAttr.md), [`Vikna::X`](https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/X.md), [`Vikna::Classes`](https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Classes.md)
 
 AUTHOR
 ======

@@ -63,7 +63,7 @@ with C<$value>
 
 This test tool is checking if the events we're receiving on C<$widget> are matching a pattern defined by C<$task-list>.
 It is based on the idea that a widget (basically, a
-L<C<Vikna::EventHandler>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/EventHandler.md>)
+L<C<Vikna::EventHandler>|https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/EventHandler.md>)
 is a state machine. And thus sequencer is an observer which monitors widget state changes by pulling in and
 executing a task.
 
@@ -153,16 +153,16 @@ named arguments of the test tool. Those not defined are taken from C<$attr> if p
 
 =head1 SEE ALSO
 
-L<C<Vikna>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna.md>,
-L<C<Vikna::Manual>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Manual.md>,
-L<C<Vikna::Canvas>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Canvas.md>,
-L<C<Vikna::Rect>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Rect.md>,
-L<C<Vikna::Widget>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Widget.md>,
-L<C<Vikna::Events>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Events.md>,
-L<C<Vikna::WAttr>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/WAttr.md>,
-L<C<Vikna::Test::App>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Test/App.md>,
-L<C<Vikna::Test::OS>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Test/OS.md>,
-L<C<Vikna::Test::Screen>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Test/Screen.md>,
+L<C<Vikna>|https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna.md>,
+L<C<Vikna::Manual>|https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Manual.md>,
+L<C<Vikna::Canvas>|https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Canvas.md>,
+L<C<Vikna::Rect>|https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Rect.md>,
+L<C<Vikna::Widget>|https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Widget.md>,
+L<C<Vikna::Events>|https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Events.md>,
+L<C<Vikna::WAttr>|https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/WAttr.md>,
+L<C<Vikna::Test::App>|https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Test/App.md>,
+L<C<Vikna::Test::OS>|https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Test/OS.md>,
+L<C<Vikna::Test::Screen>|https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Test/Screen.md>,
 L<C<Test::Async>|https://modules.raku.org/dist/Test::Async>
 
 =AUTHOR Vadim Belman <vrurg@cpan.org>

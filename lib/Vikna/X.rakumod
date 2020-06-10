@@ -17,10 +17,10 @@ the object which method thrown the exception.
 
 =head1 SEE ALSO
 
-L<C<Vikna>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna.md>,
-L<C<Vikna::Manual>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Manual.md>,
-L<C<Vikna::Point>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Point.md>,
-L<C<Vikna::Rect>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Rect.md>
+L<C<Vikna>|https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna.md>,
+L<C<Vikna::Manual>|https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Manual.md>,
+L<C<Vikna::Point>|https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Point.md>,
+L<C<Vikna::Rect>|https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Rect.md>
 
 =AUTHOR Vadim Belman <vrurg@cpan.org>
 

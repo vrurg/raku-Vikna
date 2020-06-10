@@ -21,12 +21,12 @@ Bacground color
 
 =head3 C<Int $.style>
 
-Style of the symbol. See C<VS*> constants in L<C<Vikna::Utils>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Utils.md>.
+Style of the symbol. See C<VS*> constants in L<C<Vikna::Utils>|https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Utils.md>.
 
 =head3 C<%.Profile>
 
 Cached representation of the attribute suitable for passing into methods like
-L<C<Vikna::Canvas>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Canvas.md>C<::imprint>.
+L<C<Vikna::Canvas>|https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Canvas.md>C<::imprint>.
 
 =METHODS
 
@@ -35,7 +35,7 @@ L<C<Vikna::Canvas>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna
 =head3 C<dup(*%c)>
 
 All three methods preserve their usual meaning with one nuance: if C<style> key is passed in C<%c> profile then it
-gets normalized using C<to-style> routine from L<C<Vikna::Utils>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Utils.md>.
+gets normalized using C<to-style> routine from L<C<Vikna::Utils>|https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Utils.md>.
 
 =head3 C<bold()>, C<italic()>, C<underline()>
 
@@ -64,8 +64,8 @@ A shortcut to create a new C<Vikna::CAttr> instance.
 
 =head1 SEE ALSO
 
-L<C<Vikna>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna.md>,
-L<C<Vikna::Manual>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Manual.md>,
+L<C<Vikna>|https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna.md>,
+L<C<Vikna::Manual>|https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Manual.md>,
 
 =AUTHOR Vadim Belman <vrurg@cpan.org>
 

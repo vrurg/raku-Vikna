@@ -49,9 +49,9 @@ Any other implementation specifics of the framework are decisions taken to meet 
 
 More information can be found in the following sections:
 
-  * [`Vikna::Manual`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Manual.md)
+  * [`Vikna::Manual`](https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Manual.md)
 
-  * [`Vikna::Classes`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Classes.md)
+  * [`Vikna::Classes`](https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Classes.md)
 
 DISCLAIMER
 ==========

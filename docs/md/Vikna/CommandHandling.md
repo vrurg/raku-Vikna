@@ -58,7 +58,7 @@ Responsible for implementing the command handling.
 `multi send-event(Event::Command:U \evType, Capture:D $args, %params)`
 ----------------------------------------------------------------------
 
-The method is a [`Vikna::Event::Handling`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Event/Handling.md) `send-event` convenience wrapper. Similarly to `dispatcher` method, `send-command` creates an event object and passes it for event loop handling. The difference is that because a command must always be submitted to the object it is originated by, `send-command` bypasses `route-event` and submits directly into `send-event` method.
+The method is a [`Vikna::Event::Handling`](https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Event/Handling.md) `send-event` convenience wrapper. Similarly to `dispatcher` method, `send-command` creates an event object and passes it for event loop handling. The difference is that because a command must always be submitted to the object it is originated by, `send-command` bypasses `route-event` and submits directly into `send-event` method.
 
 `args` and `$args` captures are passed down to the command handle method.
 
@@ -69,7 +69,7 @@ Returns `send-event` return value.
 SEE ALSO
 ========
 
-[Vikna](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna.md), [Vikna::Manual](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Manual.md), [Vikna::CommandHandling](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/CommandHandling.md)
+[Vikna](https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna.md), [Vikna::Manual](https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Manual.md), [Vikna::CommandHandling](https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/CommandHandling.md)
 
 AUTHOR
 ======

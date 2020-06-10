@@ -50,7 +50,7 @@ Responsible for implementing the command handling.
 =head2 C<multi send-event(Event::Command:U \evType, Capture:D $args)>
 =head2 C<multi send-event(Event::Command:U \evType, Capture:D $args, %params)>
 
-The method is a L<C<Vikna::Event::Handling>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Event/Handling.md>
+The method is a L<C<Vikna::Event::Handling>|https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Event/Handling.md>
 C<send-event> convenience wrapper. Similarly to C<dispatcher> method, C<send-command> creates an event object and passes
 it for event loop handling. The difference is that because a command must always be submitted to the object it is
 originated by, C<send-command> bypasses C<route-event> and submits directly into C<send-event> method.
@@ -63,9 +63,9 @@ Returns C<send-event> return value.
 
 =head1 SEE ALSO
 
-L<Vikna|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna.md>,
-L<Vikna::Manual|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Manual.md>,
-L<Vikna::CommandHandling|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/CommandHandling.md>
+L<Vikna|https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna.md>,
+L<Vikna::Manual|https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/Manual.md>,
+L<Vikna::CommandHandling|https://github.com/vrurg/raku-Vikna/blob/v0.0.3/docs/md/Vikna/CommandHandling.md>
 
 =AUTHOR
 
