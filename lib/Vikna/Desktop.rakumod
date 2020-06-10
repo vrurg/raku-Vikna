@@ -89,7 +89,7 @@ method print(::?CLASS:D: Vikna::Canvas $canvas?) {
         # If re-print requested but no $!on-screen-canvas defined it likely means a concurrent print invoked by
         # flatten-canvas has succeed.
         return unless $canvas || $!on-screen-canvas;
-        self.trace: "DESKTOP REDRAW -> screen";
+        self.trace: "DESKTOP print -> screen";
         if $!on-screen-canvas && $canvas {
             $canvas.invalidate: $_ for $!on-screen-canvas.invalidations;
         }

@@ -41,24 +41,67 @@ method cmd-removemember(::?CLASS:D: Vikna::Widget::GroupMember:D $member, *%c) {
     self.Vikna::Widget::cmd-removechild($member, |%c)
 }
 
-has $!sync-tag;
-has SetHash:D $!sync-awaits .= new;
+class SyncHandle {
+    has $.id;
+    has Str:D $.name = "synch";
+    has Str $.tag;
+    has SetHash $.await-for;
 
-method cmd-setgeom(Int:D $x, Int:D $y, Int:D $w, Int:D $h, |c) {
-    my $ev-id = $*VIKNA-CURRENT-EVENT.id;
-    my $tag = "geom-" ~ $ev-id;
+    my atomicint $next-id = 0;
+    method next-tag(--> Str:D) {
+        $!id = ++⚛$next-id;
+        $!await-for = ().SetHash;
+        $!tag = $!name ~ '$' ~ $!id;
+    }
+}
 
-    unless $!sync-tag {
+has SyncHandle:D $!default-sh .= new;
+has SyncHandle:D $!geom-sh .= new(:name("geom-sync"));
+has SetHash:D $!active-sync-handles .= new;
+
+
+proto method flatten-sync(|) {*}
+multi method flatten-sync(SyncHandle:D $sh, &code) {
+    my $*VIKNA-GROUP-SYNC-HANDLE = $sh;
+    my $ev-tag = $sh.next-tag;
+
+    unless $!active-sync-handles {
         self.flatten-block;
     }
 
-    $!sync-tag = $tag;
+    $!active-sync-handles{$sh}++;
 
-    tag-event $tag => {
+    tag-event $ev-tag, &code;
+
+    # By default sync on all members
+    unless $sh.await-for {
+        self.for-children: {
+            $sh.await-for{.id}++;
+        }
+    }
+}
+multi method flatten-sync(&code) {
+    self.flatten-sync: $!default-sh, &code
+}
+
+sub get-sync-handle(Str $name?) is export {
+    SyncHandle.new: |(:$name if $name)
+}
+
+sub sync-on(Vikna::Widget::GroupMember:D $child) is export {
+    with $*VIKNA-GROUP-SYNC-HANDLE {
+        .await-for{$child.id}++;
+    }
+    else {
+        die "sync-on invoked outside of a flatten-sync context";
+    }
+}
+
+method cmd-setgeom(Int:D $x, Int:D $y, Int:D $w, Int:D $h, |c) {
+    self.flatten-sync: $!geom-sh, {
         self.Vikna::Widget::cmd-setgeom: $x, $y, $w, $h;
         self.for-children: {
             .cmd-setgeom(0, 0, $w, $h, |c);
-            $!sync-awaits{.id}++;
         }
     }
 }
@@ -66,13 +109,19 @@ method cmd-setgeom(Int:D $x, Int:D $y, Int:D $w, Int:D $h, |c) {
 method cmd-childcanvas(Vikna::Widget::GroupMember:D $child, |c) {
     callsame;
     my $ev = $*VIKNA-CURRENT-EVENT;
-    if $!sync-tag && $!sync-tag ∈ $ev.tags {
-            $!sync-awaits{$child.id}--;
-            unless $!sync-awaits {
-                self.dispatch: Vikna::Event::ClockSignal;
-                self.flatten-unblock;
-                $!sync-tag = Nil;
+    if $!active-sync-handles {
+        for $!active-sync-handles.keys -> $sh {
+            if $sh.tag ∈ $ev.tags {
+                $sh.await-for{$child.id}--;
+                unless $sh.await-for {
+                    $!active-sync-handles{$sh}--;
+                }
             }
+        }
+        unless $!active-sync-handles {
+            self.flatten-unblock;
+            self.dispatch: Vikna::Event::ClockSignal;
+        }
     }
 }
 
