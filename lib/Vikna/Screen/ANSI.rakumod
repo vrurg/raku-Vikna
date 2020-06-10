@@ -84,7 +84,7 @@ multi method screen-print(Int:D $x, Int:D $y, Vikna::Canvas:D $viewport, *%c ) {
     self!OUT-PRINT: $.ANSI-str( $x, $y, $viewport, |%c )
 }
 
-multi method screen-print(Int:D $x, Int:D $y, Str:D $string, Vikna::Color:D :$fg?, Vikna::Color:D :$bg?, :$style?) {
+multi method screen-print(Int:D $x, Int:D $y, Str:D $string, Vikna::Color :$fg?, Vikna::Color :$bg?, :$style?) {
     self!OUT-PRINT: &!cursor-sub($x, $y) ~ $.color2esc(self.ansi-color: :$fg, :$bg, :style(to-style($style))) ~ $string ~ RESET-COLOR
 }
 
