@@ -168,6 +168,10 @@ Lock-protects invocation of `&code` to prevent race conditions with event loop f
         self.foo;
     }
 
+### `is-event-queue-flow()`
+
+Returns *True* if the invoking context belongs to an event handling flow of `self`.
+
 SEE ALSO
 ========
 

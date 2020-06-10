@@ -84,6 +84,11 @@ B<Note> the final semantics of this attribute is not really defined yet.
 Event default priority. To set it a sub-class can defined a method C<default-priority> which must return one of
 C<EventPriority> enums.
 
+=head3 L<C<Set>|https://docs.raku.org/type/Set> C<$.tags>
+
+Tags attached to the current event. See I<Event Tagging> in
+L<C<Vikna::Manual>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Manual.md>.
+
 =head2 Methods
 
 =head3 C<dup(*%p)>
@@ -93,6 +98,16 @@ Duplicates an event object giving the copy a new ID.
 =head3 C<clear()>
 
 Clears the event (see C<$.cleared> above).
+
+=head3 C<multi method tag(+@tags)>
+=head3 C<multi method tag(Set:D $tags)>
+
+Attach tags to event instance.
+
+=head3 C<multi method untag(+@tags)>
+=head3 C<multi method untag(Set:D $tags)>
+
+Detach tags from event instance.
 
 =head3 C<to-method-name(Str:D $prefix)>
 

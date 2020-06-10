@@ -222,6 +222,34 @@ would just C<use> a module:
         }
     }
 
+=head2 Event Tagging
+
+An event could have tags attached to it. A tag is an object which would help us identify the event in the stream of all
+events handled by an object. For example, if an event is tagged with a string I<"foo"> then we can take a special action
+against it somewhere in a handler:
+
+=begin code
+multi method event(Event::Foo:D $ev) {
+    if "foo" ∈ $ev.tags {
+        # Gotcha!
+        self.take-the-foo-action;
+    }
+}
+=end code
+
+Tags are event more useful that that because they're I<viral>. If a new event dispatched in a dynamic context with
+C<$*VIKNA-CURRENT-EVENT> then it is considered to be the event-initiator and the new event will inherit it's tags
+from the initiator unless they were manually set.
+
+Another way to tag events is to use routine C<tag-event> from
+L<C<Vikna::Utils>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Utils.md>.
+If both event-initiator has tags and a C<tag-event> is in effect then the new event instance will have all tags merged
+into one set.
+
+Tag inheritance allows tracking series of events logically linked together. See for example
+L<C<Vikna::Widget::Group>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Widget/Group.md>
+and how it implements synchronous group flattening.
+
 =head2 Parent/Child Strata
 
 Nothing has been said so far about parent/child relations of widgets because this is something intrinsic to probaly

@@ -157,6 +157,24 @@ An event source can be attached to any event handling object. For example, imagi
         }
     }
 
+Event Tagging
+-------------
+
+An event could have tags attached to it. A tag is an object which would help us identify the event in the stream of all events handled by an object. For example, if an event is tagged with a string *"foo"* then we can take a special action against it somewhere in a handler:
+
+    multi method event(Event::Foo:D $ev) {
+        if "foo" ∈ $ev.tags {
+            # Gotcha!
+            self.take-the-foo-action;
+        }
+    }
+
+Tags are event more useful that that because they're *viral*. If a new event dispatched in a dynamic context with `$*VIKNA-CURRENT-EVENT` then it is considered to be the event-initiator and the new event will inherit it's tags from the initiator unless they were manually set.
+
+Another way to tag events is to use routine `tag-event` from [`Vikna::Utils`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Utils.md). If both event-initiator has tags and a `tag-event` is in effect then the new event instance will have all tags merged into one set.
+
+Tag inheritance allows tracking series of events logically linked together. See for example [`Vikna::Widget::Group`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Widget/Group.md) and how it implements synchronous group flattening.
+
 Parent/Child Strata
 -------------------
 

@@ -116,23 +116,32 @@ Similar to C<throw> above, but invokes C<fail> with the exception object.
 This method is a shortcur to L<C<Vikna::App>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/App.md> method C<trace>. It passes the invoking object alongside with the
 arguments capture.
 
-=head2 C<flow(&code, Str :$name, :$sync = False, :$branch = False)>
+=head2 C<flow(&code, Str :$name, :$sync = False, :$branch = False, :$in-context = False, Capture:D :$args = \())>
 
 Creates a new code flow (see L<C<Vikna::Manual>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Manual.md>).
-A flow can be created as:
+A flow can be created either as an asynchronous one running in its own thread; or as a synchronous, invoked on the
+current thread context. The flow will execute C<&code> with arguments from C<:args> parameter.
 
-=item asynchronous, in it's own thread
-=item synchronous, invoked in the current thread
-=item a branch in which case a potentially threading block is considered as a branch of the current flow
+It is often the case that when a new thread is spawned it doesn't have access to the dynamic context of the code which
+spawned the thread. With C<:in-context> argument the flow records its caller's context allowing to search for dynamics
+in it using hash-key syntax:
 
-The last case is potentially useful for cases when event if a new thread is created, the code in it is a logical
-continuation of the current flow.
+=begin code
+if $*VIKNA-FLOW<$*VIKNA-CURRENT-EVENT>:exists {
+    $cur-event = $*VIKNA-FLOW<$*VIKNA-CURRENT-EVENT>;
+}
+=end code
+
+When the flow is created withing a "parent" flow, it would try to chain the search for a dynamic symbol with the
+"parent".
+
+*NOTE* that the feature is a potential memory hog as it might keep many upstream closures referenced even when nobody
+else is not using them anymore.
+
+If a new flow is created with C<:branch> parameter then it would implicitly take the name of the enclosing flow and
+will get C<:in-context> parameter implicitly.
 
 The method returns a promise which would be kept with flow's return value.
-
-I<NOTE> that flows are tracked using C<$*VIKNA-FLOW> dynamic variable. Sometimes dynamics are not preserved in
-lexically enclosed blocks. In such cases it is possible to re-use a flow by temporarily storing it in a lexical and
-re-assiging later to C<$*VIKNA-FLOW>.
 
 =head2 C<allocate-flow>, C<free-flow>
 

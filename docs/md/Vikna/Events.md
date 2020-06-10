@@ -98,6 +98,10 @@ If set to *True* then event has been taken care of and in some cases must not be
 
 Event default priority. To set it a sub-class can defined a method `default-priority` which must return one of `EventPriority` enums.
 
+### [`Set`](https://docs.raku.org/type/Set) `$.tags`
+
+Tags attached to the current event. See *Event Tagging* in [`Vikna::Manual`](https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna/Manual.md).
+
 Methods
 -------
 
@@ -108,6 +112,18 @@ Duplicates an event object giving the copy a new ID.
 ### `clear()`
 
 Clears the event (see `$.cleared` above).
+
+### `multi method tag(+@tags)`
+
+### `multi method tag(Set:D $tags)`
+
+Attach tags to event instance.
+
+### `multi method untag(+@tags)`
+
+### `multi method untag(Set:D $tags)`
+
+Detach tags from event instance.
 
 ### `to-method-name(Str:D $prefix)`
 

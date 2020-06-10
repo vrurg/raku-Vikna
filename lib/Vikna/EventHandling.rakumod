@@ -156,6 +156,10 @@ processing while we do something in a parallel thread:
         self.foo;
     }
 
+=head3 C<is-event-queue-flow()>
+
+Returns I<True> if the invoking context belongs to an event handling flow of C<self>.
+
 =head1 SEE ALSO
 
 L<C<Vikna>|https://github.com/vrurg/raku-Vikna/blob/v0.0.2/docs/md/Vikna.md>,
