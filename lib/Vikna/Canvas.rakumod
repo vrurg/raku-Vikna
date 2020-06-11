@@ -574,9 +574,8 @@ multi method invalidate(+@rect where *.elems == 4) {
 
 method is-paintable(::?CLASS:D: $x, $y) {
     # By default the whole canvas is non-paintable unless invalidated rects are added.
-    my $w := $.w;
-    return False unless    nqp::isle_i($x, $w)
-                        && nqp::isle_i($y, $.h)
+    return False unless    nqp::islt_i($x, $.w)
+                        && nqp::islt_i($y, $.h)
                         && nqp::elems($!inv-rects);
     self!build-paintable-mask if $!paintable-expired;
     nqp::atpos_i(nqp::atpos($!paintable-mask, $y), $x)
