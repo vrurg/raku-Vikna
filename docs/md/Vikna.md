@@ -11,10 +11,10 @@ SYNOPSIS
     use Vikna::App;
     use Vikna::Window;
     use Vikna::Button;
-    use Vikna::Event;
+    use Vikna::Events;
 
     class MyWin is Vikna::Window {
-        multi method event(Event::Button::Click:D $ev) {
+        multi method event(Event::Mouse::Click:D $ev) {
             $.desktop.quit;
         }
     }
